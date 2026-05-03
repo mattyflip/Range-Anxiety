@@ -1,0 +1,29 @@
+import axios from 'axios';
+
+export default async function handler(req, res) {
+  const { path: pathPoints } = req.query;
+  const GOOGLE_API_KEY = process.env.VITE_GOOGLE_MAPS_API_KEY;
+
+  if (!pathPoints) {
+    return res.status(400).json({ error: 'Path is required' });
+  }
+
+  try {
+    const response = await axios.get('https://maps.googleapis.com/maps/api/elevation/json', {
+      params: {
+        path: pathPoints,
+        samples: 50,
+        key: GOOGLE_API_KEY
+      }
+    });
+    
+    // Add CORS headers for Vercel
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
+    
+    return res.status(200).json(response.data);
+  } catch (error) {
+    console.error('Elevation API error:', error);
+    return res.status(500).json({ error: 'Failed to fetch elevation data' });
+  }
+}
