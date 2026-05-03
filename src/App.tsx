@@ -13,6 +13,7 @@ interface TripDetails {
   origin: string;
   destination: string;
   waypoints: string[];
+  returnWaypoints: string[];
 }
 
 interface RouteMetrics {
@@ -61,11 +62,13 @@ function App() {
   const [trip, setTrip] = useState<TripDetails>({
     origin: '',
     destination: '',
-    waypoints: []
+    waypoints: [],
+    returnWaypoints: []
   });
 
   const [mode, setMode] = useState<'eco' | 'sport'>('eco');
   const [isRoundTrip, setIsRoundTrip] = useState(false);
+  const [isCustomReturn, setIsCustomReturn] = useState(false);
   const [targetSpeedMph, setTargetSpeedMph] = useState(15);
   const [batteryInputMode, setBatteryInputMode] = useState<'percent' | 'voltage'>('percent');
   const [capacityInputMode, setCapacityInputMode] = useState<'ah' | 'wh'>('ah');
@@ -124,6 +127,26 @@ function App() {
     }));
   };
 
+  const addReturnWaypoint = () => {
+    setTrip(prev => ({ ...prev, returnWaypoints: [...prev.returnWaypoints, ''] }));
+  };
+
+  const removeReturnWaypoint = (index: number) => {
+    setTrip(prev => ({
+      ...prev,
+      returnWaypoints: prev.returnWaypoints.filter((_, i) => i !== index)
+    }));
+    setResponse(null);
+    setMetrics(null);
+  };
+
+  const updateReturnWaypoint = (index: number, value: string) => {
+    setTrip(prev => ({
+      ...prev,
+      returnWaypoints: prev.returnWaypoints.map((wp, i) => i === index ? value : wp)
+    }));
+  };
+
   const getBatteryLevels = (nominal: number) => {
     const series = Math.round(nominal / 3.7);
     return {
@@ -136,7 +159,6 @@ function App() {
     setError(null);
     const route = directions.routes[0];
     
-    // Aggregate distance and duration from all legs
     let totalDistanceMeters = 0;
     route.legs.forEach(leg => {
       totalDistanceMeters += leg.distance?.value || 0;
@@ -146,7 +168,8 @@ function App() {
     const totalWhAvailable = capacityInputMode === 'ah' 
       ? specs.voltage * specs.capacityAh 
       : specs.capacityAh; 
-    const multiplier = isRoundTrip ? 2 : 1;
+    
+    const multiplier = (isRoundTrip && !isCustomReturn) ? 2 : 1;
     const totalWeightKg = specs.totalWeightLbs * 0.453592;
 
     let effectiveStartPercent = startBattery;
@@ -258,7 +281,7 @@ function App() {
         setError(`Error: Google Maps could not find a route (${status}).`);
       }
     }
-  }, [mode, specs, isRoundTrip, targetSpeedMph, batteryInputMode, startBattery, startVoltage]);
+  }, [mode, specs, isRoundTrip, targetSpeedMph, batteryInputMode, startBattery, startVoltage, capacityInputMode, trip, isCustomReturn]);
 
   const handleCalculate = () => {
     if (trip.origin !== '' && trip.destination !== '') {
@@ -508,6 +531,49 @@ function App() {
               Round Trip
             </button>
           </div>
+          
+          {isRoundTrip && (
+            <div style={{ marginTop: '0.8rem', padding: '0.8rem', backgroundColor: '#2a2a2a', borderRadius: '6px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                <input 
+                  type="checkbox" 
+                  checked={isCustomReturn}
+                  onChange={(e) => setIsCustomReturn(e.target.checked)}
+                  style={{ width: 'auto' }}
+                />
+                <label style={{ margin: 0, textTransform: 'none', fontSize: '0.8rem' }}>Different Return Route</label>
+              </div>
+
+              {isCustomReturn && (
+                <div style={{ borderTop: '1px solid #444', paddingTop: '0.5rem' }}>
+                  <label style={{ fontSize: '0.7rem' }}>Return Stops</label>
+                  {trip.returnWaypoints.map((wp, idx) => (
+                    <div key={idx} style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.4rem' }}>
+                      <input 
+                        type="text" 
+                        placeholder="Return stop" 
+                        value={wp}
+                        onChange={(e) => updateReturnWaypoint(idx, e.target.value)}
+                        style={{ padding: '0.4rem', fontSize: '0.8rem' }}
+                      />
+                      <button 
+                        onClick={() => removeReturnWaypoint(idx)}
+                        style={{ background: '#d93025', color: 'white', border: 'none', borderRadius: '4px', padding: '0 0.5rem', cursor: 'pointer' }}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                  <button 
+                    onClick={addReturnWaypoint}
+                    style={{ width: '100%', background: '#333', color: 'white', border: '1px solid #444', borderRadius: '4px', padding: '0.3rem', fontSize: '0.75rem', cursor: 'pointer' }}
+                  >
+                    + Add Return Stop
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </section>
 
         <section className="form-group">
@@ -576,13 +642,28 @@ function App() {
                 Energy Used: {metrics.estimatedWh.toFixed(0)} Wh
               </p>
             </div>
-            
+
             <button 
               onClick={() => {
-                const wpQuery = trip.waypoints.length > 0 
-                  ? `&waypoints=${trip.waypoints.map(wp => encodeURIComponent(wp)).join('|')}` 
-                  : '';
-                window.open(`https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(trip.origin)}&destination=${encodeURIComponent(trip.destination)}${wpQuery}&travelmode=bicycling`, '_blank');
+                let url = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(trip.origin)}`;
+                
+                if (isRoundTrip && isCustomReturn) {
+                  const loopWaypoints = [
+                    ...trip.waypoints.filter(w => w.trim() !== ''),
+                    trip.destination,
+                    ...trip.returnWaypoints.filter(w => w.trim() !== '')
+                  ];
+                  url += `&destination=${encodeURIComponent(trip.origin)}`;
+                  url += `&waypoints=${loopWaypoints.map(wp => encodeURIComponent(wp)).join('|')}`;
+                } else {
+                  const wpQuery = trip.waypoints.length > 0 
+                    ? `&waypoints=${trip.waypoints.map(wp => encodeURIComponent(wp)).join('|')}` 
+                    : '';
+                  url += `&destination=${encodeURIComponent(trip.destination)}${wpQuery}`;
+                }
+                
+                url += `&travelmode=bicycling`;
+                window.open(url, '_blank');
               }}
               style={{ 
                 width: '100%', 
@@ -617,9 +698,15 @@ function App() {
             {trip.origin && trip.destination && isLoading && !response && (
               <DirectionsService
                 options={{
-                  destination: trip.destination,
                   origin: trip.origin,
-                  waypoints: trip.waypoints.filter(wp => wp.trim() !== '').map(wp => ({ location: wp, stopover: true })),
+                  destination: (isRoundTrip && isCustomReturn) ? trip.origin : trip.destination,
+                  waypoints: (isRoundTrip && isCustomReturn) 
+                    ? [
+                        ...trip.waypoints.filter(w => w.trim() !== '').map(w => ({ location: w, stopover: true })),
+                        { location: trip.destination, stopover: true },
+                        ...trip.returnWaypoints.filter(w => w.trim() !== '').map(w => ({ location: w, stopover: true }))
+                      ]
+                    : trip.waypoints.filter(wp => wp.trim() !== '').map(wp => ({ location: wp, stopover: true })),
                   travelMode: google.maps.TravelMode.BICYCLING,
                 }}
                 callback={directionsCallback}
