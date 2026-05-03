@@ -478,6 +478,9 @@ function App() {
                 Energy Used: {metrics.estimatedWh.toFixed(0)} Wh
               </p>
             </div>
+            <p style={{ marginTop: '1rem', fontSize: '0.65rem', color: '#777', fontStyle: 'italic', lineHeight: '1.2' }}>
+              * Results may vary based on battery age, cycle count, and internal degradation.
+            </p>
           </div>
         )}
       </aside>
@@ -512,6 +515,12 @@ function App() {
           <div className="map-placeholder">Loading Google Maps...</div>
         )}
       </main>
+
+      <footer style={{ gridColumn: '1 / -1', marginTop: '3rem', padding: '1.5rem 0', borderTop: '1px solid #333', textAlign: 'center' }}>
+        <p style={{ fontSize: '0.7rem', color: '#666', maxWidth: '600px', margin: '0 auto' }}>
+          &copy; 2026 Range Anxiety. All calculations are theoretical estimates. Actual range is significantly impacted by battery health, tire pressure, and riding style.
+        </p>
+      </footer>
     </div>
   )
 }
