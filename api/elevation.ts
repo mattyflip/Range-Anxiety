@@ -1,6 +1,7 @@
 import axios from 'axios';
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-export default async function handler(req, res) {
+export default async function handler(req: VercelRequest, res: VercelResponse) {
   const { path: pathPoints } = req.query;
   const GOOGLE_API_KEY = process.env.VITE_GOOGLE_MAPS_API_KEY;
 
