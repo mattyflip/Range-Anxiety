@@ -1,6 +1,8 @@
-import { useState, useCallback } from 'react'
-import { GoogleMap, useJsApiLoader, DirectionsService, DirectionsRenderer } from '@react-google-maps/api'
+import { useState, useCallback, useRef } from 'react'
+import { GoogleMap, useJsApiLoader, DirectionsService, DirectionsRenderer, Marker } from '@react-google-maps/api'
 import axios from 'axios'
+
+const LIBRARIES: ("places")[] = ["places"];
 
 interface BikeSpecs {
   voltage: number;
@@ -35,6 +37,13 @@ interface SavedBike {
   specs: BikeSpecs;
 }
 
+interface POI {
+  id: string;
+  name: string;
+  position: google.maps.LatLngLiteral;
+  type: string;
+}
+
 const containerStyle = {
   width: '100%',
   height: '500px',
@@ -49,8 +58,11 @@ const center = {
 function App() {
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
-    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ""
+    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "",
+    libraries: LIBRARIES
   })
+
+  const mapRef = useRef<google.maps.Map | null>(null);
 
   const [specs, setSpecs] = useState<BikeSpecs>({
     voltage: 48,
@@ -78,6 +90,8 @@ function App() {
   const [metrics, setMetrics] = useState<RouteMetrics | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pois, setPois] = useState<POI[]>([]);
+  const [poiCategory, setPoiCategory] = useState<string | null>(null);
   
   const [savedBikes, setSavedBikes] = useState<SavedBike[]>(() => {
     const local = localStorage.getItem('ebike-saved-bikes');
@@ -145,6 +159,48 @@ function App() {
       ...prev,
       returnWaypoints: prev.returnWaypoints.map((wp, i) => i === index ? value : wp)
     }));
+  };
+
+  const onMapLoad = useCallback((map: google.maps.Map) => {
+    mapRef.current = map;
+  }, []);
+
+  const searchPOIs = (category: string) => {
+    if (!mapRef.current || !response) return;
+    setPoiCategory(category);
+
+    const service = new google.maps.places.PlacesService(mapRef.current);
+    const route = response.routes[0];
+    const destination = route.legs[route.legs.length - 1].end_location;
+
+    service.nearbySearch(
+      {
+        location: destination,
+        radius: 5000, // 5km radius around destination
+        keyword: category
+      },
+      (results, status) => {
+        if (status === google.maps.places.PlacesServiceStatus.OK && results) {
+          const newPois = results.map(r => ({
+            id: r.place_id || Math.random().toString(),
+            name: r.name || 'Unknown',
+            position: { lat: r.geometry?.location?.lat() || 0, lng: r.geometry?.location?.lng() || 0 },
+            type: category
+          }));
+          setPois(newPois);
+        }
+      }
+    );
+  };
+
+  const addPOIAsWaypoint = (poi: POI) => {
+    setTrip(prev => ({
+      ...prev,
+      waypoints: [...prev.waypoints, poi.name]
+    }));
+    setPois([]);
+    setPoiCategory(null);
+    handleCalculate(); // Trigger re-calculation
   };
 
   const getBatteryLevels = (nominal: number) => {
@@ -598,6 +654,19 @@ function App() {
           {isLoading ? 'Calculating...' : 'Find Efficient Route'}
         </button>
 
+        {response && (
+          <section className="form-group" style={{ marginTop: '1.5rem', backgroundColor: 'var(--card-bg)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+            <label style={{ fontSize: '0.7rem' }}>Explore Along Route</label>
+            <div className="mode-toggle" style={{ flexWrap: 'wrap' }}>
+              <button onClick={() => searchPOIs('bike shop')} className={poiCategory === 'bike shop' ? 'active' : ''}>🛠 Bike Shops</button>
+              <button onClick={() => searchPOIs('cafe')} className={poiCategory === 'cafe' ? 'active' : ''}>☕ Cafes</button>
+              <button onClick={() => searchPOIs('park')} className={poiCategory === 'park' ? 'active' : ''}>🌳 Parks</button>
+              <button onClick={() => searchPOIs('charging station')} className={poiCategory === 'charging station' ? 'active' : ''}>⚡ Charging</button>
+            </div>
+            {pois.length > 0 && <p style={{ fontSize: '0.7rem', color: 'var(--secondary-text)', marginTop: '0.5rem' }}>Found {pois.length} spots. Click a marker on the map to add as stop!</p>}
+          </section>
+        )}
+
         {error && (
           <div style={{ color: '#d93025', fontSize: '0.8rem', marginTop: '0.5rem', fontStyle: 'italic' }}>
             {error}
@@ -694,6 +763,7 @@ function App() {
             mapContainerStyle={containerStyle}
             center={center}
             zoom={10}
+            onLoad={onMapLoad}
           >
             {trip.origin && trip.destination && isLoading && !response && (
               <DirectionsService
@@ -720,6 +790,20 @@ function App() {
                 }}
               />
             )}
+
+            {pois.map(poi => (
+              <Marker 
+                key={poi.id}
+                position={poi.position}
+                title={poi.name}
+                onClick={() => addPOIAsWaypoint(poi)}
+                label={{
+                  text: '➕',
+                  color: 'white',
+                  fontSize: '14px'
+                }}
+              />
+            ))}
           </GoogleMap>
         ) : (
           <div className="map-placeholder">Loading Google Maps...</div>
