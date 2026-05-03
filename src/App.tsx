@@ -441,33 +441,33 @@ function App() {
         )}
 
         {metrics && (
-          <div className="card" style={{ marginTop: '1.5rem', borderLeft: '4px solid var(--accent-color)' }}>
-            <h3 style={{ fontSize: '0.9rem', marginBottom: '0.5rem' }}>ESTIMATED TRIP METRICS</h3>
-            <p style={{ fontSize: '1.2rem', fontWeight: 'bold', marginBottom: '0.2rem' }}>
+          <div className="card metrics-card" style={{ marginTop: '1.5rem' }}>
+            <h3 style={{ fontSize: '0.9rem', marginBottom: '0.5rem', color: 'var(--accent-color)' }}>ESTIMATED TRIP METRICS</h3>
+            <p style={{ fontSize: '1.4rem', fontWeight: 'bold', marginBottom: '0.2rem', color: 'white' }}>
               Remaining Battery: {metrics.batteryPercentUsed.toFixed(1)}%
             </p>
-            <p style={{ fontSize: '1rem', color: 'var(--secondary-text)', marginBottom: '0.5rem' }}>
+            <p style={{ fontSize: '1rem', color: 'var(--secondary-text)', marginBottom: '0.8rem' }}>
               Est. Final Voltage: {(getBatteryLevels(specs.voltage).min + (metrics.batteryPercentUsed / 100) * (getBatteryLevels(specs.voltage).max - getBatteryLevels(specs.voltage).min)).toFixed(1)}V
             </p>
             
             {metrics.windConditions && (
-              <div style={{ margin: '0.5rem 0', fontSize: '0.85rem', padding: '0.5rem', backgroundColor: '#f0f7ff', borderRadius: '4px' }}>
-                <strong>Wind:</strong> {metrics.windConditions.speed} mph | 
-                <span style={{ color: metrics.windConditions.headwindComponent > 0 ? '#d93025' : '#188038' }}>
+              <div style={{ margin: '0.8rem 0', fontSize: '0.85rem', padding: '0.6rem', backgroundColor: '#2a2a2a', borderRadius: '6px', border: '1px solid #444' }}>
+                <strong style={{ color: 'white' }}>Wind:</strong> {metrics.windConditions.speed} mph | 
+                <span style={{ color: metrics.windConditions.headwindComponent > 0 ? '#ff4444' : '#00c853', fontWeight: '600' }}>
                   {metrics.windConditions.headwindComponent > 0 ? ` +${metrics.windConditions.headwindComponent.toFixed(1)} mph Headwind` : ` ${Math.abs(metrics.windConditions.headwindComponent).toFixed(1)} mph Tailwind`}
                 </span>
               </div>
             )}
 
-            <div style={{ margin: '0.8rem 0', padding: '0.8rem', backgroundColor: 'var(--card-bg)', borderRadius: '4px' }}>
-              <p style={{ color: 'var(--text-color)', fontSize: '0.9rem', fontWeight: '600' }}>
+            <div style={{ margin: '0.8rem 0', padding: '0.8rem', backgroundColor: '#2a2a2a', borderRadius: '6px', border: '1px solid #444' }}>
+              <p style={{ color: 'white', fontSize: '0.9rem', fontWeight: '600' }}>
                 Your Target Speed: {targetSpeedMph} mph
               </p>
               <p style={{ color: 'var(--secondary-text)', fontSize: '0.8rem', marginTop: '0.2rem' }}>
                 Rec. Speed for {mode.toUpperCase()}: {metrics.recommendedSpeedMph} mph
               </p>
             </div>
-            <div style={{ marginTop: '0.8rem', paddingTop: '0.8rem', borderTop: '1px solid var(--border-color)' }}>
+            <div style={{ marginTop: '0.8rem', paddingTop: '0.8rem', borderTop: '1px solid #333' }}>
               <p style={{ color: 'var(--secondary-text)', fontSize: '0.85rem' }}>
                 Distance: {metrics.distanceMiles.toFixed(1)} miles
               </p>
