@@ -81,6 +81,7 @@ function App() {
   });
 
   const [mode, setMode] = useState<'eco' | 'sport'>('eco');
+  const [ridingStyle, setRidingStyle] = useState<'relaxed' | 'aggressive'>('relaxed');
   const [isRoundTrip, setIsRoundTrip] = useState(false);
   const [isCustomReturn, setIsCustomReturn] = useState(false);
   const [targetSpeedMph, setTargetSpeedMph] = useState(15);
@@ -324,7 +325,8 @@ function App() {
       const elevationGainFeet = elevationGainM * 3.28084;
       
       const airSpeed = Math.max(5, targetSpeedMph + headwindComponent);
-      const Wh_base = 12; 
+      const styleMultiplier = ridingStyle === 'aggressive' ? 1.3 : 1.0;
+      const Wh_base = 12 * styleMultiplier; 
       const Wh_drag = 0.04 * Math.pow(airSpeed, 2);
       const effectiveWhPerMile = Wh_base + Wh_drag;
 
@@ -721,6 +723,24 @@ function App() {
           </div>
         </section>
 
+        <section className="form-group">
+          <label>Riding Style</label>
+          <div className="mode-toggle">
+            <button 
+              className={ridingStyle === 'relaxed' ? 'active' : ''} 
+              onClick={() => setRidingStyle('relaxed')}
+            >
+              Relaxed
+            </button>
+            <button 
+              className={ridingStyle === 'aggressive' ? 'active' : ''} 
+              onClick={() => setRidingStyle('aggressive')}
+            >
+              Aggressive
+            </button>
+          </div>
+        </section>
+
         {response && (
           <section className="form-group" style={{ marginTop: '1.5rem', backgroundColor: 'var(--card-bg)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
             <label style={{ fontSize: '0.7rem' }}>Explore Along Route</label>
@@ -949,6 +969,12 @@ function App() {
             />
 
             <div className="share-card-metrics">
+              <div className="share-metric-box" style={{ gridColumn: 'span 2', background: '#252525', border: '1px solid #444' }}>
+                <div className="share-metric-label">Bike Configuration</div>
+                <div className="share-metric-value" style={{ fontSize: '1rem' }}>
+                  {specs.voltage}V {specs.capacityAh}{capacityInputMode.toUpperCase()} | {specs.totalWeightLbs} lbs | {ridingStyle.toUpperCase()} Style
+                </div>
+              </div>
               <div className="share-metric-box">
                 <div className="share-metric-label">Remaining Battery</div>
                 <div className="share-metric-value">{metrics.batteryPercentUsed.toFixed(1)}%</div>
