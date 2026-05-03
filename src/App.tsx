@@ -91,6 +91,15 @@ function App() {
     setSpecs(bike.specs);
   };
 
+  const swapLocations = () => {
+    setTrip(prev => ({
+      origin: prev.destination,
+      destination: prev.origin
+    }));
+    setResponse(null);
+    setMetrics(null);
+  };
+
   const getBatteryLevels = (nominal: number) => {
     const series = Math.round(nominal / 3.7);
     return {
@@ -297,6 +306,28 @@ function App() {
           />
         </section>
 
+        <div style={{ display: 'flex', justifyContent: 'center', margin: '-0.5rem 0 0.5rem 0' }}>
+          <button 
+            onClick={swapLocations}
+            style={{ 
+              background: 'none', 
+              border: '1px solid #444', 
+              color: 'var(--accent-color)', 
+              borderRadius: '50%', 
+              width: '30px', 
+              height: '30px', 
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '1.2rem'
+            }}
+            title="Swap Origin/Destination"
+          >
+            ⇅
+          </button>
+        </div>
+
         <section className="form-group">
           <label>Destination</label>
           <input 
@@ -478,6 +509,25 @@ function App() {
                 Energy Used: {metrics.estimatedWh.toFixed(0)} Wh
               </p>
             </div>
+            
+            <button 
+              onClick={() => window.open(`https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(trip.origin)}&destination=${encodeURIComponent(trip.destination)}&travelmode=bicycling`, '_blank')}
+              style={{ 
+                width: '100%', 
+                marginTop: '1rem', 
+                padding: '0.6rem', 
+                backgroundColor: '#34a853', 
+                color: 'white', 
+                border: 'none', 
+                borderRadius: '6px', 
+                fontWeight: '700', 
+                cursor: 'pointer',
+                fontSize: '0.85rem'
+              }}
+            >
+              🚀 Open in Google Maps
+            </button>
+
             <p style={{ marginTop: '1rem', fontSize: '0.65rem', color: '#777', fontStyle: 'italic', lineHeight: '1.2' }}>
               * Results may vary based on battery age, cycle count, and internal degradation.
             </p>
