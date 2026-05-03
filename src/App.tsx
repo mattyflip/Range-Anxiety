@@ -76,13 +76,9 @@ function App() {
     const route = directions.routes[0];
     const leg = route.legs[0];
     
-    // Convert meters to miles
     const distanceMiles = (leg.distance?.value || 0) * 0.000621371;
-    
     const totalWhAvailable = specs.voltage * specs.capacityAh;
     const multiplier = isRoundTrip ? 2 : 1;
-    
-    // Convert lbs to kg for physics calculations (1 lb = 0.453592 kg)
     const totalWeightKg = specs.totalWeightLbs * 0.453592;
 
     let effectiveStartPercent = startBattery;
@@ -93,17 +89,16 @@ function App() {
       effectiveStartPercent = Math.min(100, Math.max(0, effectiveStartPercent));
     }
 
-    // Recommended speed for UI reference
     const recommendedSpeedMph = mode === 'eco' ? 15 : 22;
 
-    // Fetch elevation for the overview path
-    const polyline = typeof route.overview_polyline === 'string' 
-      ? route.overview_polyline 
-      : (route.overview_polyline as any).points;
+    try {
+      const polyline = typeof route.overview_polyline === 'string' 
+        ? route.overview_polyline 
+        : (route.overview_polyline as any).points;
 
-    const elevRes = await axios.get(`/api/elevation`, {
-      params: { path: `enc:${polyline}` }
-    });
+      const elevRes = await axios.get(`/api/elevation`, {
+        params: { path: `enc:${polyline}` }
+      });
 
       if (!elevRes.data.results || elevRes.data.results.length === 0) {
         throw new Error('No elevation results found');
@@ -116,12 +111,7 @@ function App() {
         if (diff > 0) elevationGainM += diff;
       }
 
-      // Convert elevation gain to feet
       const elevationGainFeet = elevationGainM * 3.28084;
-
-      // Physics-based Wh/mile estimation accounting for speed (drag increases with square of speed)
-      // Wh_base is rolling resistance and mechanical losses
-      // Wh_drag is proportional to speed^2
       const Wh_base = 12; 
       const Wh_drag = 0.04 * Math.pow(targetSpeedMph, 2);
       const effectiveWhPerMile = Wh_base + Wh_drag;
@@ -131,8 +121,6 @@ function App() {
       
       const estimatedWh = Wh_flat + Wh_climb;
       const batteryPercentUsed = (estimatedWh / totalWhAvailable) * 100;
-
-      // Update duration based on target speed
       const calculatedDurationMin = (distanceMiles / targetSpeedMph) * 60;
 
       setMetrics({
@@ -181,7 +169,7 @@ function App() {
         setError(`Error: Google Maps could not find a route (${status}).`);
       }
     }
-  }, [mode, specs, isRoundTrip]);
+  }, [mode, specs, isRoundTrip, targetSpeedMph, batteryInputMode, startBattery, startVoltage]);
 
   const handleCalculate = () => {
     if (trip.origin !== '' && trip.destination !== '') {
