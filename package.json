@@ -12,12 +12,15 @@
   },
   "dependencies": {
     "@react-google-maps/api": "^2.20.8",
+    "@stripe/stripe-js": "^9.4.0",
     "axios": "^1.16.0",
     "cors": "^2.8.6",
     "firebase": "^12.12.1",
+    "firebase-admin": "^13.8.0",
     "html-to-image": "^1.11.13",
     "react": "^19.2.5",
-    "react-dom": "^19.2.5"
+    "react-dom": "^19.2.5",
+    "stripe": "^22.1.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

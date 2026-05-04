@@ -6,8 +6,10 @@ import { auth, db } from './firebase'
 import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'firebase/auth'
 import type { User } from 'firebase/auth'
 import { doc, getDoc, setDoc } from 'firebase/firestore'
+import { loadStripe } from '@stripe/stripe-js'
 
 const LIBRARIES: ("places")[] = ["places"];
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || "");
 
 interface BikeSpecs {
   voltage: number | '';
@@ -152,18 +154,37 @@ function App() {
 
   const handleSignOut = () => signOut(auth);
 
+  const handleUpgrade = async () => {
+    if (!user) {
+      setShowAuthModal(true);
+      return;
+    }
+
+    try {
+      const resp = await axios.post('/api/create-checkout-session', {
+        userId: user.uid,
+        email: user.email
+      });
+      
+      const stripe = await stripePromise;
+      if (stripe) {
+        await (stripe as any).redirectToCheckout({ sessionId: resp.data.id });
+      }
+    } catch (err) {
+      console.error("Upgrade error:", err);
+      setError("Failed to start checkout process.");
+    }
+  };
+
   const [savedBikes, setSavedBikes] = useState<SavedBike[]>([]);
   const [newBikeName, setNewBikeName] = useState('');
 
-  // 1. Sync Bikes from Local or Cloud
   useEffect(() => {
     if (!user) {
-      // If not logged in, use localStorage
       const local = localStorage.getItem('ebike-saved-bikes');
       if (local) setSavedBikes(JSON.parse(local));
       else setSavedBikes([]);
     } else {
-      // If logged in, fetch from Firestore
       const fetchCloudBikes = async () => {
         try {
           const userDoc = await getDoc(doc(db, "users", user.uid));
@@ -186,7 +207,6 @@ function App() {
     setSavedBikes(updated);
 
     if (user) {
-      // Save to Cloud
       try {
         await setDoc(doc(db, "users", user.uid), {
           bikes: updated
@@ -196,7 +216,6 @@ function App() {
         setError("Failed to sync bike to the cloud.");
       }
     } else {
-      // Save to Local
       localStorage.setItem('ebike-saved-bikes', JSON.stringify(updated));
     }
     setNewBikeName('');
@@ -386,7 +405,6 @@ function App() {
 
     const distanceMiles = totalDistanceMeters * 0.000621371;
 
-    // Type-safe value extraction
     const v = Number(specs.voltage) || 48;
     const c = Number(specs.capacityAh) || 15;
     const w = Number(specs.totalWeightLbs) || 220;
@@ -511,7 +529,7 @@ function App() {
         setError(`Error: Google Maps could not find a route (${status}).`);
       }
     }
-  }, [mode, specs, isRoundTrip, targetSpeedMph, batteryInputMode, startBattery, startVoltage, capacityInputMode, trip, isCustomReturn]);
+  }, [mode, specs, isRoundTrip, targetSpeedMph, batteryInputMode, startBattery, startVoltage, capacityInputMode, trip, isCustomReturn, ridingStyle]);
 
   const handleCalculate = () => {
     if (trip.origin !== '' && trip.destination !== '') {
@@ -585,7 +603,6 @@ function App() {
         </div>
       </header>
 
-      {/* Authentication Modal */}
       {showAuthModal && (
         <div style={{ 
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, 
@@ -1063,6 +1080,27 @@ function App() {
               📸 Save Image to Share
             </button>
 
+            {(!isPro && user) && (
+              <button 
+                onClick={handleUpgrade}
+                style={{ 
+                  width: '100%', 
+                  marginTop: '0.5rem', 
+                  padding: '0.6rem', 
+                  backgroundColor: '#ffffff', 
+                  color: '#000000', 
+                  border: 'none', 
+                  borderRadius: '6px', 
+                  fontWeight: '900', 
+                  cursor: 'pointer',
+                  fontSize: '0.85rem',
+                  textTransform: 'uppercase'
+                }}
+              >
+                ⭐ Go PRO / Remove Ads
+              </button>
+            )}
+
             <p style={{ marginTop: '1rem', fontSize: '0.65rem', color: '#777', fontStyle: 'italic', lineHeight: '1.2' }}>
               * Results may vary based on battery age, cycle count, and internal degradation.
             </p>
@@ -1179,7 +1217,6 @@ function App() {
         </p>
       </footer>
 
-      {/* Hidden Share Card Template */}
       {metrics && response && (
         <div className="share-card-container">
           <div ref={shareCardRef} className="share-card">
