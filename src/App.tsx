@@ -7,6 +7,7 @@ import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndP
 import type { User } from 'firebase/auth'
 import { doc, getDoc, setDoc } from 'firebase/firestore'
 import AdBanner from './components/AdBanner'
+import { Analytics } from '@vercel/analytics/react'
 
 const LIBRARIES: ("places")[] = ["places"];
 
@@ -1338,6 +1339,7 @@ function App() {
           </div>
         </div>
       )}
+      <Analytics />
     </div>
   )
 }
