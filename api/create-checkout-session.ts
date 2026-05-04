@@ -27,7 +27,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               name: 'Range Anxiety PRO',
               description: 'Unlock all features and remove ads forever.',
             },
-            unit_amount: 1999, // $19.99 one-time
+            unit_amount: 499, // $4.99 one-time
           },
           quantity: 1,
         },
