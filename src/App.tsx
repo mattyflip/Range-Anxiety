@@ -7,6 +7,7 @@ import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndP
 import type { User } from 'firebase/auth'
 import { doc, getDoc, setDoc } from 'firebase/firestore'
 import AdBanner from './components/AdBanner'
+import { SpeedInsights } from '@vercel/speed-insights/react'
 
 const LIBRARIES: ("places")[] = ["places"];
 
@@ -1338,6 +1339,7 @@ function App() {
           </div>
         </div>
       )}
+      <SpeedInsights />
     </div>
   )
 }
