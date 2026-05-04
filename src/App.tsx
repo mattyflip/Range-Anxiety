@@ -152,17 +152,53 @@ function App() {
 
   const handleSignOut = () => signOut(auth);
 
-  const [savedBikes, setSavedBikes] = useState<SavedBike[]>(() => {
-    const local = localStorage.getItem('ebike-saved-bikes');
-    return local ? JSON.parse(local) : [];
-  });
+  const [savedBikes, setSavedBikes] = useState<SavedBike[]>([]);
   const [newBikeName, setNewBikeName] = useState('');
 
-  const saveCurrentBike = () => {
+  // 1. Sync Bikes from Local or Cloud
+  useEffect(() => {
+    if (!user) {
+      // If not logged in, use localStorage
+      const local = localStorage.getItem('ebike-saved-bikes');
+      if (local) setSavedBikes(JSON.parse(local));
+      else setSavedBikes([]);
+    } else {
+      // If logged in, fetch from Firestore
+      const fetchCloudBikes = async () => {
+        try {
+          const userDoc = await getDoc(doc(db, "users", user.uid));
+          if (userDoc.exists() && userDoc.data().bikes) {
+            setSavedBikes(userDoc.data().bikes);
+          }
+        } catch (e) {
+          console.error("Error fetching cloud bikes:", e);
+        }
+      };
+      fetchCloudBikes();
+    }
+  }, [user]);
+
+  const saveCurrentBike = async () => {
     if (!newBikeName) return;
-    const updated = [...savedBikes, { name: newBikeName, specs }];
+    const newBike = { name: newBikeName, specs };
+    const updated = [...savedBikes, newBike];
+    
     setSavedBikes(updated);
-    localStorage.setItem('ebike-saved-bikes', JSON.stringify(updated));
+
+    if (user) {
+      // Save to Cloud
+      try {
+        await setDoc(doc(db, "users", user.uid), {
+          bikes: updated
+        }, { merge: true });
+      } catch (e) {
+        console.error("Cloud save failed:", e);
+        setError("Failed to sync bike to the cloud.");
+      }
+    } else {
+      // Save to Local
+      localStorage.setItem('ebike-saved-bikes', JSON.stringify(updated));
+    }
     setNewBikeName('');
   };
 
