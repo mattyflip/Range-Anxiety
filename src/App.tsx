@@ -171,9 +171,10 @@ function App() {
       if (stripe) {
         await (stripe as any).redirectToCheckout({ sessionId: resp.data.id });
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Upgrade error:", err);
-      setError("Failed to start checkout process.");
+      const msg = err.response?.data?.error || err.message || "Failed to start checkout process.";
+      setError(`Checkout Error: ${msg}`);
     }
   };
 
