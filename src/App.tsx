@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
-import { GoogleMap, useJsApiLoader, DirectionsService, DirectionsRenderer, Marker } from '@react-google-maps/api'
+import { GoogleMap, useJsApiLoader, DirectionsService, DirectionsRenderer, Marker, InfoWindow } from '@react-google-maps/api'
 import axios from 'axios'
 import { toPng } from 'html-to-image'
 import { auth, db } from './firebase'
@@ -101,6 +101,7 @@ function App() {
   const [error, setError] = useState<string | null>(null);
   const [pois, setPois] = useState<POI[]>([]);
   const [poiCategory, setPoiCategory] = useState<string | null>(null);
+  const [selectedPoi, setSelectedPoi] = useState<POI | null>(null);
   
   const [user, setUser] = useState<User | null>(null);
   const [isPro, setIsPro] = useState(false);
@@ -1228,14 +1229,50 @@ function App() {
                 key={poi.id}
                 position={poi.position}
                 title={poi.name}
-                onClick={() => addPOIAsWaypoint(poi)}
+                onClick={() => setSelectedPoi(poi)}
                 label={{
-                  text: '➕',
+                  text: poi.type === 'charging station' ? '⚡' : '➕',
                   color: 'white',
                   fontSize: '14px'
                 }}
               />
             ))}
+
+            {selectedPoi && (
+              <InfoWindow
+                position={selectedPoi.position}
+                onCloseClick={() => setSelectedPoi(null)}
+              >
+                <div style={{ padding: '0.5rem', color: '#333', maxWidth: '200px' }}>
+                  <h4 style={{ margin: '0 0 0.3rem 0', fontSize: '0.9rem' }}>{selectedPoi.name}</h4>
+                  <p style={{ fontSize: '0.75rem', margin: '0 0 0.5rem 0', color: '#666' }}>{selectedPoi.address}</p>
+                  {selectedPoi.details && (
+                    <p style={{ fontSize: '0.7rem', margin: '0 0 0.8rem 0', padding: '0.4rem', background: '#f0f0f0', borderRadius: '4px' }}>
+                      <strong>Connectors:</strong> {selectedPoi.details}
+                    </p>
+                  )}
+                  <button 
+                    onClick={() => {
+                      addPOIAsWaypoint(selectedPoi);
+                      setSelectedPoi(null);
+                    }}
+                    style={{ 
+                      width: '100%', 
+                      padding: '0.4rem', 
+                      backgroundColor: 'var(--accent-color)', 
+                      color: 'white', 
+                      border: 'none', 
+                      borderRadius: '4px', 
+                      cursor: 'pointer',
+                      fontSize: '0.75rem',
+                      fontWeight: 'bold'
+                    }}
+                  >
+                    Add as Stop
+                  </button>
+                </div>
+              </InfoWindow>
+            )}
           </GoogleMap>
         </>
         ) : (
