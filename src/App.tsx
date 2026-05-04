@@ -1063,23 +1063,35 @@ function App() {
               🚀 Open in Google Maps
             </button>
 
-            <button 
-              onClick={downloadShareCard}
-              style={{ 
-                width: '100%', 
-                marginTop: '0.5rem', 
-                padding: '0.6rem', 
-                backgroundColor: 'var(--accent-color)', 
-                color: 'white', 
-                border: 'none', 
-                borderRadius: '6px', 
-                fontWeight: '700', 
-                cursor: 'pointer',
-                fontSize: '0.85rem'
-              }}
-            >
-              📸 Save Image to Share
-            </button>
+            {isPro ? (
+              <button 
+                onClick={downloadShareCard}
+                style={{ 
+                  width: '100%', 
+                  marginTop: '0.5rem', 
+                  padding: '0.6rem', 
+                  backgroundColor: 'var(--accent-color)', 
+                  color: 'white', 
+                  border: 'none', 
+                  borderRadius: '6px', 
+                  fontWeight: '700', 
+                  cursor: 'pointer',
+                  fontSize: '0.85rem'
+                }}
+              >
+                📸 Save Image to Share
+              </button>
+            ) : (
+              <div style={{ marginTop: '0.5rem', padding: '0.6rem', backgroundColor: '#2a2a2a', borderRadius: '6px', border: '1px dashed #444', textAlign: 'center' }}>
+                <p style={{ fontSize: '0.75rem', color: '#aaa', marginBottom: '0.3rem' }}>Want to share this with friends?</p>
+                <button 
+                  onClick={() => user ? handleUpgrade() : setShowAuthModal(true)}
+                  style={{ background: 'none', border: 'none', color: 'var(--accent-color)', fontSize: '0.8rem', cursor: 'pointer', fontWeight: 'bold', textDecoration: 'underline' }}
+                >
+                  Unlock Share Cards with PRO
+                </button>
+              </div>
+            )}
 
             {(!isPro && user) && (
               <button 
