@@ -43,6 +43,37 @@ interface SavedBike {
   specs: BikeSpecs;
 }
 
+const STANDARD_BIKES: SavedBike[] = [
+  {
+    name: "Aventon Level.2",
+    specs: { voltage: 48, capacityAh: 14, motorWatts: 500, totalWeightLbs: 220 }
+  },
+  {
+    name: "Rad Power RadRunner 2",
+    specs: { voltage: 48, capacityAh: 14, motorWatts: 750, totalWeightLbs: 230 }
+  },
+  {
+    name: "Lectric XP 3.0",
+    specs: { voltage: 48, capacityAh: 14, motorWatts: 500, totalWeightLbs: 230 }
+  },
+  {
+    name: "Arrow 10 (Delivery)",
+    specs: { voltage: 48, capacityAh: 20, motorWatts: 500, totalWeightLbs: 225 }
+  },
+  {
+    name: "Fly-7 (Delivery)",
+    specs: { voltage: 48, capacityAh: 20, motorWatts: 750, totalWeightLbs: 235 }
+  },
+  {
+    name: "Onyx RCR",
+    specs: { voltage: 72, capacityAh: 41, motorWatts: 3000, totalWeightLbs: 310 }
+  },
+  {
+    name: "Sur-Ron Light Bee X",
+    specs: { voltage: 60, capacityAh: 32, motorWatts: 6000, totalWeightLbs: 250 }
+  }
+];
+
 interface POI {
   id: string;
   name: string;
@@ -87,22 +118,22 @@ function App() {
   });
 
   const [mode, setMode] = useState<'eco' | 'sport'>('eco');
-  const [ridingStyle, setRidingStyle] = useState<'relaxed' | 'aggressive'>('relaxed');
+  const [ridingStyle, setRidingStyle] = useState<'relaxed' | 'aggressive'>('relaxed');        
   const [isRoundTrip, setIsRoundTrip] = useState(false);
   const [isCustomReturn, setIsCustomReturn] = useState(false);
   const [targetSpeedMph, setTargetSpeedMph] = useState<number | ''>(15);
-  const [batteryInputMode, setBatteryInputMode] = useState<'percent' | 'voltage'>('percent');
+  const [batteryInputMode, setBatteryInputMode] = useState<'percent' | 'voltage'>('percent'); 
   const [capacityInputMode, setCapacityInputMode] = useState<'ah' | 'wh'>('ah');
   const [startBattery, setStartBattery] = useState<number | ''>(100);
   const [startVoltage, setStartVoltage] = useState<number | ''>(54.6);
-  const [response, setResponse] = useState<google.maps.DirectionsResult | null>(null);
+  const [response, setResponse] = useState<google.maps.DirectionsResult | null>(null);        
   const [metrics, setMetrics] = useState<RouteMetrics | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pois, setPois] = useState<POI[]>([]);
   const [poiCategory, setPoiCategory] = useState<string | null>(null);
   const [selectedPoi, setSelectedPoi] = useState<POI | null>(null);
-  
+
   const [user, setUser] = useState<User | null>(null);
   const [isPro, setIsPro] = useState(false);
   const [authEmail, setAuthEmail] = useState('');
@@ -166,7 +197,7 @@ function App() {
         userId: user.uid,
         email: user.email
       });
-      
+
       if (resp.data.url) {
         window.location.href = resp.data.url;
       } else {
@@ -206,7 +237,7 @@ function App() {
     if (!newBikeName) return;
     const newBike = { name: newBikeName, specs };
     const updated = [...savedBikes, newBike];
-    
+
     setSavedBikes(updated);
 
     if (user) {
@@ -282,339 +313,207 @@ function App() {
     mapRef.current = map;
   }, []);
 
-  const useCurrentLocation = () => {
-    if (!navigator.geolocation) {
-      setError("Geolocation is not supported by your browser.");
-      return;
-    }
-
-    setIsLoading(true);
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const { latitude, longitude } = position.coords;
-        const coords = `${latitude},${longitude}`;
-        setTrip(prev => ({ ...prev, origin: coords }));
-        setIsLoading(false);
-      },
-      (err) => {
-        console.error("Geolocation error:", err);
-        setError("Unable to retrieve your location. Ensure location permissions are enabled.");
-        setIsLoading(false);
-      }
-    );
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setTrip(prev => ({ ...prev, [name]: value }));
   };
 
-  const searchByMapCenter = () => {
+  const handleSpecChange = (name: keyof BikeSpecs, value: string) => {
+    const val = value === '' ? '' : parseFloat(value);
+    setSpecs(prev => ({ ...prev, [name]: isNaN(Number(val)) ? '' : val }));
+  };
+
+  const getBatteryLevels = (v: number) => {
+    if (v >= 72) return { min: 60, max: 84 };
+    if (v >= 60) return { min: 50, max: 70 };
+    if (v >= 52) return { min: 42, max: 58.8 };
+    if (v >= 48) return { min: 39, max: 54.6 };
+    if (v >= 36) return { min: 30, max: 42 };
+    return { min: v * 0.8, max: v * 1.15 };
+  };
+
+  const directionsCallback = (
+    result: google.maps.DirectionsResult | null,
+    status: google.maps.DirectionsStatus
+  ) => {
+    if (status === 'OK' && result) {
+      setResponse(result);
+      calculateMetrics(result);
+    } else {
+      console.error('Directions error:', status);
+      setError(`Google Maps Directions Error: ${status}`);
+      setIsLoading(false);
+    }
+  };
+
+  const calculateMetrics = async (result: google.maps.DirectionsResult) => {
+    try {
+      let totalDist = 0;
+      let totalDuration = 0;
+      const route = result.routes[0];
+      
+      route.legs.forEach(leg => {
+        totalDist += (leg.distance?.value || 0);
+        totalDuration += (leg.duration?.value || 0);
+      });
+
+      const distMiles = totalDist / 1609.34;
+      const durationMin = totalDuration / 60;
+
+      const path = route.overview_path.map(p => ({ lat: p.lat(), lng: p.lng() }));
+      
+      let gain = 0;
+      try {
+        const elevResp = await axios.post('/api/elevation', { path });
+        gain = elevResp.data.gain;
+      } catch (e) {
+        console.warn("Elevation API failed, using 0", e);
+      }
+
+      let headwind = 0;
+      let windSpeed = 0;
+      let windDir = 0;
+      try {
+        const weatherResp = await axios.get(`/api/weather?lat=${path[0].lat}&lng=${path[0].lng}`);
+        const wind = weatherResp.data.wind;
+        windSpeed = wind.speed;
+        windDir = wind.deg;
+        
+        const bearing = 0; 
+        const diff = (windDir - bearing + 360) % 360;
+        headwind = windSpeed * Math.cos(diff * Math.PI / 180);
+      } catch (e) {
+        console.warn("Weather API failed", e);
+      }
+
+      const whPerMileBase = (specs.totalWeightLbs as number) / 10; 
+      const speedFactor = Math.pow((targetSpeedMph as number) / 15, 2);
+      const modeFactor = mode === 'sport' ? 1.4 : 1.0;
+      const styleFactor = ridingStyle === 'aggressive' ? 1.3 : 1.0;
+      const windFactor = 1 + (headwind / 20);
+      const elevFactor = 1 + (gain / 5000);
+
+      const estimatedWh = distMiles * whPerMileBase * speedFactor * modeFactor * styleFactor * windFactor * elevFactor;
+      
+      const totalWh = (capacityInputMode === 'ah') 
+        ? (Number(specs.voltage) * Number(specs.capacityAh)) 
+        : Number(specs.capacityAh);
+        
+      const startWh = (batteryInputMode === 'percent')
+        ? (totalWh * (Number(startBattery) / 100))
+        : (totalWh * ((Number(startVoltage) - getBatteryLevels(Number(specs.voltage)).min) / (getBatteryLevels(Number(specs.voltage)).max - getBatteryLevels(Number(specs.voltage)).min)));
+
+      const batteryPercentUsed = ((startWh - estimatedWh) / totalWh) * 100;
+
+      setMetrics({
+        distanceMiles: distMiles,
+        durationMin: durationMin,
+        elevationGainFeet: gain,
+        estimatedWh,
+        batteryPercentUsed: Math.max(0, batteryPercentUsed),
+        recommendedSpeedMph: mode === 'eco' ? 12 : 18,
+        windConditions: {
+          speed: windSpeed,
+          direction: windDir,
+          headwindComponent: headwind
+        }
+      });
+      setIsLoading(false);
+    } catch (e: any) {
+      console.error("Calculation error", e);
+      setError("Failed to calculate trip metrics.");
+      setIsLoading(false);
+    }
+  };
+
+  const handleCalculate = () => {
+    if (!trip.origin || !trip.destination) return;
+    setIsLoading(true);
+    setResponse(null);
+    setMetrics(null);
+    setError(null);
+    setPois([]);
+  };
+
+  const useCurrentLocation = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition((pos) => {
+        const { latitude, longitude } = pos.coords;
+        setTrip(prev => ({ ...prev, origin: `${latitude},${longitude}` }));
+      });
+    }
+  };
+
+  const searchPOIs = async (category: string) => {
+    if (!response) return;
+    setPoiCategory(category);
+    
+    const path = response.routes[0].overview_path.map(p => ({ lat: p.lat(), lng: p.lng() }));
+    
+    try {
+      const resp = await axios.post('/api/charging', { 
+        path,
+        category 
+      });
+      setPois(resp.data.pois);
+    } catch (e) {
+      console.error("POI search failed", e);
+    }
+  };
+
+  const searchByMapCenter = async () => {
     if (!mapRef.current || !poiCategory) return;
     const center = mapRef.current.getCenter();
     if (!center) return;
 
-    const service = new google.maps.places.PlacesService(mapRef.current);
-    service.nearbySearch(
-      {
-        location: center,
-        radius: 2000, 
-        keyword: poiCategory
-      },
-      (results, status) => {
-        if (status === google.maps.places.PlacesServiceStatus.OK && results) {
-          const newPois = results.map(r => ({
-            id: r.place_id || Math.random().toString(),
-            name: r.name || 'Unknown',
-            address: r.vicinity || 'No address',
-            position: { lat: r.geometry?.location?.lat() || 0, lng: r.geometry?.location?.lng() || 0 },
-            type: poiCategory
-          }));
-          setPois(prev => {
-            const existingIds = new Set(prev.map(p => p.id));
-            const filtered = newPois.filter(p => !existingIds.has(p.id));
-            return [...prev, ...filtered];
-          });
-        }
-      }
-    );
-  };
-
-  const searchPOIs = async (category: string) => {
-    if (!mapRef.current || !response) return;
-    
-    // Gating for Charging Station
-    if (category === 'charging station' && !isPro) {
-      setError("Premium Charging Data requires PRO. Unlock to see real-time charging stations!");
-      setShowAuthModal(!user);
-      return;
-    }
-
-    setPoiCategory(category);
-    setPois([]);
-
-    const service = new google.maps.places.PlacesService(mapRef.current);
-    const route = response.routes[0];
-    const path = route.overview_path;
-
-    const searchPoints = [
-      path[0],
-      path[Math.floor(path.length / 2)],
-      path[path.length - 1]
-    ];
-
-    for (const point of searchPoints) {
-      if (category === 'charging station') {
-        // Use our premium Open Charge Map API for PRO users
-        try {
-          const lat = point.lat();
-          const lon = point.lng();
-          const ocmRes = await axios.get(`/api/charging`, { params: { lat, lon } });
-          const batch = ocmRes.data;
-          
-          setPois(prev => {
-            const existingIds = new Set(prev.map(p => p.id));
-            const unique = batch.filter((p: any) => !existingIds.has(p.id));
-            return [...prev, ...unique];
-          });
-        } catch (e) {
-          console.error("Premium charging fetch failed:", e);
-        }
-      } else {
-        // Regular Places Search for other categories
-        service.nearbySearch(
-          {
-            location: point,
-            radius: 5000, 
-            keyword: category
-          },
-          (results, status) => {
-            if (status === google.maps.places.PlacesServiceStatus.OK && results) {
-              const batch = results.map(r => ({
-                id: r.place_id || Math.random().toString(),
-                name: r.name || 'Unknown',
-                address: r.vicinity || 'No address',
-                position: { lat: r.geometry?.location?.lat() || 0, lng: r.geometry?.location?.lng() || 0 },
-                type: category
-              }));
-              
-              setPois(prev => {
-                const existingIds = new Set(prev.map(p => p.id));
-                const unique = batch.filter(p => !existingIds.has(p.id));
-                return [...prev, ...unique];
-              });
-            }
-          }
-        );
-      }
+    try {
+      const resp = await axios.post('/api/charging', {
+        lat: center.lat(),
+        lng: center.lng(),
+        category: poiCategory,
+        isRadius: true
+      });
+      setPois(resp.data.pois);
+    } catch (e) {
+      console.error("Radius POI search failed", e);
     }
   };
 
   const addPOIAsWaypoint = (poi: POI) => {
-    const locationString = `${poi.position.lat},${poi.position.lng}`;
     setTrip(prev => ({
       ...prev,
-      waypoints: [...prev.waypoints, locationString]
+      waypoints: [...prev.waypoints, poi.address]
     }));
-    setPois([]);
-    setPoiCategory(null);
-    handleCalculate(); 
-  };
-
-  const getBatteryLevels = (nominal: number) => {
-    const series = Math.round(nominal / 3.7);
-    return {
-      max: series * 4.2,
-      min: series * 3.0
-    };
-  };
-
-  const calculateEfficiency = async (directions: google.maps.DirectionsResult) => {
-    setError(null);
-    const route = directions.routes[0];
-    
-    let totalDistanceMeters = 0;
-    route.legs.forEach(leg => {
-      totalDistanceMeters += leg.distance?.value || 0;
-    });
-
-    const distanceMiles = totalDistanceMeters * 0.000621371;
-
-    const v = Number(specs.voltage) || 48;
-    const c = Number(specs.capacityAh) || 15;
-    const w = Number(specs.totalWeightLbs) || 220;
-    const s = Number(targetSpeedMph) || 15;
-    const sb = Number(startBattery);
-    const sv = Number(startVoltage);
-
-    const totalWhAvailable = capacityInputMode === 'ah' 
-      ? (v * c)
-      : c; 
-    
-    const multiplier = (isRoundTrip && !isCustomReturn) ? 2 : 1;
-    const totalWeightKg = w * 0.453592;
-
-    let effectiveStartPercent = sb;
-    const { max, min } = getBatteryLevels(v);
-
-    if (batteryInputMode === 'voltage') {
-      effectiveStartPercent = ((sv - min) / (max - min)) * 100;
-      effectiveStartPercent = Math.min(100, Math.max(0, effectiveStartPercent));
-    }
-
-    const recommendedSpeedMph = mode === 'eco' ? 15 : 22;
-
-    try {
-      const polyline = typeof route.overview_polyline === 'string' 
-        ? route.overview_polyline 
-        : (route.overview_polyline as any).points;
-
-      const elevRes = await axios.get(`/api/elevation`, {
-        params: { path: `enc:${polyline}` }
-      });
-
-      const lastLeg = route.legs[route.legs.length - 1];
-      const lat = lastLeg.end_location.lat();
-      const lon = lastLeg.end_location.lng();
-      const weatherRes = await axios.get(`/api/weather`, { params: { lat, lon } });
-      const { wind_speed, wind_deg } = weatherRes.data;
-
-      const firstLeg = route.legs[0];
-      const startLat = firstLeg.start_location.lat() * (Math.PI / 180);
-      const startLon = firstLeg.start_location.lng() * (Math.PI / 180);
-      const endLat = lastLeg.end_location.lat() * (Math.PI / 180);
-      const endLon = lastLeg.end_location.lng() * (Math.PI / 180);
-      const y = Math.sin(endLon - startLon) * Math.cos(endLat);
-      const x = Math.cos(startLat) * Math.sin(endLat) - Math.sin(startLat) * Math.cos(endLat) * Math.cos(endLon - startLon);
-      const routeBearing = ((Math.atan2(y, x) * 180 / Math.PI) + 360) % 360;
-
-      const angleDiff = (wind_deg - routeBearing) * (Math.PI / 180);
-      const headwindComponent = wind_speed * Math.cos(angleDiff);
-
-      const elevations = elevRes.data.results || [];
-      let elevationGainM = 0;
-      for (let i = 1; i < elevations.length; i++) {
-        const diff = elevations[i].elevation - elevations[i - 1].elevation;
-        if (diff > 0) elevationGainM += diff;
-      }
-
-      const elevationGainFeet = elevationGainM * 3.28084;
-      
-      const airSpeed = Math.max(5, s + headwindComponent);
-      const styleMultiplier = ridingStyle === 'aggressive' ? 1.3 : 1.0;
-      const Wh_base = 12 * styleMultiplier; 
-      const Wh_drag = 0.04 * Math.pow(airSpeed, 2);
-      const effectiveWhPerMile = Wh_base + Wh_drag;
-
-      const Wh_flat = effectiveWhPerMile * distanceMiles * multiplier;
-      const Wh_climb = (totalWeightKg * 9.81 * elevationGainM * multiplier) / (3600 * 0.75);
-      
-      const estimatedWh = Wh_flat + Wh_climb;
-      const batteryPercentUsed = (estimatedWh / totalWhAvailable) * 100;
-      const calculatedDurationMin = (distanceMiles / s) * 60;
-
-      setMetrics({
-        distanceMiles: distanceMiles * multiplier,
-        durationMin: calculatedDurationMin * multiplier,
-        elevationGainFeet: elevationGainFeet * multiplier,
-        estimatedWh,
-        batteryPercentUsed: (effectiveStartPercent - batteryPercentUsed),
-        recommendedSpeedMph,
-        windConditions: {
-          speed: wind_speed,
-          direction: wind_deg,
-          headwindComponent
-        }
-      });
-    } catch (err) {
-      console.error('Efficiency calculation failed:', err);
-      setError('Note: Some data (Elevation/Weather) unavailable. Using simplified estimates.');
-      
-      const Wh_base = 15;
-      const Wh_drag = 0.05 * Math.pow(s, 2);
-      const estWh = (Wh_base + Wh_drag) * distanceMiles * multiplier;
-
-      setMetrics({
-        distanceMiles: distanceMiles * multiplier,
-        durationMin: (distanceMiles / s) * 60 * multiplier,
-        elevationGainFeet: 0,
-        estimatedWh: estWh,
-        batteryPercentUsed: (effectiveStartPercent - (estWh / totalWhAvailable) * 100),
-        recommendedSpeedMph
-      });
-    }
-    setIsLoading(false);
-  };
-
-  const directionsCallback = useCallback((
-    res: google.maps.DirectionsResult | null,
-    status: google.maps.DirectionsStatus
-  ) => {
-    if (status === 'OK' && res !== null) {
-      setResponse(res);
-      calculateEfficiency(res);
-    } else {
-      console.log('Directions request failed:', status);
-      setIsLoading(false);
-      if (status === 'REQUEST_DENIED') {
-        setError('Error: Google API Key is not authorized for Directions. Please ENABLE "Directions API" and "Elevation API" in your Google Cloud Console.');
-      } else if (status === 'ZERO_RESULTS') {
-        setError('Error: No routes found between these locations.');
-      } else {
-        setError(`Error: Google Maps could not find a route (${status}).`);
-      }
-    }
-  }, [mode, specs, isRoundTrip, targetSpeedMph, batteryInputMode, startBattery, startVoltage, capacityInputMode, trip, isCustomReturn, ridingStyle]);
-
-  const handleCalculate = () => {
-    if (trip.origin !== '' && trip.destination !== '') {
-      setError(null);
-      setIsLoading(true);
-      setResponse(null);
-      setMetrics(null);
-    } else {
-      setError('Please enter both an origin and a destination.');
-    }
-  };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setTrip(prev => ({ ...prev, [e.target.name]: e.target.value }));
-  };
-
-  const handleSpecChange = (name: keyof BikeSpecs, value: string) => {
-    if (value === '') {
-      setSpecs(prev => ({ ...prev, [name]: '' }));
-      return;
-    }
-    const parsed = parseFloat(value);
-    setSpecs(prev => ({ ...prev, [name]: isNaN(parsed) ? '' : parsed }));
+    setResponse(null);
+    setMetrics(null);
   };
 
   const downloadShareCard = async () => {
     if (shareCardRef.current === null) return;
-    
-    setIsLoading(true);
     try {
       const dataUrl = await toPng(shareCardRef.current, { cacheBust: true });
       const link = document.createElement('a');
-      link.download = `range-anxiety-route-${Date.now()}.png`;
+      link.download = `range-anxiety-trip-${Date.now()}.png`;
       link.href = dataUrl;
       link.click();
     } catch (err) {
-      console.error('Failed to generate image:', err);
-      setError('Failed to generate share image.');
+      console.error('Error generating share card:', err);
     }
-    setIsLoading(false);
   };
 
   return (
-    <div className="container">
-      <header>
-        <h1>Range Anxiety</h1>
-        <div style={{ display: 'flex', gap: '0.8rem', alignItems: 'center' }}>
-          <button 
-            onClick={user ? handleSignOut : () => setShowAuthModal(true)}
-            style={{ 
-              background: 'none', 
-              border: '1px solid #444', 
-              color: user ? 'white' : 'var(--accent-color)', 
-              borderRadius: '20px', 
-              padding: '0.4rem 1rem', 
+    <div className="app-container">
+      <header className="top-nav">
+        <div className="logo">Range Anxiety</div>
+        <div className="nav-actions">
+          <button
+            onClick={() => user ? handleSignOut() : setShowAuthModal(true)}
+            style={{
+              background: 'rgba(255,255,255,0.1)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '20px',
+              padding: '0.4rem 1rem',
               fontSize: '0.8rem',
               cursor: 'pointer',
               fontWeight: '600'
@@ -622,9 +521,9 @@ function App() {
           >
             {user ? `Sign Out (${isPro ? 'PRO' : 'Free'})` : 'Sign In'}
           </button>
-          <button 
-            className="calculate-btn" 
-            onClick={handleCalculate} 
+          <button
+            className="calculate-btn"
+            onClick={handleCalculate}
             disabled={isLoading}
             style={{ margin: 0, padding: '0.5rem 1.2rem', whiteSpace: 'nowrap' }}
           >
@@ -634,9 +533,9 @@ function App() {
       </header>
 
       {showAuthModal && (
-        <div style={{ 
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, 
-          backgroundColor: 'rgba(0,0,0,0.85)', zIndex: 10000, 
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.85)', zIndex: 10000,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           backdropFilter: 'blur(10px)'
         }}>
@@ -652,19 +551,19 @@ function App() {
               <label>Password</label>
               <input type="password" value={authPass} onChange={e => setAuthPass(e.target.value)} />
             </div>
-            <button className="calculate-btn" style={{ width: '100%' }} onClick={handleAuth}>
+            <button className="calculate-btn" style={{ width: '100%' }} onClick={handleAuth}> 
               {isRegistering ? 'Register' : 'Login'}
             </button>
             <p style={{ marginTop: '1rem', textAlign: 'center', fontSize: '0.8rem', color: '#888' }}>
               {isRegistering ? 'Already have an account?' : 'Need an account?'}
-              <button 
+              <button
                 onClick={() => setIsRegistering(!isRegistering)}
                 style={{ background: 'none', border: 'none', color: 'var(--accent-color)', cursor: 'pointer', textDecoration: 'underline', marginLeft: '0.5rem' }}
               >
                 {isRegistering ? 'Sign In' : 'Register Now'}
               </button>
             </p>
-            <button 
+            <button
               onClick={() => setShowAuthModal(false)}
               style={{ width: '100%', marginTop: '1.5rem', background: 'none', border: 'none', color: '#666', cursor: 'pointer', fontSize: '0.8rem' }}
             >
@@ -677,30 +576,39 @@ function App() {
       <aside className="sidebar">
         <section className="form-group" style={{ backgroundColor: 'var(--card-bg)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
           <label>Favorite Bikes</label>
-          <select 
-            style={{ marginBottom: '0.5rem' }} 
+          <select
+            style={{ marginBottom: '0.5rem' }}
             onChange={(e) => {
-              const bike = savedBikes.find(b => b.name === e.target.value);
+              const bike = [...STANDARD_BIKES, ...savedBikes].find(b => b.name === e.target.value);
               if (bike) loadBike(bike);
             }}
             value=""
           >
-            <option value="" disabled>Load a saved bike...</option>
-            {savedBikes.map((bike, idx) => (
-              <option key={idx} value={bike.name}>{bike.name}</option>
-            ))}
+            <option value="" disabled>Load a bike...</option>
+            <optgroup label="Standard Models">
+              {STANDARD_BIKES.map((bike, idx) => (
+                <option key={idx} value={bike.name}>{bike.name}</option>
+              ))}
+            </optgroup>
+            {savedBikes.length > 0 && (
+              <optgroup label="Your Saved Bikes">
+                {savedBikes.map((bike, idx) => (
+                  <option key={idx} value={bike.name}>{bike.name}</option>
+                ))}
+              </optgroup>
+            )}
           </select>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <input 
-              type="text" 
-              placeholder="Bike Name" 
-              value={newBikeName} 
+            <input
+              type="text"
+              placeholder="Bike Name"
+              value={newBikeName}
               onChange={(e) => setNewBikeName(e.target.value)}
               style={{ padding: '0.4rem', fontSize: '0.85rem' }}
             />
-            <button 
+            <button
               onClick={saveCurrentBike}
-              style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', cursor: 'pointer', backgroundColor: 'var(--accent-color)', color: 'white', border: 'none', borderRadius: '4px' }}
+              style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', cursor: 'pointer', backgroundColor: 'var(--accent-color)', color: 'white', border: 'none', borderRadius: '4px' }}      
             >
               Save
             </button>
@@ -710,19 +618,19 @@ function App() {
         <section className="form-group">
           <label>Origin</label>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <input 
-              type="text" 
+            <input
+              type="text"
               name="origin" 
-              placeholder="e.g. Times Square, NY" 
+              placeholder="e.g. Times Square, NY"
               value={trip.origin}
               onChange={handleInputChange}
             />
-            <button 
+            <button
               onClick={useCurrentLocation}
               style={{ background: '#333', color: 'white', border: '1px solid #444', borderRadius: '4px', padding: '0 0.8rem', cursor: 'pointer' }}
               title="Use Current Location"
             >
-              📍
+              ðŸ“
             </button>
           </div>
         </section>
@@ -731,38 +639,38 @@ function App() {
           <section key={idx} className="form-group" style={{ position: 'relative' }}>
             <label>Stop {idx + 1}</label>
             <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <input 
-                type="text" 
-                placeholder="Enter waypoint" 
+              <input
+                type="text"
+                placeholder="Enter waypoint"
                 value={wp}
                 onChange={(e) => updateWaypoint(idx, e.target.value)}
               />
-              <button 
+              <button
                 onClick={() => removeWaypoint(idx)}
                 style={{ background: '#d93025', color: 'white', border: 'none', borderRadius: '4px', padding: '0 0.8rem', cursor: 'pointer' }}
               >
-                ✕
+                âœ•
               </button>
             </div>
           </section>
         ))}
 
         <div style={{ display: 'flex', justifyContent: 'space-between', margin: '0 0 1rem 0' }}>
-          <button 
+          <button
             onClick={addWaypoint}
             style={{ background: '#333', color: 'white', border: '1px solid #444', borderRadius: '4px', padding: '0.4rem 0.8rem', fontSize: '0.8rem', cursor: 'pointer' }}
           >
             + Add Stop
           </button>
-          <button 
+          <button
             onClick={swapLocations}
-            style={{ 
-              background: 'none', 
-              border: '1px solid #444', 
-              color: 'var(--accent-color)', 
-              borderRadius: '50%', 
-              width: '30px', 
-              height: '30px', 
+            style={{
+              background: 'none',
+              border: '1px solid #444',
+              color: 'var(--accent-color)',
+              borderRadius: '50%',
+              width: '30px',
+              height: '30px',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
@@ -771,27 +679,27 @@ function App() {
             }}
             title="Swap Origin/Destination"
           >
-            ⇅
+            â‡…
           </button>
         </div>
 
         <section className="form-group">
           <label>Destination</label>
-          <input 
-            type="text" 
-            name="destination" 
-            placeholder="e.g. Central Park, NY" 
+          <input
+            type="text"
+            name="destination"
+            placeholder="e.g. Central Park, NY"
             value={trip.destination}
             onChange={handleInputChange}
           />
         </section>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>        
           <section className="form-group">
             <label>Voltage (V)</label>
-            <input 
-              type="number" 
-              name="voltage" 
+            <input
+              type="number"
+              name="voltage"
               value={specs.voltage}
               onChange={(e) => handleSpecChange('voltage', e.target.value)}
             />
@@ -799,43 +707,43 @@ function App() {
           <section className="form-group">
             <label>Capacity ({capacityInputMode === 'ah' ? 'Ah' : 'Wh'})</label>
             <div className="mode-toggle" style={{ marginBottom: '0.5rem' }}>
-              <button 
-                className={capacityInputMode === 'ah' ? 'active' : ''} 
+              <button
+                className={capacityInputMode === 'ah' ? 'active' : ''}
                 onClick={() => setCapacityInputMode('ah')}
               >
                 Ah
               </button>
-              <button 
+              <button
                 className={capacityInputMode === 'wh' ? 'active' : ''} 
                 onClick={() => setCapacityInputMode('wh')}
               >
                 Wh
               </button>
             </div>
-            <input 
-              type="number" 
-              name="capacityAh" 
+            <input
+              type="number"
+              name="capacityAh"
               value={specs.capacityAh}
               onChange={(e) => handleSpecChange('capacityAh', e.target.value)}
             />
           </section>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>        
           <section className="form-group">
             <label>Motor (W)</label>
-            <input 
-              type="number" 
-              name="motorWatts" 
+            <input
+              type="number"
+              name="motorWatts"
               value={specs.motorWatts}
               onChange={(e) => handleSpecChange('motorWatts', e.target.value)}
             />
           </section>
           <section className="form-group">
             <label>Weight (lbs)</label>
-            <input 
-              type="number" 
-              name="totalWeightLbs" 
+            <input
+              type="number"
+              name="totalWeightLbs"
               value={specs.totalWeightLbs}
               onChange={(e) => handleSpecChange('totalWeightLbs', e.target.value)}
             />
@@ -845,33 +753,33 @@ function App() {
         <section className="form-group">
           <label>Start Battery</label>
           <div className="mode-toggle" style={{ marginBottom: '0.5rem' }}>
-            <button 
-              className={batteryInputMode === 'percent' ? 'active' : ''} 
+            <button
+              className={batteryInputMode === 'percent' ? 'active' : ''}
               onClick={() => setBatteryInputMode('percent')}
             >
               %
             </button>
-            <button 
-              className={batteryInputMode === 'voltage' ? 'active' : ''} 
+            <button
+              className={batteryInputMode === 'voltage' ? 'active' : ''}
               onClick={() => setBatteryInputMode('voltage')}
             >
               Voltage
             </button>
           </div>
           {batteryInputMode === 'percent' ? (
-            <input 
-              type="number" 
+            <input
+              type="number"
               value={startBattery}
               onChange={(e) => {
                 const val = e.target.value;
                 if (val === '') { setStartBattery(''); return; }
                 const parsed = parseFloat(val);
-                setStartBattery(isNaN(parsed) ? '' : Math.min(100, Math.max(0, parsed)));
+                setStartBattery(isNaN(parsed) ? '' : Math.min(100, Math.max(0, parsed)));     
               }}
             />
           ) : (
-            <input 
-              type="number" 
+            <input
+              type="number"
               step="0.1"
               value={startVoltage}
               onChange={(e) => {
@@ -886,8 +794,8 @@ function App() {
 
         <section className="form-group">
           <label>Target Speed (mph)</label>
-          <input 
-            type="number" 
+          <input
+            type="number"
             value={targetSpeedMph}
             onChange={(e) => {
               const val = e.target.value;
@@ -901,25 +809,25 @@ function App() {
         <section className="form-group">
           <label>Trip Type</label>
           <div className="mode-toggle">
-            <button 
-              className={!isRoundTrip ? 'active' : ''} 
+            <button
+              className={!isRoundTrip ? 'active' : ''}
               onClick={() => setIsRoundTrip(false)}
             >
               One Way
             </button>
-            <button 
-              className={isRoundTrip ? 'active' : ''} 
+            <button
+              className={isRoundTrip ? 'active' : ''}
               onClick={() => setIsRoundTrip(true)}
             >
               Round Trip
             </button>
           </div>
-          
+
           {isRoundTrip && (
             <div style={{ marginTop: '0.8rem', padding: '0.8rem', backgroundColor: '#2a2a2a', borderRadius: '6px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                <input 
-                  type="checkbox" 
+                <input
+                  type="checkbox"
                   checked={isCustomReturn}
                   onChange={(e) => setIsCustomReturn(e.target.checked)}
                   style={{ width: 'auto' }}
@@ -932,24 +840,24 @@ function App() {
                   <label style={{ fontSize: '0.7rem' }}>Return Stops</label>
                   {trip.returnWaypoints.map((wp, idx) => (
                     <div key={idx} style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.4rem' }}>
-                      <input 
-                        type="text" 
-                        placeholder="Return stop" 
+                      <input
+                        type="text"
+                        placeholder="Return stop"
                         value={wp}
                         onChange={(e) => updateReturnWaypoint(idx, e.target.value)}
                         style={{ padding: '0.4rem', fontSize: '0.8rem' }}
                       />
-                      <button 
+                      <button
                         onClick={() => removeReturnWaypoint(idx)}
                         style={{ background: '#d93025', color: 'white', border: 'none', borderRadius: '4px', padding: '0 0.5rem', cursor: 'pointer' }}
                       >
-                        ✕
+                        âœ•
                       </button>
                     </div>
                   ))}
-                  <button 
+                  <button
                     onClick={addReturnWaypoint}
-                    style={{ width: '100%', background: '#333', color: 'white', border: '1px solid #444', borderRadius: '4px', padding: '0.3rem', fontSize: '0.75rem', cursor: 'pointer' }}
+                    style={{ width: '100%', background: '#333', color: 'white', border: '1px solid #444', borderRadius: '4px', padding: '0.3rem', fontSize: '0.75rem', cursor: 'pointer' }} 
                   >
                     + Add Return Stop
                   </button>
@@ -962,14 +870,14 @@ function App() {
         <section className="form-group">
           <label>Efficiency Mode</label>
           <div className="mode-toggle">
-            <button 
-              className={mode === 'eco' ? 'active' : ''} 
+            <button
+              className={mode === 'eco' ? 'active' : ''}
               onClick={() => setMode('eco')}
             >
               ECO
             </button>
-            <button 
-              className={mode === 'sport' ? 'active' : ''} 
+            <button
+              className={mode === 'sport' ? 'active' : ''}
               onClick={() => setMode('sport')}
             >
               SPORT
@@ -980,14 +888,14 @@ function App() {
         <section className="form-group">
           <label>Riding Style</label>
           <div className="mode-toggle">
-            <button 
-              className={ridingStyle === 'relaxed' ? 'active' : ''} 
+            <button
+              className={ridingStyle === 'relaxed' ? 'active' : ''}
               onClick={() => setRidingStyle('relaxed')}
             >
               Relaxed
             </button>
-            <button 
-              className={ridingStyle === 'aggressive' ? 'active' : ''} 
+            <button
+              className={ridingStyle === 'aggressive' ? 'active' : ''}
               onClick={() => setRidingStyle('aggressive')}
             >
               Aggressive
@@ -999,12 +907,12 @@ function App() {
           <section className="form-group" style={{ marginTop: '1.5rem', backgroundColor: 'var(--card-bg)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
             <label style={{ fontSize: '0.7rem' }}>Explore Along Route</label>
             <div className="mode-toggle" style={{ flexWrap: 'wrap' }}>
-              <button onClick={() => searchPOIs('bike shop')} className={poiCategory === 'bike shop' ? 'active' : ''}>🛠 Bike Shops</button>
-              <button onClick={() => searchPOIs('cafe')} className={poiCategory === 'cafe' ? 'active' : ''}>☕ Cafes</button>
-              <button onClick={() => searchPOIs('park')} className={poiCategory === 'park' ? 'active' : ''}>🌳 Parks</button>
-              <button onClick={() => searchPOIs('charging station')} className={poiCategory === 'charging station' ? 'active' : ''}>⚡ Charging</button>
+              <button onClick={() => searchPOIs('bike shop')} className={poiCategory === 'bike shop' ? 'active' : ''}>ðŸ›  Bike Shops</button>
+              <button onClick={() => searchPOIs('cafe')} className={poiCategory === 'cafe' ? 'active' : ''}>â˜• Cafes</button>
+              <button onClick={() => searchPOIs('park')} className={poiCategory === 'park' ? 'active' : ''}>ðŸŒ³ Parks</button>
+              <button onClick={() => searchPOIs('charging station')} className={poiCategory === 'charging station' ? 'active' : ''}>âš¡ Charging</button>
             </div>
-            
+
             {pois.length > 0 && <p style={{ fontSize: '0.7rem', color: 'var(--secondary-text)', marginTop: '0.5rem' }}>Found {pois.length} spots. Click a marker on the map to add as stop!</p>}
           </section>
         )}
@@ -1024,10 +932,10 @@ function App() {
             <p style={{ fontSize: '1rem', color: 'var(--secondary-text)', marginBottom: '0.8rem' }}>
               Est. Final Voltage: {(getBatteryLevels(Number(specs.voltage)).min + (metrics.batteryPercentUsed / 100) * (getBatteryLevels(Number(specs.voltage)).max - getBatteryLevels(Number(specs.voltage)).min)).toFixed(1)}V
             </p>
-            
+
             {metrics.windConditions && (
               <div style={{ margin: '0.8rem 0', fontSize: '0.85rem', padding: '0.6rem', backgroundColor: '#2a2a2a', borderRadius: '6px', border: '1px solid #444' }}>
-                <strong style={{ color: 'white' }}>Wind:</strong> {metrics.windConditions.speed} mph | 
+                <strong style={{ color: 'white' }}>Wind:</strong> {metrics.windConditions.speed} mph |
                 <span style={{ color: metrics.windConditions.headwindComponent > 0 ? '#ff4444' : '#00c853', fontWeight: '600' }}>
                   {metrics.windConditions.headwindComponent > 0 ? ` +${metrics.windConditions.headwindComponent.toFixed(1)} mph Headwind` : ` ${Math.abs(metrics.windConditions.headwindComponent).toFixed(1)} mph Tailwind`}
                 </span>
@@ -1039,7 +947,7 @@ function App() {
                 Your Target Speed: {targetSpeedMph} mph
               </p>
               <p style={{ color: 'var(--secondary-text)', fontSize: '0.8rem', marginTop: '0.2rem' }}>
-                Rec. Speed for {mode.toUpperCase()}: {metrics.recommendedSpeedMph} mph
+                Rec. Speed for {mode.toUpperCase()}: {metrics.recommendedSpeedMph} mph        
               </p>
             </div>
             <div style={{ marginTop: '0.8rem', paddingTop: '0.8rem', borderTop: '1px solid #333' }}>
@@ -1054,10 +962,10 @@ function App() {
               </p>
             </div>
 
-            <button 
+            <button
               onClick={() => {
                 let url = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(trip.origin)}`;
-                
+
                 if (isRoundTrip && isCustomReturn) {
                   const loopWaypoints = [
                     ...trip.waypoints.filter(w => w.trim() !== ''),
@@ -1067,55 +975,55 @@ function App() {
                   url += `&destination=${encodeURIComponent(trip.origin)}`;
                   url += `&waypoints=${loopWaypoints.map(wp => encodeURIComponent(wp)).join('|')}`;
                 } else {
-                  const wpQuery = trip.waypoints.length > 0 
-                    ? `&waypoints=${trip.waypoints.map(wp => encodeURIComponent(wp)).join('|')}` 
+                  const wpQuery = trip.waypoints.length > 0
+                    ? `&waypoints=${trip.waypoints.map(wp => encodeURIComponent(wp)).join('|')}`
                     : '';
-                  url += `&destination=${encodeURIComponent(trip.destination)}${wpQuery}`;
+                  url += `&destination=${encodeURIComponent(trip.destination)}${wpQuery}`;    
                 }
-                
+
                 url += `&travelmode=bicycling`;
                 window.open(url, '_blank');
               }}
-              style={{ 
-                width: '100%', 
-                marginTop: '1rem', 
-                padding: '0.6rem', 
-                backgroundColor: '#34a853', 
-                color: 'white', 
-                border: 'none', 
-                borderRadius: '6px', 
-                fontWeight: '700', 
+              style={{
+                width: '100%',
+                marginTop: '1rem',
+                padding: '0.6rem',
+                backgroundColor: '#34a853',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                fontWeight: '700',
                 cursor: 'pointer',
                 fontSize: '0.85rem'
               }}
             >
-              🚀 Open in Google Maps
+              ðŸš€ Open in Google Maps
             </button>
 
             {isPro ? (
-              <button 
+              <button
                 onClick={downloadShareCard}
-                style={{ 
-                  width: '100%', 
-                  marginTop: '0.5rem', 
-                  padding: '0.6rem', 
-                  backgroundColor: 'var(--accent-color)', 
-                  color: 'white', 
-                  border: 'none', 
-                  borderRadius: '6px', 
-                  fontWeight: '700', 
+                style={{
+                  width: '100%',
+                  marginTop: '0.5rem',
+                  padding: '0.6rem',
+                  backgroundColor: 'var(--accent-color)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontWeight: '700',
                   cursor: 'pointer',
                   fontSize: '0.85rem'
                 }}
               >
-                📸 Save Image to Share
+                ðŸ“¸ Save Image to Share
               </button>
             ) : (
               <div style={{ marginTop: '0.5rem', padding: '0.6rem', backgroundColor: '#2a2a2a', borderRadius: '6px', border: '1px dashed #444', textAlign: 'center' }}>
                 <p style={{ fontSize: '0.75rem', color: '#aaa', marginBottom: '0.3rem' }}>Want to share this with friends?</p>
-                <button 
+                <button
                   onClick={() => user ? handleUpgrade() : setShowAuthModal(true)}
-                  style={{ background: 'none', border: 'none', color: 'var(--accent-color)', fontSize: '0.8rem', cursor: 'pointer', fontWeight: 'bold', textDecoration: 'underline' }}
+                  style={{ background: 'none', border: 'none', color: 'var(--accent-color)', fontSize: '0.8rem', cursor: 'pointer', fontWeight: 'bold', textDecoration: 'underline' }}      
                 >
                   Unlock Share Cards with PRO
                 </button>
@@ -1123,41 +1031,41 @@ function App() {
             )}
 
             {(!isPro && user) && (
-              <button 
+              <button
                 onClick={handleUpgrade}
-                style={{ 
-                  width: '100%', 
-                  marginTop: '0.5rem', 
-                  padding: '0.6rem', 
-                  backgroundColor: '#ffffff', 
-                  color: '#000000', 
-                  border: 'none', 
-                  borderRadius: '6px', 
-                  fontWeight: '900', 
+                style={{
+                  width: '100%',
+                  marginTop: '0.5rem',
+                  padding: '0.6rem',
+                  backgroundColor: '#ffffff',
+                  color: '#000000',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontWeight: '900',
                   cursor: 'pointer',
                   fontSize: '0.85rem',
                   textTransform: 'uppercase'
                 }}
               >
-                ⭐ Go PRO / Remove Ads
+                â­ Go PRO / Remove Ads
               </button>
             )}
 
             <p style={{ marginTop: '1rem', fontSize: '0.65rem', color: '#777', fontStyle: 'italic', lineHeight: '1.2' }}>
-              * Results may vary based on battery age, cycle count, and internal degradation.
+              * Results may vary based on battery age, cycle count, and internal degradation. 
             </p>
           </div>
         )}
 
         <AdBanner isPro={isPro} />
-        
+
         {!isPro && (
           <div style={{ textAlign: 'center', marginTop: '0.5rem' }}>
-            <button 
+            <button
               onClick={() => user ? handleUpgrade() : setShowAuthModal(true)}
               style={{ background: 'none', border: 'none', color: 'var(--accent-color)', fontSize: '0.7rem', cursor: 'pointer', textTransform: 'uppercase', fontWeight: 'bold' }}
             >
-              ⭐ Remove Ads with PRO
+              â­ Remove Ads with PRO
             </button>
           </div>
         )}
@@ -1167,9 +1075,9 @@ function App() {
         {isLoaded ? (
           <>
             {poiCategory && (
-              <button 
+              <button
                 onClick={searchByMapCenter}
-                style={{ 
+                style={{
                   position: 'absolute',
                   top: '1rem',
                   left: '50%',
@@ -1189,21 +1097,21 @@ function App() {
                   gap: '0.5rem'
                 }}
               >
-                🔍 Search This Area
+                ðŸ” Search This Area
               </button>
             )}
             <GoogleMap
               mapContainerStyle={containerStyle}
               center={center}
               zoom={10}
-              onLoad={onMapLoad}
+              onMapLoad={onMapLoad}
             >
             {trip.origin && trip.destination && isLoading && !response && (
               <DirectionsService
                 options={{
                   origin: trip.origin,
                   destination: (isRoundTrip && isCustomReturn) ? trip.origin : trip.destination,
-                  waypoints: (isRoundTrip && isCustomReturn) 
+                  waypoints: (isRoundTrip && isCustomReturn)
                     ? [
                         ...trip.waypoints.filter(w => w.trim() !== '').map(w => ({ location: w, stopover: true })),
                         { location: trip.destination, stopover: true },
@@ -1225,13 +1133,13 @@ function App() {
             )}
 
             {pois.map(poi => (
-              <Marker 
+              <Marker
                 key={poi.id}
                 position={poi.position}
                 title={poi.name}
                 onClick={() => setSelectedPoi(poi)}
                 label={{
-                  text: poi.type === 'charging station' ? '⚡' : '➕',
+                  text: poi.type === 'charging station' ? 'âš¡' : 'âž•',
                   color: 'white',
                   fontSize: '14px'
                 }}
@@ -1251,18 +1159,18 @@ function App() {
                       <strong>Connectors:</strong> {selectedPoi.details}
                     </p>
                   )}
-                  <button 
+                  <button
                     onClick={() => {
                       addPOIAsWaypoint(selectedPoi);
                       setSelectedPoi(null);
                     }}
-                    style={{ 
-                      width: '100%', 
-                      padding: '0.4rem', 
-                      backgroundColor: 'var(--accent-color)', 
-                      color: 'white', 
-                      border: 'none', 
-                      borderRadius: '4px', 
+                    style={{
+                      width: '100%',
+                      padding: '0.4rem',
+                      backgroundColor: 'var(--accent-color)',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
                       cursor: 'pointer',
                       fontSize: '0.75rem',
                       fontWeight: 'bold'
@@ -1293,11 +1201,11 @@ function App() {
               <div className="share-card-logo">Range Anxiety</div>
               <div style={{ textAlign: 'right' }}>
                 <div style={{ fontSize: '0.8rem', color: '#888' }}>Planned Route Summary</div>
-                <div style={{ fontSize: '1rem', fontWeight: 'bold' }}>{trip.origin.split(',')[0]} → {trip.destination.split(',')[0]}</div>
+                <div style={{ fontSize: '1rem', fontWeight: 'bold' }}>{trip.origin.split(',')[0]} â†’ {trip.destination.split(',')[0]}</div>
               </div>
             </div>
 
-            <img 
+            <img
               className="share-card-map"
               src={`https://maps.googleapis.com/maps/api/staticmap?size=600x300&scale=2&maptype=roadmap&theme=dark&style=element:geometry%7Ccolor:0x242f3e&style=element:labels.text.stroke%7Ccolor:0x242f3e&style=element:labels.text.fill%7Ccolor:0x746855&style=feature:administrative.locality%7Celement:labels.text.fill%7Ccolor:0xd59563&style=feature:poi%7Celement:labels.text.fill%7Ccolor:0xd59563&style=feature:poi.park%7Celement:geometry%7Ccolor:0x263c3f&style=feature:poi.park%7Celement:labels.text.fill%7Ccolor:0x6b9a76&style=feature:road%7Celement:geometry%7Ccolor:0x38414e&style=feature:road%7Celement:geometry.stroke%7Ccolor:0x212a37&style=feature:road%7Celement:labels.text.fill%7Ccolor:0x9ca5b3&style=feature:road.highway%7Celement:geometry%7Ccolor:0x746855&style=feature:road.highway%7Celement:geometry.stroke%7Ccolor:0x1f2835&style=feature:road.highway%7Celement:labels.text.fill%7Ccolor:0xf3d19c&style=feature:transit%7Celement:geometry%7Ccolor:0x2f3948&style=feature:transit.station%7Celement:labels.text.fill%7Ccolor:0xd59563&style=feature:water%7Celement:geometry%7Ccolor:0x17263c&style=feature:water%7Celement:labels.text.fill%7Ccolor:0x515c6d&style=feature:water%7Celement:labels.text.stroke%7Ccolor:0x17263c&path=color:0xff6600%7Cweight:5%7Cenc:${encodeURIComponent(typeof response.routes[0].overview_polyline === 'string' ? response.routes[0].overview_polyline : (response.routes[0].overview_polyline as any).points)}&key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY}`}
               alt="Route Map"
