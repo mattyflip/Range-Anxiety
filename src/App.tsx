@@ -70,7 +70,7 @@ const STANDARD_BIKES: SavedBike[] = [
   // --- Utility & Delivery ---
   { name: "Arrow 10 (Delivery)", specs: { voltage: 48, capacityAh: 20, motorWatts: 500, bikeWeightLbs: 65 } },
   { name: "Fly-7 (Delivery)", specs: { voltage: 48, capacityAh: 20, motorWatts: 750, bikeWeightLbs: 75 } },
-  { name: "Senada Herald", specs: { voltage: 48, capacityAh: 14, motorWatts: 750, totalWeightLbs: 68 } },
+  { name: "Senada Herald", specs: { voltage: 48, capacityAh: 14, motorWatts: 750, bikeWeightLbs: 68 } },
   { name: "Sondors MadMod", specs: { voltage: 48, capacityAh: 21, motorWatts: 750, bikeWeightLbs: 80 } },
   { name: "BOB E-Trike (PH)", specs: { voltage: 48, capacityAh: 20, motorWatts: 500, bikeWeightLbs: 110 } },
   { name: "Tern GSD S10", specs: { voltage: 36, capacityAh: 11, motorWatts: 250, bikeWeightLbs: 75 } }
@@ -250,8 +250,8 @@ function App() {
         headwind = windSpeed * Math.cos((windDir - 0) * Math.PI / 180);
       } catch (e) { console.warn("Weather API failed", e); }
 
-      const totalWeightLbs = (Number(specs.bikeWeightLbs) || 0) + (Number(riderWeightLbs) || 0);
-      const whPerMileBase = totalWeightLbs / 10; 
+      const totalWeightLbsValue = (Number(specs.bikeWeightLbs) || 0) + (Number(riderWeightLbs) || 0);
+      const whPerMileBase = totalWeightLbsValue / 10; 
       const speedFactor = Math.pow((targetSpeedMph as number) / 15, 2);
       const estimatedWh = distMiles * whPerMileBase * speedFactor * (mode === 'sport' ? 1.4 : 1.0) * (ridingStyle === 'aggressive' ? 1.3 : 1.0) * (1 + (headwind / 20)) * (1 + (gain / 5000));
       
@@ -311,7 +311,7 @@ function App() {
       </header>
 
       <div style={{ display: 'flex', flexGrow: 1, position: 'relative', width: '100%', height: 'calc(100vh - 4.5rem)' }}>
-        <aside className="sidebar" style={{ position: 'absolute', top: '1.5rem', left: '1.5rem', width: '380px', maxHeight: '90%', background: 'rgba(30,30,30,0.95)', padding: '1.5rem', borderRadius: '16px', border: '1px solid #333', overflowY: 'auto', zIndex: 10, boxShadow: '0 8px 32px rgba(0,0,0,0.6)' }}>
+        <aside className="sidebar" style={{ position: 'absolute', top: '1.5rem', left: '1.5rem', width: '380px', maxHeight: '90%', background: 'rgba(30,30,30,0.95)', padding: '1.5rem', borderRadius: '16px', border: '1px solid #333', overflowY: 'auto', zIndex: 10, boxShadow: 0 }}>
           {error && <div style={{ background: 'rgba(217,48,37,0.1)', color: '#d93025', padding: '0.8rem', borderRadius: '8px', marginBottom: '1rem', fontSize: '0.8rem' }}>{error}</div>}
           
           <section className="form-group" style={{ position: 'relative' }}>
