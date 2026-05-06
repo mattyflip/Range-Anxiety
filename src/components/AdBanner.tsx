@@ -1,20 +1,31 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 interface AdBannerProps {
   isPro: boolean;
 }
 
 const AdBanner = ({ isPro }: AdBannerProps) => {
+  const [adLoaded, setAdLoaded] = useState(false);
+
   useEffect(() => {
-    if (!isPro) {
-      try {
-        // @ts-ignore
-        (window.adsbygoogle = window.adsbygoogle || []).push({});
-      } catch (e) {
-        console.warn("AdSense push failed - this is normal if an adblocker is active or script is still loading.");
-      }
+    // Only attempt to load if not PRO and haven't tried loading this mount session
+    if (!isPro && !adLoaded) {
+      const loadAd = () => {
+        try {
+          // @ts-ignore
+          const adsbygoogle = window.adsbygoogle || [];
+          adsbygoogle.push({});
+          setAdLoaded(true);
+        } catch (e) {
+          console.warn("AdSense push failed - waiting for script or checking for adblocker.");
+        }
+      };
+
+      // Small delay to ensure the DOM element is fully rendered before pushing
+      const timer = setTimeout(loadAd, 500);
+      return () => clearTimeout(timer);
     }
-  }, [isPro]);
+  }, [isPro, adLoaded]);
 
   if (isPro) return null;
 
@@ -33,7 +44,6 @@ const AdBanner = ({ isPro }: AdBannerProps) => {
       }}
     >
       <p style={{ fontSize: '0.6rem', color: '#555', marginBottom: '0.5rem', letterSpacing: '0.1em' }}>ADVERTISEMENT</p> 
-      {/* sidebar banner */}
       <ins className="adsbygoogle"
            style={{ display: 'block' }}
            data-ad-client="ca-pub-7537427403075018"
