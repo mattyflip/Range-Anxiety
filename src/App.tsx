@@ -44,6 +44,7 @@ interface SavedBike {
 }
 
 const STANDARD_BIKES: SavedBike[] = [
+  // --- Moped & High Performance ---
   { name: "Macfox X1 / X1S", specs: { voltage: 48, capacityAh: 10.4, motorWatts: 500, totalWeightLbs: 215 } },
   { name: "Macfox X2", specs: { voltage: 48, capacityAh: 15.6, motorWatts: 750, totalWeightLbs: 225 } },
   { name: "Ride1Up Revv 1", specs: { voltage: 52, capacityAh: 20, motorWatts: 750, totalWeightLbs: 245 } },
@@ -54,6 +55,8 @@ const STANDARD_BIKES: SavedBike[] = [
   { name: "Onyx RCR", specs: { voltage: 72, capacityAh: 41, motorWatts: 3000, totalWeightLbs: 310 } },
   { name: "Sur-Ron Light Bee X", specs: { voltage: 60, capacityAh: 32, motorWatts: 6000, totalWeightLbs: 250 } },
   { name: "Talaria Sting R", specs: { voltage: 60, capacityAh: 45, motorWatts: 8000, totalWeightLbs: 260 } },
+
+  // --- Commuter & Everyday ---
   { name: "Aventon Level.2", specs: { voltage: 48, capacityAh: 14, motorWatts: 500, totalWeightLbs: 220 } },
   { name: "Velotric Discover 1", specs: { voltage: 48, capacityAh: 14.4, motorWatts: 500, totalWeightLbs: 215 } },
   { name: "Velotric Nomad 1", specs: { voltage: 48, capacityAh: 14.4, motorWatts: 750, totalWeightLbs: 230 } },
@@ -63,6 +66,8 @@ const STANDARD_BIKES: SavedBike[] = [
   { name: "Lectric XP 3.0", specs: { voltage: 48, capacityAh: 14, motorWatts: 500, totalWeightLbs: 230 } },
   { name: "Rad Power RadRunner 2", specs: { voltage: 48, capacityAh: 14, motorWatts: 750, totalWeightLbs: 230 } },
   { name: "Electra Townie Go! 7D", specs: { voltage: 36, capacityAh: 7, motorWatts: 250, totalWeightLbs: 210 } },
+
+  // --- Utility & Delivery ---
   { name: "Arrow 10 (Delivery)", specs: { voltage: 48, capacityAh: 20, motorWatts: 500, totalWeightLbs: 225 } },
   { name: "Fly-7 (Delivery)", specs: { voltage: 48, capacityAh: 20, motorWatts: 750, totalWeightLbs: 235 } },
   { name: "Senada Herald", specs: { voltage: 48, capacityAh: 14, motorWatts: 750, totalWeightLbs: 225 } },
@@ -405,7 +410,7 @@ function App() {
               <button onClick={() => {
                   let url = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(trip.origin)}&destination=${encodeURIComponent(trip.destination)}&travelmode=bicycling`;
                   window.open(url, '_blank');
-              }} style={{ width: '100%', marginTop: '1rem', padding: '0.6rem', backgroundColor: '#34a853', color: 'white', border: 'none', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer' }}>🚀 Open Maps</button>
+              }} style={{ width: '100%', marginTop: '1rem', padding: '0.6rem', backgroundColor: '#34a853', color: 'white', border: 'none', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer' }}>Open Maps</button>
               
               <button onClick={downloadShareCard} style={{ width: '100%', marginTop: '0.5rem', padding: '0.6rem', backgroundColor: '#444', color: 'white', border: 'none', borderRadius: '4px', fontSize: '0.8rem', cursor: 'pointer' }}>Save Image</button>
             </div>
@@ -427,9 +432,9 @@ function App() {
             >
               {response && (
                 <div style={{ position: 'absolute', top: '1rem', right: '1rem', zIndex: 1, display: 'flex', gap: '0.5rem' }}>
-                    <button onClick={() => searchPOIs('cafe')} style={{ padding: '0.5rem 1rem', background: 'white', border: '1px solid #ccc', borderRadius: '20px', fontSize: '0.8rem', cursor: 'pointer' }}>☕ Cafes</button>
-                    <button onClick={() => searchPOIs('bike shop')} style={{ padding: '0.5rem 1rem', background: 'white', border: '1px solid #ccc', borderRadius: '20px', fontSize: '0.8rem', cursor: 'pointer' }}>🚲 Shops</button>
-                    <button onClick={searchByMapCenter} style={{ padding: '0.5rem 1rem', background: '#ff6600', color: 'white', border: 'none', borderRadius: '20px', fontSize: '0.8rem', cursor: 'pointer' }}>🔍 Search Area</button>
+                    <button onClick={() => searchPOIs('cafe')} style={{ padding: '0.5rem 1rem', background: 'white', border: '1px solid #ccc', borderRadius: '20px', fontSize: '0.8rem', cursor: 'pointer' }}>Cafes</button>
+                    <button onClick={() => searchPOIs('bike shop')} style={{ padding: '0.5rem 1rem', background: 'white', border: '1px solid #ccc', borderRadius: '20px', fontSize: '0.8rem', cursor: 'pointer' }}>Shops</button>
+                    <button onClick={searchByMapCenter} style={{ padding: '0.5rem 1rem', background: '#ff6600', color: 'white', border: 'none', borderRadius: '20px', fontSize: '0.8rem', cursor: 'pointer' }}>Search Area</button>
                 </div>
               )}
 
@@ -469,6 +474,19 @@ function App() {
         <p style={{ fontSize: '0.6rem', color: '#444' }}>&copy; 2026 Range Anxiety. Estimates only.</p>
       </footer>
       
+      {showAuthModal && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.85)', zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(10px)' }}>
+          <div className="card" style={{ width: '350px', background: '#1e1e1e', padding: '2rem', borderRadius: '12px', border: '1px solid #333' }}>
+            <h2 style={{ color: '#ff6600', marginBottom: '1.5rem', textAlign: 'center' }}>{isRegistering ? 'Create Account' : 'Sign In'}</h2>
+            <div className="form-group"><label>Email</label><input type="email" value={authEmail} onChange={e => setAuthEmail(e.target.value)} /></div>
+            <div className="form-group"><label>Password</label><input type="password" value={authPass} onChange={e => setAuthPass(e.target.value)} /></div>
+            <button className="calculate-btn" style={{ width: '100%', padding: '0.8rem' }} onClick={handleAuth}>{isRegistering ? 'Register' : 'Login'}</button>
+            <p style={{ marginTop: '1rem', textAlign: 'center', fontSize: '0.8rem', color: '#888' }}>{isRegistering ? 'Already have an account?' : 'Need an account?'} <button onClick={() => setIsRegistering(!isRegistering)} style={{ background: 'none', border: 'none', color: '#ff6600', cursor: 'pointer', textDecoration: 'underline' }}>{isRegistering ? 'Sign In' : 'Register Now'}</button></p>
+            <button onClick={() => setShowAuthModal(false)} style={{ width: '100%', marginTop: '1.5rem', background: 'none', border: 'none', color: '#666', cursor: 'pointer' }}>Cancel</button>
+          </div>
+        </div>
+      )}
+
       {/* Off-screen ref for image generation */}
       <div style={{ position: 'absolute', left: '-9999px', top: '-9999px' }} ref={shareCardRef}>
           <div style={{ width: '500px', background: '#121212', padding: '2rem', color: 'white' }}>
