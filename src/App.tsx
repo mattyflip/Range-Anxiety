@@ -44,7 +44,6 @@ interface SavedBike {
 }
 
 const STANDARD_BIKES: SavedBike[] = [
-  // --- Moped & High Performance ---
   { name: "Macfox X1 / X1S", specs: { voltage: 48, capacityAh: 10.4, motorWatts: 500, totalWeightLbs: 215 } },
   { name: "Macfox X2", specs: { voltage: 48, capacityAh: 15.6, motorWatts: 750, totalWeightLbs: 225 } },
   { name: "Ride1Up Revv 1", specs: { voltage: 52, capacityAh: 20, motorWatts: 750, totalWeightLbs: 245 } },
@@ -55,8 +54,6 @@ const STANDARD_BIKES: SavedBike[] = [
   { name: "Onyx RCR", specs: { voltage: 72, capacityAh: 41, motorWatts: 3000, totalWeightLbs: 310 } },
   { name: "Sur-Ron Light Bee X", specs: { voltage: 60, capacityAh: 32, motorWatts: 6000, totalWeightLbs: 250 } },
   { name: "Talaria Sting R", specs: { voltage: 60, capacityAh: 45, motorWatts: 8000, totalWeightLbs: 260 } },
-
-  // --- Commuter & Everyday ---
   { name: "Aventon Level.2", specs: { voltage: 48, capacityAh: 14, motorWatts: 500, totalWeightLbs: 220 } },
   { name: "Velotric Discover 1", specs: { voltage: 48, capacityAh: 14.4, motorWatts: 500, totalWeightLbs: 215 } },
   { name: "Velotric Nomad 1", specs: { voltage: 48, capacityAh: 14.4, motorWatts: 750, totalWeightLbs: 230 } },
@@ -66,8 +63,6 @@ const STANDARD_BIKES: SavedBike[] = [
   { name: "Lectric XP 3.0", specs: { voltage: 48, capacityAh: 14, motorWatts: 500, totalWeightLbs: 230 } },
   { name: "Rad Power RadRunner 2", specs: { voltage: 48, capacityAh: 14, motorWatts: 750, totalWeightLbs: 230 } },
   { name: "Electra Townie Go! 7D", specs: { voltage: 36, capacityAh: 7, motorWatts: 250, totalWeightLbs: 210 } },
-
-  // --- Utility & Delivery ---
   { name: "Arrow 10 (Delivery)", specs: { voltage: 48, capacityAh: 20, motorWatts: 500, totalWeightLbs: 225 } },
   { name: "Fly-7 (Delivery)", specs: { voltage: 48, capacityAh: 20, motorWatts: 750, totalWeightLbs: 235 } },
   { name: "Senada Herald", specs: { voltage: 48, capacityAh: 14, motorWatts: 750, totalWeightLbs: 225 } },
@@ -311,6 +306,8 @@ function App() {
 
       <div style={{ display: 'flex', flexGrow: 1, position: 'relative', width: '100%', height: 'calc(100vh - 4.5rem)' }}>
         <aside className="sidebar" style={{ position: 'absolute', top: '1.5rem', left: '1.5rem', width: '380px', maxHeight: '90%', background: 'rgba(30,30,30,0.95)', padding: '1.5rem', borderRadius: '16px', border: '1px solid #333', overflowY: 'auto', zIndex: 10, boxShadow: '0 8px 32px rgba(0,0,0,0.6)' }}>
+          {error && <div style={{ background: 'rgba(217,48,37,0.1)', color: '#d93025', padding: '0.8rem', borderRadius: '8px', marginBottom: '1rem', fontSize: '0.8rem' }}>{error}</div>}
+          
           <section className="form-group" style={{ position: 'relative' }}>
             <label>Search Bike Model</label>
             <input type="text" placeholder="e.g. Onyx, Sur-Ron..." value={bikeSearchQuery} onFocus={() => setShowBikeResults(true)} onChange={(e) => { setBikeSearchQuery(e.target.value); setShowBikeResults(true); }} />
@@ -321,13 +318,13 @@ function App() {
             )}
             <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
               <input type="text" placeholder="Nickname to Save" value={newBikeName} onChange={(e) => setNewBikeName(e.target.value)} style={{ padding: '0.4rem' }} />
-              <button onClick={saveCurrentBike} style={{ padding: '0.4rem 0.8rem', backgroundColor: 'var(--accent-color)', color: 'white', border: 'none', borderRadius: '4px' }}>Save</button>
+              <button onClick={saveCurrentBike} style={{ padding: '0.4rem 0.8rem', backgroundColor: 'var(--accent-color)', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Save</button>
             </div>
           </section>
 
           <section className="form-group">
             <label>Origin</label>
-            <div style={{ display: 'flex', gap: '0.5rem' }}><input type="text" name="origin" value={trip.origin} onChange={handleInputChange} /><button onClick={useCurrentLocation} style={{ padding: '0 0.8rem' }}>Loc</button></div>
+            <div style={{ display: 'flex', gap: '0.5rem' }}><input type="text" name="origin" value={trip.origin} onChange={handleInputChange} /><button onClick={useCurrentLocation} style={{ padding: '0 0.8rem', cursor: 'pointer' }}>Loc</button></div>
           </section>
           
           <div style={{ textAlign: 'center', margin: '-0.5rem 0 0.5rem 0' }}>
@@ -370,6 +367,30 @@ function App() {
               <button className={!isRoundTrip ? 'active' : ''} onClick={() => setIsRoundTrip(false)}>One Way</button>
               <button className={isRoundTrip ? 'active' : ''} onClick={() => setIsRoundTrip(true)}>Round Trip</button>
             </div>
+            {isRoundTrip && (
+              <div style={{ marginTop: '0.8rem', padding: '0.8rem', background: '#222', borderRadius: '8px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', textTransform: 'none' }}>
+                  <input type="checkbox" checked={isCustomReturn} onChange={e => setIsCustomReturn(e.target.checked)} style={{ width: 'auto' }} />
+                  Custom Return Route
+                </label>
+              </div>
+            )}
+          </section>
+
+          <section className="form-group">
+            <label>Riding Mode</label>
+            <div className="mode-toggle">
+              <button className={mode === 'eco' ? 'active' : ''} onClick={() => setMode('eco')}>ECO</button>
+              <button className={mode === 'sport' ? 'active' : ''} onClick={() => setMode('sport')}>SPORT</button>
+            </div>
+          </section>
+
+          <section className="form-group">
+            <label>Style</label>
+            <div className="mode-toggle">
+              <button className={ridingStyle === 'relaxed' ? 'active' : ''} onClick={() => setRidingStyle('relaxed')}>Relaxed</button>
+              <button className={ridingStyle === 'aggressive' ? 'active' : ''} onClick={() => setRidingStyle('aggressive')}>Aggressive</button>
+            </div>
           </section>
 
           {metrics && (
@@ -385,8 +406,15 @@ function App() {
                   let url = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(trip.origin)}&destination=${encodeURIComponent(trip.destination)}&travelmode=bicycling`;
                   window.open(url, '_blank');
               }} style={{ width: '100%', marginTop: '1rem', padding: '0.6rem', backgroundColor: '#34a853', color: 'white', border: 'none', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer' }}>🚀 Open Maps</button>
+              
+              <button onClick={downloadShareCard} style={{ width: '100%', marginTop: '0.5rem', padding: '0.6rem', backgroundColor: '#444', color: 'white', border: 'none', borderRadius: '4px', fontSize: '0.8rem', cursor: 'pointer' }}>Save Image</button>
             </div>
           )}
+
+          <div style={{ marginTop: '1rem' }}>
+            <AdBanner isPro={isPro} />
+            {!isPro && <button onClick={handleUpgrade} style={{ width: '100%', marginTop: '0.5rem', background: 'none', border: 'none', color: '#ff6600', fontSize: '0.7rem', cursor: 'pointer', textDecoration: 'underline' }}>Go PRO / Remove Ads</button>}
+          </div>
         </aside>
 
         <main style={{ flexGrow: 1, position: 'relative', width: '100%', height: '100%' }}>
@@ -397,6 +425,14 @@ function App() {
               zoom={10}
               onLoad={onMapLoad}
             >
+              {response && (
+                <div style={{ position: 'absolute', top: '1rem', right: '1rem', zIndex: 1, display: 'flex', gap: '0.5rem' }}>
+                    <button onClick={() => searchPOIs('cafe')} style={{ padding: '0.5rem 1rem', background: 'white', border: '1px solid #ccc', borderRadius: '20px', fontSize: '0.8rem', cursor: 'pointer' }}>☕ Cafes</button>
+                    <button onClick={() => searchPOIs('bike shop')} style={{ padding: '0.5rem 1rem', background: 'white', border: '1px solid #ccc', borderRadius: '20px', fontSize: '0.8rem', cursor: 'pointer' }}>🚲 Shops</button>
+                    <button onClick={searchByMapCenter} style={{ padding: '0.5rem 1rem', background: '#ff6600', color: 'white', border: 'none', borderRadius: '20px', fontSize: '0.8rem', cursor: 'pointer' }}>🔍 Search Area</button>
+                </div>
+              )}
+
               {trip.origin && trip.destination && isLoading && !response && (
                 <DirectionsService
                   options={{ origin: trip.origin, destination: trip.destination, travelMode: google.maps.TravelMode.BICYCLING }}
@@ -408,9 +444,9 @@ function App() {
               {selectedPoi && (
                 <InfoWindow position={selectedPoi.position} onCloseClick={() => setSelectedPoi(null)}>
                   <div style={{ padding: '0.5rem', color: '#333' }}>
-                    <h4>{selectedPoi.name}</h4>
-                    <p>{selectedPoi.address}</p>
-                    <button onClick={() => { addPOIAsWaypoint(selectedPoi); setSelectedPoi(null); }} style={{ width: '100%', marginTop: '0.5rem', padding: '0.2rem', backgroundColor: 'var(--accent-color)', color: 'white', border: 'none', cursor: 'pointer' }}>Add Stop</button>
+                    <h4 style={{ margin: 0 }}>{selectedPoi.name}</h4>
+                    <p style={{ margin: '0.2rem 0', fontSize: '0.8rem' }}>{selectedPoi.address}</p>
+                    <button onClick={() => { addPOIAsWaypoint(selectedPoi); setSelectedPoi(null); }} style={{ width: '100%', marginTop: '0.5rem', padding: '0.2rem', backgroundColor: '#ff6600', color: 'white', border: 'none', cursor: 'pointer' }}>Add Stop</button>
                   </div>
                 </InfoWindow>
               )}
@@ -421,7 +457,7 @@ function App() {
                 <div style={{ textAlign: 'center', padding: '2rem' }}>
                   <p style={{ color: '#ff4444', fontWeight: 'bold' }}>Error Loading Maps</p>
                   <p style={{ fontSize: '0.8rem' }}>{loadError.message}</p>
-                  <p style={{ fontSize: '0.7rem', marginTop: '1rem' }}>Check if VITE_GOOGLE_MAPS_API_KEY is set in Vercel.</p>
+                  <p style={{ fontSize: '0.7rem', marginTop: '1rem' }}>Check VITE_GOOGLE_MAPS_API_KEY.</p>
                 </div>
               ) : "Loading Google Maps API..."}
             </div>
@@ -432,19 +468,14 @@ function App() {
       <footer style={{ position: 'fixed', bottom: '10px', width: '100%', textAlign: 'center', pointerEvents: 'none', zIndex: 100 }}>
         <p style={{ fontSize: '0.6rem', color: '#444' }}>&copy; 2026 Range Anxiety. Estimates only.</p>
       </footer>
-
-      {showAuthModal && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.85)', zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(10px)' }}>
-          <div className="card" style={{ width: '350px', background: '#1e1e1e', padding: '2rem', borderRadius: '12px', border: '1px solid #333' }}>
-            <h2 style={{ color: '#ff6600', marginBottom: '1.5rem', textAlign: 'center' }}>{isRegistering ? 'Create Account' : 'Sign In'}</h2>
-            <div className="form-group"><label>Email</label><input type="email" value={authEmail} onChange={e => setAuthEmail(e.target.value)} /></div>
-            <div className="form-group"><label>Password</label><input type="password" value={authPass} onChange={e => setAuthPass(e.target.value)} /></div>
-            <button className="calculate-btn" style={{ width: '100%', padding: '0.8rem' }} onClick={handleAuth}>{isRegistering ? 'Register' : 'Login'}</button>
-            <p style={{ marginTop: '1rem', textAlign: 'center', fontSize: '0.8rem', color: '#888' }}>{isRegistering ? 'Already have an account?' : 'Need an account?'} <button onClick={() => setIsRegistering(!isRegistering)} style={{ background: 'none', border: 'none', color: '#ff6600', cursor: 'pointer', textDecoration: 'underline' }}>{isRegistering ? 'Sign In' : 'Register Now'}</button></p>
-            <button onClick={() => setShowAuthModal(false)} style={{ width: '100%', marginTop: '1.5rem', background: 'none', border: 'none', color: '#666', cursor: 'pointer' }}>Cancel</button>
+      
+      {/* Off-screen ref for image generation */}
+      <div style={{ position: 'absolute', left: '-9999px', top: '-9999px' }} ref={shareCardRef}>
+          <div style={{ width: '500px', background: '#121212', padding: '2rem', color: 'white' }}>
+              <h2>Range Anxiety Report</h2>
+              {metrics && <p>Remaining Battery: {metrics.batteryPercentUsed.toFixed(1)}%</p>}
           </div>
-        </div>
-      )}
+      </div>
     </div>
   )
 }
