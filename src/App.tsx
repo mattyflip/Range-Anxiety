@@ -280,44 +280,33 @@ function App() {
       const massKg = (bikeWeight + riderWeight) * 0.453592;
       const velocityMps = (Number(targetSpeedMph) || 15) * 0.44704;
       
-      // 1. Rolling Resistance (Crr)
-      // Road tires ~ 0.007, Knobby tires ~ 0.015
-      // Lower pressure increases resistance (simplified: every 5psi under 35 adds 0.002)
       let Crr = tireType === 'road' ? 0.007 : 0.015;
       if (tirePressurePsi !== '' && tirePressurePsi < 35) {
         Crr += (35 - tirePressurePsi) / 5 * 0.002;
       }
       const ForceRolling = Crr * massKg * 9.81;
 
-      // 2. Air Drag
-      // Air density (rho) changes with temperature (colder air = more dense = more drag)
       const tempF = Number(ambientTempF) || 70;
       const tempC = (tempF - 32) * 5 / 9;
-      const rho = 1.225 * (288.15 / (273.15 + tempC)); // STP adjustment
+      const rho = 1.225 * (288.15 / (273.15 + tempC));
       const CdA = 0.55;
       const relativeVelocityMps = Math.max(0.1, velocityMps + (headwindMph * 0.44704));
       const ForceDrag = 0.5 * rho * CdA * Math.pow(relativeVelocityMps, 2);
 
-      // 3. Potential Energy (Hills)
       const gainMeters = gainFeet * 0.3048;
-      // Temperature impact on motor/battery efficiency
-      // Lithium batteries lose usable capacity and voltage consistency in the cold
       let thermalEfficiency = 1.0;
-      if (tempF < 60) thermalEfficiency -= (60 - tempF) * 0.003; // ~3% loss per 10 degrees below 60
+      if (tempF < 60) thermalEfficiency -= (60 - tempF) * 0.003;
       
       const efficiency = (mode === 'eco' ? 0.85 : 0.75) * thermalEfficiency;
       const WorkClimbJoules = massKg * 9.81 * gainMeters;
       const WhClimb = (WorkClimbJoules / 3600) / efficiency;
 
-      // 4. Kinetic Power (Watts)
       const PowerWatts = (ForceRolling + ForceDrag) * velocityMps;
       const WhPerMileFlat = (PowerWatts / velocityMps) * (1609.34 / 3600) / efficiency;
 
       const styleMultiplier = ridingStyle === 'aggressive' ? 1.2 : 1.0;
       const estimatedWh = (distMiles * WhPerMileFlat * styleMultiplier) + WhClimb;
       
-      // --- BATTERY HEALTH & STATE ---
-      // "Broken-in" factor (92%)
       const BATTERY_HEALTH_FACTOR = 0.92;
       const totalWhRaw = (capacityInputMode === 'ah') ? (Number(specs.voltage) * Number(specs.capacityAh)) : Number(specs.capacityAh);
       const totalWhUsable = totalWhRaw * BATTERY_HEALTH_FACTOR;
@@ -549,7 +538,15 @@ function App() {
 
               {trip.origin && trip.destination && isLoading && !response && (
                 <DirectionsService
-                  options={{ origin: trip.origin, destination: trip.destination, travelMode: google.maps.TravelMode.BICYCLING }}
+                  options={{
+                    origin: trip.origin,
+                    destination: isRoundTrip ? trip.origin : trip.destination,
+                    waypoints: [
+                      ...(isRoundTrip ? [{ location: trip.destination, stopover: true }] : []),
+                      ...(isRoundTrip && isCustomReturn ? trip.returnWaypoints.map(wp => ({ location: wp, stopover: true })) : [])
+                    ].filter(wp => wp.location.trim() !== ""),
+                    travelMode: google.maps.TravelMode.BICYCLING,
+                  }}
                   callback={directionsCallback}
                 />
               )}
