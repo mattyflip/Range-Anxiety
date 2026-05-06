@@ -187,10 +187,23 @@ function App() {
     setNewBikeName('');
   };
 
+  const getBatteryLevels = (v: number) => {
+    if (v >= 72) return { min: 60, max: 84 };
+    if (v >= 60) return { min: 50, max: 70 };
+    if (v >= 52) return { min: 42, max: 58.8 };
+    if (v >= 48) return { min: 39, max: 54.6 };
+    if (v >= 36) return { min: 30, max: 42 };
+    return { min: v * 0.8, max: v * 1.15 };
+  };
+
   const loadBike = (bike: SavedBike) => {
     setSpecs(bike.specs);
     setBikeSearchQuery(bike.name);
     setShowBikeResults(false);
+    // Automatically update starting voltage to max for the bike's system
+    if (bike.specs.voltage) {
+      setStartVoltage(getBatteryLevels(Number(bike.specs.voltage)).max);
+    }
   };
 
   const onMapLoad = useCallback((map: google.maps.Map) => {
@@ -205,15 +218,6 @@ function App() {
   const handleSpecChange = (name: keyof BikeSpecs, value: string) => {
     const val = value === '' ? '' : parseFloat(value);
     setSpecs(prev => ({ ...prev, [name]: isNaN(Number(val)) ? '' : val }));
-  };
-
-  const getBatteryLevels = (v: number) => {
-    if (v >= 72) return { min: 60, max: 84 };
-    if (v >= 60) return { min: 50, max: 70 };
-    if (v >= 52) return { min: 42, max: 58.8 };
-    if (v >= 48) return { min: 39, max: 54.6 };
-    if (v >= 36) return { min: 30, max: 42 };
-    return { min: v * 0.8, max: v * 1.15 };
   };
 
   const directionsCallback = (result: google.maps.DirectionsResult | null, status: google.maps.DirectionsStatus) => {
@@ -262,7 +266,6 @@ function App() {
         const weatherResp = await axios.get(`/api/weather?lat=${path[0].lat}&lng=${path[0].lng}`);
         windSpeed = weatherResp.data.wind_speed;
         windDir = weatherResp.data.wind_deg;
-        // Headwind = wind_speed * cos(wind_angle - route_angle)
         const angleDiff = (windDir - routeBearing + 360) % 360;
         headwindMph = windSpeed * Math.cos((angleDiff * Math.PI) / 180);
       } catch (e) { console.warn("Weather API failed", e); }
@@ -273,49 +276,49 @@ function App() {
       const massKg = (bikeWeight + riderWeight) * 0.453592;
       const velocityMps = (Number(targetSpeedMph) || 15) * 0.44704; // mph to m/s
       
-      // 1. Rolling Resistance (F_rr = Crr * m * g)
-      // Crr for fat tires/mtb tires ~ 0.008
       const Crr = 0.008;
       const ForceRolling = Crr * massKg * 9.81;
 
-      // 2. Air Drag (F_drag = 0.5 * rho * CdA * v^2)
-      // CdA for upright rider ~ 0.5
       const rho = 1.225; // air density kg/m3
       const CdA = 0.55;
       const relativeVelocityMps = Math.max(0.1, velocityMps + (headwindMph * 0.44704));
       const ForceDrag = 0.5 * rho * CdA * Math.pow(relativeVelocityMps, 2);
 
-      // 3. Potential Energy (Wh_climb = m * g * h / efficiency)
-      // Height h in meters
       const gainMeters = gainFeet * 0.3048;
-      const efficiency = mode === 'eco' ? 0.85 : 0.75; // Sport mode higher power usually less efficient
+      const efficiency = mode === 'eco' ? 0.85 : 0.75;
       const WorkClimbJoules = massKg * 9.81 * gainMeters;
       const WhClimb = (WorkClimbJoules / 3600) / efficiency;
 
-      // 4. Kinetic Power (Watts)
       const PowerWatts = (ForceRolling + ForceDrag) * velocityMps;
       const WhPerMileFlat = (PowerWatts / velocityMps) * (1609.34 / 3600) / efficiency;
 
-      // 5. Blending in Style Factor
-      // Aggressive riding style adds to the "drag" (starts/stops/acceleration)
       const styleMultiplier = ridingStyle === 'aggressive' ? 1.2 : 1.0;
       
       const estimatedWh = (distMiles * WhPerMileFlat * styleMultiplier) + WhClimb;
       
-      const totalWh = (capacityInputMode === 'ah') ? (Number(specs.voltage) * Number(specs.capacityAh)) : Number(specs.capacityAh);
+      // --- BATTERY HEALTH & STATE ---
+      // "Broken-in" good health factor (92% usable capacity)
+      const BATTERY_HEALTH_FACTOR = 0.92;
+      
+      const totalWhRaw = (capacityInputMode === 'ah') ? (Number(specs.voltage) * Number(specs.capacityAh)) : Number(specs.capacityAh);
+      const totalWhUsable = totalWhRaw * BATTERY_HEALTH_FACTOR;
+      
+      const minV = getBatteryLevels(Number(specs.voltage)).min;
+      const maxV = getBatteryLevels(Number(specs.voltage)).max;
+      
       const startWh = (batteryInputMode === 'percent')
-        ? (totalWh * (Number(startBattery) / 100))
-        : (totalWh * ((Number(startVoltage) - getBatteryLevels(Number(specs.voltage)).min) / (getBatteryLevels(Number(specs.voltage)).max - getBatteryLevels(Number(specs.voltage)).min)));
+        ? (totalWhUsable * (Number(startBattery) / 100))
+        : (totalWhUsable * ((Number(startVoltage) - minV) / (maxV - minV)));
 
       const batteryLeftWh = startWh - estimatedWh;
-      const batteryPercentUsed = (batteryLeftWh / totalWh) * 100;
+      const batteryPercentRemaining = (batteryLeftWh / totalWhUsable) * 100;
 
       setMetrics({
         distanceMiles: distMiles,
         durationMin: durationMin,
         elevationGainFeet: gainFeet,
         estimatedWh,
-        batteryPercentUsed: Math.max(0, batteryPercentUsed),
+        batteryPercentUsed: Math.max(0, batteryPercentRemaining),
         recommendedSpeedMph: mode === 'eco' ? 15 : 22,
         windConditions: { speed: windSpeed, direction: windDir, headwindComponent: headwindMph }
       });
@@ -387,7 +390,7 @@ function App() {
           </section>
           
           <div style={{ textAlign: 'center', margin: '-0.5rem 0 0.5rem 0' }}>
-              <button onClick={() => setTrip(p => ({ ...p, origin: p.destination, destination: p.origin }))} style={{ background: 'none', border: 'none', color: 'var(--accent-color)', cursor: 'pointer', fontSize: '1.2rem' }}>⇵</button>
+              <button onClick={() => setTrip(p => ({ ...p, origin: p.destination, destination: p.origin }))} style={{ background: 'none', border: 'none', color: 'var(--accent-color)', cursor: 'pointer', fontSize: '1.2rem' }}>⇅</button>
           </div>
 
           <section className="form-group"><label>Destination</label><input type="text" name="destination" value={trip.destination} onChange={handleInputChange} /></section>
