@@ -302,10 +302,9 @@ function App() {
       <header style={{ flexShrink: 0, height: '4.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 1.5rem', background: '#1e1e1e', borderBottom: '1px solid #333' }}>
         <div className="logo" style={{ color: '#ff6600', fontWeight: '900', fontSize: '1.4rem' }}>Range Anxiety</div>
         <div className="nav-actions">
-          <button onClick={() => user ? handleSignOut() : setShowAuthModal(true)} style={{ background: 'rgba(255,255,255,0.1)', color: 'white', border: 'none', borderRadius: '20px', padding: '0.4rem 1rem', fontSize: '0.8rem', cursor: 'pointer', marginRight: '1rem' }}>
+          <button onClick={() => user ? handleSignOut() : setShowAuthModal(true)} style={{ background: 'rgba(255,255,255,0.1)', color: 'white', border: 'none', borderRadius: '20px', padding: '0.4rem 1rem', fontSize: '0.8rem', cursor: 'pointer' }}>
             {user ? `Sign Out (${isPro ? 'PRO' : 'Free'})` : 'Sign In'}
           </button>
-          <button className="calculate-btn" onClick={handleCalculate} disabled={isLoading}>{isLoading ? 'Calculating...' : 'Find Route'}</button>
         </div>
       </header>
 
@@ -410,7 +409,7 @@ function App() {
               <button onClick={() => {
                   let url = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(trip.origin)}&destination=${encodeURIComponent(trip.destination)}&travelmode=bicycling`;
                   window.open(url, '_blank');
-              }} style={{ width: '100%', marginTop: '1rem', padding: '0.6rem', backgroundColor: '#34a853', color: 'white', border: 'none', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer' }}>Open Maps</button>
+              }} style={{ width: '100%', marginTop: '1rem', padding: '0.6rem', backgroundColor: '#34a853', color: 'white', border: 'none', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer' }}>🚀 Open Maps</button>
               
               <button onClick={downloadShareCard} style={{ width: '100%', marginTop: '0.5rem', padding: '0.6rem', backgroundColor: '#444', color: 'white', border: 'none', borderRadius: '4px', fontSize: '0.8rem', cursor: 'pointer' }}>Save Image</button>
             </div>
@@ -420,6 +419,15 @@ function App() {
             <AdBanner isPro={isPro} />
             {!isPro && <button onClick={handleUpgrade} style={{ width: '100%', marginTop: '0.5rem', background: 'none', border: 'none', color: '#ff6600', fontSize: '0.7rem', cursor: 'pointer', textDecoration: 'underline' }}>Go PRO / Remove Ads</button>}
           </div>
+          
+          <button 
+            className="calculate-btn" 
+            onClick={handleCalculate} 
+            disabled={isLoading}
+            style={{ width: '100%', marginTop: '1rem', padding: '1rem', borderRadius: '12px' }}
+          >
+            {isLoading ? 'Calculating...' : 'Find Route'}
+          </button>
         </aside>
 
         <main style={{ flexGrow: 1, position: 'relative', width: '100%', height: '100%' }}>
@@ -432,9 +440,9 @@ function App() {
             >
               {response && (
                 <div style={{ position: 'absolute', top: '1rem', right: '1rem', zIndex: 1, display: 'flex', gap: '0.5rem' }}>
-                    <button onClick={() => searchPOIs('cafe')} style={{ padding: '0.5rem 1rem', background: 'white', border: '1px solid #ccc', borderRadius: '20px', fontSize: '0.8rem', cursor: 'pointer' }}>Cafes</button>
-                    <button onClick={() => searchPOIs('bike shop')} style={{ padding: '0.5rem 1rem', background: 'white', border: '1px solid #ccc', borderRadius: '20px', fontSize: '0.8rem', cursor: 'pointer' }}>Shops</button>
-                    <button onClick={searchByMapCenter} style={{ padding: '0.5rem 1rem', background: '#ff6600', color: 'white', border: 'none', borderRadius: '20px', fontSize: '0.8rem', cursor: 'pointer' }}>Search Area</button>
+                    <button onClick={() => searchPOIs('cafe')} style={{ padding: '0.5rem 1rem', background: 'white', border: '1px solid #ccc', borderRadius: '20px', fontSize: '0.8rem', cursor: 'pointer' }}>☕ Cafes</button>
+                    <button onClick={() => searchPOIs('bike shop')} style={{ padding: '0.5rem 1rem', background: 'white', border: '1px solid #ccc', borderRadius: '20px', fontSize: '0.8rem', cursor: 'pointer' }}>🚲 Shops</button>
+                    <button onClick={searchByMapCenter} style={{ padding: '0.5rem 1rem', background: '#ff6600', color: 'white', border: 'none', borderRadius: '20px', fontSize: '0.8rem', cursor: 'pointer' }}>🔍 Search Area</button>
                 </div>
               )}
 
