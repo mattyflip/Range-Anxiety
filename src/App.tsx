@@ -44,18 +44,71 @@ interface SavedBike {
 }
 
 const STANDARD_BIKES: SavedBike[] = [
+  // --- Commuter & Everyday ---
   {
     name: "Aventon Level.2",
     specs: { voltage: 48, capacityAh: 14, motorWatts: 500, totalWeightLbs: 220 }
   },
   {
-    name: "Rad Power RadRunner 2",
-    specs: { voltage: 48, capacityAh: 14, motorWatts: 750, totalWeightLbs: 230 }
+    name: "Velotric Discover 1",
+    specs: { voltage: 48, capacityAh: 14.4, motorWatts: 500, totalWeightLbs: 215 }
+  },
+  {
+    name: "Ride1Up 700 Series",
+    specs: { voltage: 48, capacityAh: 14, motorWatts: 750, totalWeightLbs: 220 }
   },
   {
     name: "Lectric XP 3.0",
     specs: { voltage: 48, capacityAh: 14, motorWatts: 500, totalWeightLbs: 230 }
   },
+  {
+    name: "Electra Townie Go! 7D",
+    specs: { voltage: 36, capacityAh: 7, motorWatts: 250, totalWeightLbs: 210 }
+  },
+  {
+    name: "Rad Power RadRunner 2",
+    specs: { voltage: 48, capacityAh: 14, motorWatts: 750, totalWeightLbs: 230 }
+  },
+
+  // --- Performance & Moped ---
+  {
+    name: "Ride1Up Revv 1",
+    specs: { voltage: 52, capacityAh: 20, motorWatts: 750, totalWeightLbs: 245 }
+  },
+  {
+    name: "Super73 S2",
+    specs: { voltage: 48, capacityAh: 20, motorWatts: 750, totalWeightLbs: 230 }
+  },
+  {
+    name: "Goat Motor Goat V3",
+    specs: { voltage: 60, capacityAh: 20, motorWatts: 1000, totalWeightLbs: 240 }
+  },
+  {
+    name: "Macfox X2",
+    specs: { voltage: 48, capacityAh: 15.6, motorWatts: 750, totalWeightLbs: 225 }
+  },
+  {
+    name: "Macfox X1 / X1S",
+    specs: { voltage: 48, capacityAh: 10.4, motorWatts: 500, totalWeightLbs: 215 }
+  },
+  {
+    name: "Ridstar Q20",
+    specs: { voltage: 48, capacityAh: 20, motorWatts: 1500, totalWeightLbs: 235 }
+  },
+  {
+    name: "Bigniu 72V High-Power",
+    specs: { voltage: 72, capacityAh: 30, motorWatts: 2000, totalWeightLbs: 280 }
+  },
+  {
+    name: "Onyx RCR",
+    specs: { voltage: 72, capacityAh: 41, motorWatts: 3000, totalWeightLbs: 310 }
+  },
+  {
+    name: "Sur-Ron Light Bee X",
+    specs: { voltage: 60, capacityAh: 32, motorWatts: 6000, totalWeightLbs: 250 }
+  },
+
+  // --- Delivery & Utility ---
   {
     name: "Arrow 10 (Delivery)",
     specs: { voltage: 48, capacityAh: 20, motorWatts: 500, totalWeightLbs: 225 }
@@ -65,12 +118,20 @@ const STANDARD_BIKES: SavedBike[] = [
     specs: { voltage: 48, capacityAh: 20, motorWatts: 750, totalWeightLbs: 235 }
   },
   {
-    name: "Onyx RCR",
-    specs: { voltage: 72, capacityAh: 41, motorWatts: 3000, totalWeightLbs: 310 }
+    name: "Senada Herald",
+    specs: { voltage: 48, capacityAh: 14, motorWatts: 750, totalWeightLbs: 225 }
   },
   {
-    name: "Sur-Ron Light Bee X",
-    specs: { voltage: 60, capacityAh: 32, motorWatts: 6000, totalWeightLbs: 250 }
+    name: "Sondors MadMod",
+    specs: { voltage: 48, capacityAh: 21, motorWatts: 750, totalWeightLbs: 230 }
+  },
+  {
+    name: "BOB E-Trike (PH)",
+    specs: { voltage: 48, capacityAh: 20, motorWatts: 500, totalWeightLbs: 260 }
+  },
+  {
+    name: "Velotric Nomad 1",
+    specs: { voltage: 48, capacityAh: 14.4, motorWatts: 750, totalWeightLbs: 230 }
   }
 ];
 
@@ -630,7 +691,7 @@ function App() {
               style={{ background: '#333', color: 'white', border: '1px solid #444', borderRadius: '4px', padding: '0 0.8rem', cursor: 'pointer' }}
               title="Use Current Location"
             >
-              ðŸ“
+              📍
             </button>
           </div>
         </section>
@@ -649,7 +710,7 @@ function App() {
                 onClick={() => removeWaypoint(idx)}
                 style={{ background: '#d93025', color: 'white', border: 'none', borderRadius: '4px', padding: '0 0.8rem', cursor: 'pointer' }}
               >
-                âœ•
+                ✖
               </button>
             </div>
           </section>
@@ -679,7 +740,7 @@ function App() {
             }}
             title="Swap Origin/Destination"
           >
-            â‡…
+            ⇅
           </button>
         </div>
 
@@ -851,7 +912,7 @@ function App() {
                         onClick={() => removeReturnWaypoint(idx)}
                         style={{ background: '#d93025', color: 'white', border: 'none', borderRadius: '4px', padding: '0 0.5rem', cursor: 'pointer' }}
                       >
-                        âœ•
+                        ✖
                       </button>
                     </div>
                   ))}
@@ -907,10 +968,10 @@ function App() {
           <section className="form-group" style={{ marginTop: '1.5rem', backgroundColor: 'var(--card-bg)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
             <label style={{ fontSize: '0.7rem' }}>Explore Along Route</label>
             <div className="mode-toggle" style={{ flexWrap: 'wrap' }}>
-              <button onClick={() => searchPOIs('bike shop')} className={poiCategory === 'bike shop' ? 'active' : ''}>ðŸ›  Bike Shops</button>
-              <button onClick={() => searchPOIs('cafe')} className={poiCategory === 'cafe' ? 'active' : ''}>â˜• Cafes</button>
-              <button onClick={() => searchPOIs('park')} className={poiCategory === 'park' ? 'active' : ''}>ðŸŒ³ Parks</button>
-              <button onClick={() => searchPOIs('charging station')} className={poiCategory === 'charging station' ? 'active' : ''}>âš¡ Charging</button>
+              <button onClick={() => searchPOIs('bike shop')} className={poiCategory === 'bike shop' ? 'active' : ''}>🚲 Bike Shops</button>
+              <button onClick={() => searchPOIs('cafe')} className={poiCategory === 'cafe' ? 'active' : ''}>☕ Cafes</button>
+              <button onClick={() => searchPOIs('park')} className={poiCategory === 'park' ? 'active' : ''}>🌳 Parks</button>
+              <button onClick={() => searchPOIs('charging station')} className={poiCategory === 'charging station' ? 'active' : ''}>⚡ Charging</button>
             </div>
 
             {pois.length > 0 && <p style={{ fontSize: '0.7rem', color: 'var(--secondary-text)', marginTop: '0.5rem' }}>Found {pois.length} spots. Click a marker on the map to add as stop!</p>}
@@ -997,7 +1058,7 @@ function App() {
                 fontSize: '0.85rem'
               }}
             >
-              ðŸš€ Open in Google Maps
+              🚀 Open in Google Maps
             </button>
 
             {isPro ? (
@@ -1016,7 +1077,7 @@ function App() {
                   fontSize: '0.85rem'
                 }}
               >
-                ðŸ“¸ Save Image to Share
+                📸 Save Image to Share
               </button>
             ) : (
               <div style={{ marginTop: '0.5rem', padding: '0.6rem', backgroundColor: '#2a2a2a', borderRadius: '6px', border: '1px dashed #444', textAlign: 'center' }}>
@@ -1047,7 +1108,7 @@ function App() {
                   textTransform: 'uppercase'
                 }}
               >
-                â­ Go PRO / Remove Ads
+                ⭐ Go PRO / Remove Ads
               </button>
             )}
 
@@ -1065,7 +1126,7 @@ function App() {
               onClick={() => user ? handleUpgrade() : setShowAuthModal(true)}
               style={{ background: 'none', border: 'none', color: 'var(--accent-color)', fontSize: '0.7rem', cursor: 'pointer', textTransform: 'uppercase', fontWeight: 'bold' }}
             >
-              â­ Remove Ads with PRO
+              ⭐ Remove Ads with PRO
             </button>
           </div>
         )}
@@ -1097,7 +1158,7 @@ function App() {
                   gap: '0.5rem'
                 }}
               >
-                ðŸ” Search This Area
+                🔍 Search This Area
               </button>
             )}
             <GoogleMap
@@ -1139,7 +1200,7 @@ function App() {
                 title={poi.name}
                 onClick={() => setSelectedPoi(poi)}
                 label={{
-                  text: poi.type === 'charging station' ? 'âš¡' : 'âž•',
+                  text: poi.type === 'charging station' ? '⚡' : '➕',
                   color: 'white',
                   fontSize: '14px'
                 }}
@@ -1201,7 +1262,7 @@ function App() {
               <div className="share-card-logo">Range Anxiety</div>
               <div style={{ textAlign: 'right' }}>
                 <div style={{ fontSize: '0.8rem', color: '#888' }}>Planned Route Summary</div>
-                <div style={{ fontSize: '1rem', fontWeight: 'bold' }}>{trip.origin.split(',')[0]} â†’ {trip.destination.split(',')[0]}</div>
+                <div style={{ fontSize: '1rem', fontWeight: 'bold' }}>{trip.origin.split(',')[0]} → {trip.destination.split(',')[0]}</div>
               </div>
             </div>
 
