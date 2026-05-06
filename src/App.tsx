@@ -106,7 +106,7 @@ function App() {
   const [tirePressurePsi, setTirePressurePsi] = useState<number | ''>(''); // Empty assumes optimal
 
   const [trip, setTrip] = useState<TripDetails>({ origin: '', destination: '', waypoints: [], returnWaypoints: [] });
-  const [mode, setMode] = useState<'eco' | 'sport'>('eco');
+  const [mode, setMode] = useState<'eco' | 'normal' | 'sport'>('normal');
   const [ridingStyle, setRidingStyle] = useState<'relaxed' | 'aggressive'>('relaxed');        
   const [isRoundTrip, setIsRoundTrip] = useState(false);
   const [isCustomReturn, setIsCustomReturn] = useState(false);
@@ -297,15 +297,30 @@ function App() {
       let thermalEfficiency = 1.0;
       if (tempF < 60) thermalEfficiency -= (60 - tempF) * 0.003;
       
-      const efficiency = (mode === 'eco' ? 0.85 : 0.75) * thermalEfficiency;
+      // --- 3-SPEED MODE SYSTEM ---
+      // ECO: High efficiency (85%), smooth power delivery
+      // NORMAL: Standard efficiency (80%)
+      // SPORT: Lower efficiency (75% due to heat/I2R losses), aggressive acceleration
+      let motorEfficiency = 0.80;
+      let modeStyleMultiplier = 1.0;
+      
+      if (mode === 'eco') {
+        motorEfficiency = 0.85;
+        modeStyleMultiplier = 0.95; // Power saving logic
+      } else if (mode === 'sport') {
+        motorEfficiency = 0.75;
+        modeStyleMultiplier = 1.25; // Aggressive power mapping
+      }
+      
+      const combinedEfficiency = motorEfficiency * thermalEfficiency;
       const WorkClimbJoules = massKg * 9.81 * gainMeters;
-      const WhClimb = (WorkClimbJoules / 3600) / efficiency;
+      const WhClimb = (WorkClimbJoules / 3600) / combinedEfficiency;
 
       const PowerWatts = (ForceRolling + ForceDrag) * velocityMps;
-      const WhPerMileFlat = (PowerWatts / velocityMps) * (1609.34 / 3600) / efficiency;
+      const WhPerMileFlat = (PowerWatts / velocityMps) * (1609.34 / 3600) / combinedEfficiency;
 
       const styleMultiplier = ridingStyle === 'aggressive' ? 1.2 : 1.0;
-      const estimatedWh = (distMiles * WhPerMileFlat * styleMultiplier) + WhClimb;
+      const estimatedWh = (distMiles * WhPerMileFlat * styleMultiplier * modeStyleMultiplier) + WhClimb;
       
       const BATTERY_HEALTH_FACTOR = 0.92;
       const totalWhRaw = (capacityInputMode === 'ah') ? (Number(specs.voltage) * Number(specs.capacityAh)) : Number(specs.capacityAh);
@@ -327,7 +342,7 @@ function App() {
         elevationGainFeet: gainFeet,
         estimatedWh,
         batteryPercentUsed: Math.max(0, batteryPercentRemaining),
-        recommendedSpeedMph: mode === 'eco' ? 15 : 22,
+        recommendedSpeedMph: mode === 'eco' ? 18 : mode === 'normal' ? 25 : 35,
         windConditions: { speed: windSpeed, direction: windDir, headwindComponent: headwindMph }
       });
       setIsLoading(false);
@@ -471,9 +486,10 @@ function App() {
           </section>
 
           <section className="form-group">
-            <label>Riding Mode</label>
+            <label>3-Speed Switch Mode</label>
             <div className="mode-toggle">
               <button className={mode === 'eco' ? 'active' : ''} onClick={() => setMode('eco')}>ECO</button>
+              <button className={mode === 'normal' ? 'active' : ''} onClick={() => setMode('normal')}>NORMAL</button>
               <button className={mode === 'sport' ? 'active' : ''} onClick={() => setMode('sport')}>SPORT</button>
             </div>
           </section>
