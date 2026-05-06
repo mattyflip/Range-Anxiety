@@ -5,8 +5,9 @@ import { toPng } from 'html-to-image'
 import { auth, db } from './firebase'
 import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'firebase/auth'
 import type { User } from 'firebase/auth'
-import { doc, getDoc, setDoc, collection, addDoc } from 'firebase/firestore'
+import { doc, getDoc, setDoc, collection, addDoc, serverTimestamp } from 'firebase/firestore'
 import AdBanner from './components/AdBanner'
+import TermsOfService from './components/TermsOfService'
 
 const LIBRARIES: ("places")[] = ["places"];
 
@@ -138,6 +139,9 @@ function App() {
   const [savedBikes, setSavedBikes] = useState<SavedBike[]>([]);
   const [newBikeName, setNewBikeName] = useState('');
 
+  const [agreedToToS, setAgreedToToS] = useState(false);
+  const [showToSPage, setShowToSPage] = useState(false);
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
@@ -164,9 +168,27 @@ function App() {
   const handleAuth = async () => {
     setError(null);
     try {
-      if (isRegistering) { await createUserWithEmailAndPassword(auth, authEmail, authPass); }
-      else { await signInWithEmailAndPassword(auth, authEmail, authPass); }
-      setShowAuthModal(false); setAuthEmail(''); setAuthPass('');
+      if (isRegistering) {
+        if (!agreedToToS) {
+          setError("You must agree to the Terms of Service to create an account.");
+          return;
+        }
+        const userCredential = await createUserWithEmailAndPassword(auth, authEmail, authPass);
+        
+        // Save to marketing list
+        try {
+          await setDoc(doc(db, "marketing_emails", userCredential.user.uid), {
+            email: authEmail,
+            subscribedAt: serverTimestamp(),
+            source: "account_creation"
+          });
+        } catch (e) {
+          console.error("Marketing email log failed:", e);
+        }
+      } else {
+        await signInWithEmailAndPassword(auth, authEmail, authPass);
+      }
+      setShowAuthModal(false); setAuthEmail(''); setAuthPass(''); setAgreedToToS(false);
     } catch (err: any) { console.error("Auth error:", err); setError(err.message); }
   };
 
@@ -185,24 +207,29 @@ function App() {
   };
 
   const saveCurrentBike = async () => {
+    if (!user) {
+      setError("You must be signed in to save bikes to your library.");
+      setShowAuthModal(true);
+      return;
+    }
     if (!newBikeName) return;
     const newBike = { name: newBikeName, specs };
     const updated = [...savedBikes, newBike];
     setSavedBikes(updated);
     
-    // 1. Save to personal list (local or cloud)
-    if (user) {
-      try { await setDoc(doc(db, "users", user.uid), { bikes: updated }, { merge: true }); }
-      catch (e) { console.error("Cloud save failed:", e); setError("Failed to sync bike to the cloud."); }
-    } else { 
-      localStorage.setItem('ebike-saved-bikes', JSON.stringify(updated)); 
+    // 1. Save to personal list (cloud)
+    try { 
+      await setDoc(doc(db, "users", user.uid), { bikes: updated }, { merge: true }); 
+    } catch (e) { 
+      console.error("Cloud save failed:", e); 
+      setError("Failed to sync bike to the cloud."); 
     }
 
     // 2. Submit to Global Review List for Admin
     try {
       await addDoc(collection(db, "bike_submissions"), {
         ...newBike,
-        submittedBy: user?.email || "Guest",
+        submittedBy: user.email || "Unknown",
         submittedAt: new Date().toISOString(),
         status: "pending"
       });
@@ -660,12 +687,30 @@ function App() {
             <h2 style={{ color: '#ff6600', marginBottom: '1.5rem', textAlign: 'center' }}>{isRegistering ? 'Create Account' : 'Sign In'}</h2>
             <div className="form-group"><label>Email</label><input type="email" value={authEmail} onChange={e => setAuthEmail(e.target.value)} /></div>
             <div className="form-group"><label>Password</label><input type="password" value={authPass} onChange={e => setAuthPass(e.target.value)} /></div>
-            <button className="calculate-btn" style={{ width: '100%', padding: '0.8rem' }} onClick={handleAuth}>{isRegistering ? 'Register' : 'Login'}</button>
+            
+            {isRegistering && (
+              <div className="form-group" style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', marginTop: '1rem' }}>
+                <input 
+                  type="checkbox" 
+                  id="tos-check" 
+                  checked={agreedToToS} 
+                  onChange={e => setAgreedToToS(e.target.checked)} 
+                  style={{ width: 'auto', marginTop: '4px' }}
+                />
+                <label htmlFor="tos-check" style={{ fontSize: '0.75rem', textTransform: 'none', lineHeight: '1.4' }}>
+                  I agree to the <button type="button" onClick={() => setShowToSPage(true)} style={{ background: 'none', border: 'none', color: '#ff6600', padding: 0, textDecoration: 'underline', cursor: 'pointer', fontSize: '0.75rem' }}>Terms of Service</button> and to receive marketing updates from Ebike King NJ.
+                </label>
+              </div>
+            )}
+
+            <button className="calculate-btn" style={{ width: '100%', padding: '0.8rem', marginTop: '1rem' }} onClick={handleAuth}>{isRegistering ? 'Register' : 'Login'}</button>
             <p style={{ marginTop: '1rem', textAlign: 'center', fontSize: '0.8rem', color: '#888' }}>{isRegistering ? 'Already have an account?' : 'Need an account?'} <button onClick={() => setIsRegistering(!isRegistering)} style={{ background: 'none', border: 'none', color: '#ff6600', cursor: 'pointer', textDecoration: 'underline' }}>{isRegistering ? 'Sign In' : 'Register Now'}</button></p>
             <button onClick={() => setShowAuthModal(false)} style={{ width: '100%', marginTop: '1.5rem', background: 'none', border: 'none', color: '#666', cursor: 'pointer' }}>Cancel</button>
           </div>
         </div>
       )}
+
+      {showToSPage && <TermsOfService onClose={() => setShowToSPage(false)} />}
 
       {/* Off-screen ref for image generation */}
       <div style={{ position: 'absolute', left: '-9999px', top: '-9999px' }} ref={shareCardRef}>
