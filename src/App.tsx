@@ -221,50 +221,103 @@ function App() {
     else { console.error('Directions error:', status); setError(`Google Maps Directions Error: ${status}`); setIsLoading(false); }
   };
 
+  // Helper to calculate bearing between two points
+  const calculateBearing = (start: {lat: number, lng: number}, end: {lat: number, lng: number}) => {
+    const startLat = (start.lat * Math.PI) / 180;
+    const startLng = (start.lng * Math.PI) / 180;
+    const endLat = (end.lat * Math.PI) / 180;
+    const endLng = (end.lng * Math.PI) / 180;
+    const y = Math.sin(endLng - startLng) * Math.cos(endLat);
+    const x = Math.cos(startLat) * Math.sin(endLat) - Math.sin(startLat) * Math.cos(endLat) * Math.cos(endLng - startLng);
+    const bearing = (Math.atan2(y, x) * 180) / Math.PI;
+    return (bearing + 360) % 360;
+  };
+
   const calculateMetrics = async (result: google.maps.DirectionsResult) => {
     try {
-      let totalDist = 0;
-      let totalDuration = 0;
+      let totalDistMeters = 0;
+      let totalDurationSec = 0;
       const route = result.routes[0];
       route.legs.forEach(leg => {
-        totalDist += (leg.distance?.value || 0);
-        totalDuration += (leg.duration?.value || 0);
+        totalDistMeters += (leg.distance?.value || 0);
+        totalDurationSec += (leg.duration?.value || 0);
       });
 
-      const distMiles = totalDist / 1609.34;
-      const durationMin = totalDuration / 60;
+      const distMiles = totalDistMeters / 1609.34;
+      const durationMin = totalDurationSec / 60;
       const path = route.overview_path.map(p => ({ lat: p.lat(), lng: p.lng() }));
       
-      let gain = 0;
-      try { const elevResp = await axios.post('/api/elevation', { path }); gain = elevResp.data.gain; }
-      catch (e) { console.warn("Elevation API failed", e); }
+      const routeBearing = calculateBearing(path[0], path[path.length - 1]);
 
-      let headwind = 0;
+      let gainFeet = 0;
+      try { 
+        const elevResp = await axios.post('/api/elevation', { path }); 
+        gainFeet = elevResp.data.gain; 
+      } catch (e) { console.warn("Elevation API failed", e); }
+
+      let headwindMph = 0;
       let windSpeed = 0;
       let windDir = 0;
       try {
         const weatherResp = await axios.get(`/api/weather?lat=${path[0].lat}&lng=${path[0].lng}`);
-        const wind = weatherResp.data.wind;
-        windSpeed = wind.speed;
-        windDir = wind.deg;
-        headwind = windSpeed * Math.cos((windDir - 0) * Math.PI / 180);
+        windSpeed = weatherResp.data.wind_speed;
+        windDir = weatherResp.data.wind_deg;
+        // Headwind = wind_speed * cos(wind_angle - route_angle)
+        const angleDiff = (windDir - routeBearing + 360) % 360;
+        headwindMph = windSpeed * Math.cos((angleDiff * Math.PI) / 180);
       } catch (e) { console.warn("Weather API failed", e); }
 
-      const totalWeightLbsValue = (Number(specs.bikeWeightLbs) || 0) + (Number(riderWeightLbs) || 0);
-      const whPerMileBase = totalWeightLbsValue / 10; 
-      const speedFactor = Math.pow((targetSpeedMph as number) / 15, 2);
-      const estimatedWh = distMiles * whPerMileBase * speedFactor * (mode === 'sport' ? 1.4 : 1.0) * (ridingStyle === 'aggressive' ? 1.3 : 1.0) * (1 + (headwind / 20)) * (1 + (gain / 5000));
+      // --- PHYSICS-BASED MODEL ---
+      const bikeWeight = Number(specs.bikeWeightLbs) || 60;
+      const riderWeight = Number(riderWeightLbs) || 175;
+      const massKg = (bikeWeight + riderWeight) * 0.453592;
+      const velocityMps = (Number(targetSpeedMph) || 15) * 0.44704; // mph to m/s
+      
+      // 1. Rolling Resistance (F_rr = Crr * m * g)
+      // Crr for fat tires/mtb tires ~ 0.008
+      const Crr = 0.008;
+      const ForceRolling = Crr * massKg * 9.81;
+
+      // 2. Air Drag (F_drag = 0.5 * rho * CdA * v^2)
+      // CdA for upright rider ~ 0.5
+      const rho = 1.225; // air density kg/m3
+      const CdA = 0.55;
+      const relativeVelocityMps = Math.max(0.1, velocityMps + (headwindMph * 0.44704));
+      const ForceDrag = 0.5 * rho * CdA * Math.pow(relativeVelocityMps, 2);
+
+      // 3. Potential Energy (Wh_climb = m * g * h / efficiency)
+      // Height h in meters
+      const gainMeters = gainFeet * 0.3048;
+      const efficiency = mode === 'eco' ? 0.85 : 0.75; // Sport mode higher power usually less efficient
+      const WorkClimbJoules = massKg * 9.81 * gainMeters;
+      const WhClimb = (WorkClimbJoules / 3600) / efficiency;
+
+      // 4. Kinetic Power (Watts)
+      const PowerWatts = (ForceRolling + ForceDrag) * velocityMps;
+      const WhPerMileFlat = (PowerWatts / velocityMps) * (1609.34 / 3600) / efficiency;
+
+      // 5. Blending in Style Factor
+      // Aggressive riding style adds to the "drag" (starts/stops/acceleration)
+      const styleMultiplier = ridingStyle === 'aggressive' ? 1.2 : 1.0;
+      
+      const estimatedWh = (distMiles * WhPerMileFlat * styleMultiplier) + WhClimb;
       
       const totalWh = (capacityInputMode === 'ah') ? (Number(specs.voltage) * Number(specs.capacityAh)) : Number(specs.capacityAh);
       const startWh = (batteryInputMode === 'percent')
         ? (totalWh * (Number(startBattery) / 100))
         : (totalWh * ((Number(startVoltage) - getBatteryLevels(Number(specs.voltage)).min) / (getBatteryLevels(Number(specs.voltage)).max - getBatteryLevels(Number(specs.voltage)).min)));
 
+      const batteryLeftWh = startWh - estimatedWh;
+      const batteryPercentUsed = (batteryLeftWh / totalWh) * 100;
+
       setMetrics({
-        distanceMiles: distMiles, durationMin: durationMin, elevationGainFeet: gain, estimatedWh,
-        batteryPercentUsed: Math.max(0, ((startWh - estimatedWh) / totalWh) * 100),
-        recommendedSpeedMph: mode === 'eco' ? 12 : 18,
-        windConditions: { speed: windSpeed, direction: windDir, headwindComponent: headwind }
+        distanceMiles: distMiles,
+        durationMin: durationMin,
+        elevationGainFeet: gainFeet,
+        estimatedWh,
+        batteryPercentUsed: Math.max(0, batteryPercentUsed),
+        recommendedSpeedMph: mode === 'eco' ? 15 : 22,
+        windConditions: { speed: windSpeed, direction: windDir, headwindComponent: headwindMph }
       });
       setIsLoading(false);
     } catch (e: any) { console.error("Calculation error", e); setError("Failed to calculate metrics."); setIsLoading(false); }
@@ -334,7 +387,7 @@ function App() {
           </section>
           
           <div style={{ textAlign: 'center', margin: '-0.5rem 0 0.5rem 0' }}>
-              <button onClick={() => setTrip(p => ({ ...p, origin: p.destination, destination: p.origin }))} style={{ background: 'none', border: 'none', color: 'var(--accent-color)', cursor: 'pointer', fontSize: '1.2rem' }}>⇅</button>
+              <button onClick={() => setTrip(p => ({ ...p, origin: p.destination, destination: p.origin }))} style={{ background: 'none', border: 'none', color: 'var(--accent-color)', cursor: 'pointer', fontSize: '1.2rem' }}>⇵</button>
           </div>
 
           <section className="form-group"><label>Destination</label><input type="text" name="destination" value={trip.destination} onChange={handleInputChange} /></section>
@@ -409,6 +462,7 @@ function App() {
               <div style={{ marginTop: '0.5rem', fontSize: '0.8rem', color: '#b0b0b0' }}>
                 <div>Dist: {metrics.distanceMiles.toFixed(1)} mi</div>
                 <div>Gain: {metrics.elevationGainFeet.toFixed(0)} ft</div>
+                <div>Wh/mile: {(metrics.estimatedWh / metrics.distanceMiles).toFixed(1)}</div>
               </div>
               <button onClick={() => {
                   let url = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(trip.origin)}&destination=${encodeURIComponent(trip.destination)}&travelmode=bicycling`;
