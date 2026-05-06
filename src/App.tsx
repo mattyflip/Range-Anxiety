@@ -14,7 +14,7 @@ interface BikeSpecs {
   voltage: number | '';
   capacityAh: number | '';
   motorWatts: number | '';
-  totalWeightLbs: number | '';
+  bikeWeightLbs: number | '';
 }
 
 interface TripDetails {
@@ -45,35 +45,35 @@ interface SavedBike {
 
 const STANDARD_BIKES: SavedBike[] = [
   // --- Moped & High Performance ---
-  { name: "Macfox X1 / X1S", specs: { voltage: 48, capacityAh: 10.4, motorWatts: 500, totalWeightLbs: 215 } },
-  { name: "Macfox X2", specs: { voltage: 48, capacityAh: 15.6, motorWatts: 750, totalWeightLbs: 225 } },
-  { name: "Ride1Up Revv 1", specs: { voltage: 52, capacityAh: 20, motorWatts: 750, totalWeightLbs: 245 } },
-  { name: "Super73 S2", specs: { voltage: 48, capacityAh: 20, motorWatts: 750, totalWeightLbs: 230 } },
-  { name: "Super73 R-Adventure", specs: { voltage: 48, capacityAh: 20, motorWatts: 750, totalWeightLbs: 240 } },
-  { name: "Goat Motor Goat V3", specs: { voltage: 60, capacityAh: 20, motorWatts: 1000, totalWeightLbs: 240 } },
-  { name: "Ridstar Q20 Pro", specs: { voltage: 52, capacityAh: 20, motorWatts: 2000, totalWeightLbs: 250 } },
-  { name: "Onyx RCR", specs: { voltage: 72, capacityAh: 41, motorWatts: 3000, totalWeightLbs: 310 } },
-  { name: "Sur-Ron Light Bee X", specs: { voltage: 60, capacityAh: 32, motorWatts: 6000, totalWeightLbs: 250 } },
-  { name: "Talaria Sting R", specs: { voltage: 60, capacityAh: 45, motorWatts: 8000, totalWeightLbs: 260 } },
+  { name: "Macfox X1 / X1S", specs: { voltage: 48, capacityAh: 10.4, motorWatts: 500, bikeWeightLbs: 65 } },
+  { name: "Macfox X2", specs: { voltage: 48, capacityAh: 15.6, motorWatts: 750, bikeWeightLbs: 75 } },
+  { name: "Ride1Up Revv 1", specs: { voltage: 52, capacityAh: 20, motorWatts: 750, bikeWeightLbs: 93 } },
+  { name: "Super73 S2", specs: { voltage: 48, capacityAh: 20, motorWatts: 750, bikeWeightLbs: 73 } },
+  { name: "Super73 R-Adventure", specs: { voltage: 48, capacityAh: 20, motorWatts: 750, bikeWeightLbs: 80 } },
+  { name: "Goat Motor Goat V3", specs: { voltage: 60, capacityAh: 20, motorWatts: 1000, bikeWeightLbs: 85 } },
+  { name: "Ridstar Q20 Pro", specs: { voltage: 52, capacityAh: 20, motorWatts: 2000, bikeWeightLbs: 88 } },
+  { name: "Onyx RCR", specs: { voltage: 72, capacityAh: 41, motorWatts: 3000, bikeWeightLbs: 145 } },
+  { name: "Sur-Ron Light Bee X", specs: { voltage: 60, capacityAh: 32, motorWatts: 6000, bikeWeightLbs: 110 } },
+  { name: "Talaria Sting R", specs: { voltage: 60, capacityAh: 45, motorWatts: 8000, bikeWeightLbs: 145 } },
 
   // --- Commuter & Everyday ---
-  { name: "Aventon Level.2", specs: { voltage: 48, capacityAh: 14, motorWatts: 500, totalWeightLbs: 220 } },
-  { name: "Velotric Discover 1", specs: { voltage: 48, capacityAh: 14.4, motorWatts: 500, totalWeightLbs: 215 } },
-  { name: "Velotric Nomad 1", specs: { voltage: 48, capacityAh: 14.4, motorWatts: 750, totalWeightLbs: 230 } },
-  { name: "Vanpowers City Vanture", specs: { voltage: 36, capacityAh: 7, motorWatts: 350, totalWeightLbs: 200 } },
-  { name: "Vanpowers UrbanGlide-Ultra", specs: { voltage: 48, capacityAh: 15, motorWatts: 500, totalWeightLbs: 225 } },
-  { name: "Ride1Up 700 Series", specs: { voltage: 48, capacityAh: 14, motorWatts: 750, totalWeightLbs: 220 } },
-  { name: "Lectric XP 3.0", specs: { voltage: 48, capacityAh: 14, motorWatts: 500, totalWeightLbs: 230 } },
-  { name: "Rad Power RadRunner 2", specs: { voltage: 48, capacityAh: 14, motorWatts: 750, totalWeightLbs: 230 } },
-  { name: "Electra Townie Go! 7D", specs: { voltage: 36, capacityAh: 7, motorWatts: 250, totalWeightLbs: 210 } },
+  { name: "Aventon Level.2", specs: { voltage: 48, capacityAh: 14, motorWatts: 500, bikeWeightLbs: 62 } },
+  { name: "Velotric Discover 1", specs: { voltage: 48, capacityAh: 14.4, motorWatts: 500, bikeWeightLbs: 65 } },
+  { name: "Velotric Nomad 1", specs: { voltage: 48, capacityAh: 14.4, motorWatts: 750, bikeWeightLbs: 73 } },
+  { name: "Vanpowers City Vanture", specs: { voltage: 36, capacityAh: 7, motorWatts: 350, bikeWeightLbs: 35 } },
+  { name: "Vanpowers UrbanGlide-Ultra", specs: { voltage: 48, capacityAh: 15, motorWatts: 500, bikeWeightLbs: 70 } },
+  { name: "Ride1Up 700 Series", specs: { voltage: 48, capacityAh: 14, motorWatts: 750, bikeWeightLbs: 62 } },
+  { name: "Lectric XP 3.0", specs: { voltage: 48, capacityAh: 14, motorWatts: 500, bikeWeightLbs: 64 } },
+  { name: "Rad Power RadRunner 2", specs: { voltage: 48, capacityAh: 14, motorWatts: 750, bikeWeightLbs: 65 } },
+  { name: "Electra Townie Go! 7D", specs: { voltage: 36, capacityAh: 7, motorWatts: 250, bikeWeightLbs: 48 } },
 
   // --- Utility & Delivery ---
-  { name: "Arrow 10 (Delivery)", specs: { voltage: 48, capacityAh: 20, motorWatts: 500, totalWeightLbs: 225 } },
-  { name: "Fly-7 (Delivery)", specs: { voltage: 48, capacityAh: 20, motorWatts: 750, totalWeightLbs: 235 } },
-  { name: "Senada Herald", specs: { voltage: 48, capacityAh: 14, motorWatts: 750, totalWeightLbs: 225 } },
-  { name: "Sondors MadMod", specs: { voltage: 48, capacityAh: 21, motorWatts: 750, totalWeightLbs: 230 } },
-  { name: "BOB E-Trike (PH)", specs: { voltage: 48, capacityAh: 20, motorWatts: 500, totalWeightLbs: 260 } },
-  { name: "Tern GSD S10", specs: { voltage: 36, capacityAh: 11, motorWatts: 250, totalWeightLbs: 240 } }
+  { name: "Arrow 10 (Delivery)", specs: { voltage: 48, capacityAh: 20, motorWatts: 500, bikeWeightLbs: 65 } },
+  { name: "Fly-7 (Delivery)", specs: { voltage: 48, capacityAh: 20, motorWatts: 750, bikeWeightLbs: 75 } },
+  { name: "Senada Herald", specs: { voltage: 48, capacityAh: 14, motorWatts: 750, totalWeightLbs: 68 } },
+  { name: "Sondors MadMod", specs: { voltage: 48, capacityAh: 21, motorWatts: 750, bikeWeightLbs: 80 } },
+  { name: "BOB E-Trike (PH)", specs: { voltage: 48, capacityAh: 20, motorWatts: 500, bikeWeightLbs: 110 } },
+  { name: "Tern GSD S10", specs: { voltage: 36, capacityAh: 11, motorWatts: 250, bikeWeightLbs: 75 } }
 ];
 
 interface POI {
@@ -97,7 +97,8 @@ function App() {
   const mapRef = useRef<google.maps.Map | null>(null);
   const shareCardRef = useRef<HTMLDivElement>(null);
 
-  const [specs, setSpecs] = useState<BikeSpecs>({ voltage: 48, capacityAh: 15, motorWatts: 750, totalWeightLbs: 220 });
+  const [specs, setSpecs] = useState<BikeSpecs>({ voltage: 48, capacityAh: 15, motorWatts: 750, bikeWeightLbs: 65 });
+  const [riderWeightLbs, setRiderWeightLbs] = useState<number | ''>(175);
   const [trip, setTrip] = useState<TripDetails>({ origin: '', destination: '', waypoints: [], returnWaypoints: [] });
   const [mode, setMode] = useState<'eco' | 'sport'>('eco');
   const [ridingStyle, setRidingStyle] = useState<'relaxed' | 'aggressive'>('relaxed');        
@@ -249,7 +250,8 @@ function App() {
         headwind = windSpeed * Math.cos((windDir - 0) * Math.PI / 180);
       } catch (e) { console.warn("Weather API failed", e); }
 
-      const whPerMileBase = (specs.totalWeightLbs as number) / 10; 
+      const totalWeightLbs = (Number(specs.bikeWeightLbs) || 0) + (Number(riderWeightLbs) || 0);
+      const whPerMileBase = totalWeightLbs / 10; 
       const speedFactor = Math.pow((targetSpeedMph as number) / 15, 2);
       const estimatedWh = distMiles * whPerMileBase * speedFactor * (mode === 'sport' ? 1.4 : 1.0) * (ridingStyle === 'aggressive' ? 1.3 : 1.0) * (1 + (headwind / 20)) * (1 + (gain / 5000));
       
@@ -351,8 +353,10 @@ function App() {
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>        
             <section className="form-group"><label>Motor (W)</label><input type="number" value={specs.motorWatts} onChange={(e) => handleSpecChange('motorWatts', e.target.value)} /></section>
-            <section className="form-group"><label>Weight (lbs)</label><input type="number" value={specs.totalWeightLbs} onChange={(e) => handleSpecChange('totalWeightLbs', e.target.value)} /></section>
+            <section className="form-group"><label>Bike Wt (lbs)</label><input type="number" value={specs.bikeWeightLbs} onChange={(e) => handleSpecChange('bikeWeightLbs', e.target.value)} /></section>
           </div>
+
+          <section className="form-group"><label>Rider Weight (lbs)</label><input type="number" value={riderWeightLbs} onChange={(e) => setRiderWeightLbs(parseFloat(e.target.value) || '')} /></section>
 
           <section className="form-group">
             <label>Start Battery</label>
