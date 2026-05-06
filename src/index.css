@@ -256,21 +256,32 @@ main {
     height: 4rem;
     padding: 0 1rem;
   }
-  
+
   h1 {
     font-size: 1.1rem;
   }
 
   .sidebar {
+    position: fixed;
     top: auto;
     bottom: 0;
     left: 0;
     width: 100%;
-    max-height: 35%; 
+    max-height: 45%;
     border-radius: 20px 20px 0 0;
     border-left: none;
     border-right: none;
     border-bottom: none;
     padding: 1.5rem 1rem;
+    margin: 0; /* Reset margins */
+    box-sizing: border-box; /* Ensure padding doesn't overflow */
+  }
+
+  main {
+    height: calc(100vh - 4rem); /* Ensure main takes up screen space above sidebar */
+  }
+
+  .logo {
+    font-size: 1rem;
   }
 }
