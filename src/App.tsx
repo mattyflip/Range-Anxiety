@@ -1165,7 +1165,7 @@ function App() {
               mapContainerStyle={containerStyle}
               center={center}
               zoom={10}
-              onMapLoad={onMapLoad}
+              onLoad={onMapLoad}
             >
             {trip.origin && trip.destination && isLoading && !response && (
               <DirectionsService
