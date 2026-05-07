@@ -18,6 +18,8 @@ interface GroupRide {
   pin: string;
   creatorId: string;
   origin: string;
+  startLat: number;
+  startLng: number;
 }
 
 interface Participant {
@@ -168,11 +170,25 @@ function App() {
 
   // Group Rides State
   const [activeRide, setActiveRide] = useState<GroupRide | null>(null);
+  const [publicRides, setPublicRides] = useState<GroupRide[]>([]);
+  const [selectedPublicRide, setSelectedPublicRide] = useState<GroupRide | null>(null);
   const [rideParticipants, setRideParticipants] = useState<Participant[]>([]);
   const [groupRideName, setGroupRideName] = useState('');
   const [joinPin, setJoinPin] = useState('');
   const [isPublicRide, setIsPublicRide] = useState(true);
   const [lastUploadedLocation, setLastUploadedLocation] = useState<google.maps.LatLngLiteral | null>(null);
+
+  // Sync Public Rides
+  useEffect(() => {
+    if (!user || !isPro) return;
+    const q = query(collection(db, "group_rides"), where("isPublic", "==", true), where("status", "==", "active"));
+    const unsubscribe = onSnapshot(q, (snap) => {
+      const rides: GroupRide[] = [];
+      snap.forEach(doc => rides.push({ id: doc.id, ...doc.data() } as GroupRide));
+      setPublicRides(rides);
+    });
+    return () => unsubscribe();
+  }, [user, isPro]);
 
   // Sync Participants
   useEffect(() => {
@@ -317,6 +333,8 @@ function App() {
       creatorId: user.uid,
       createdAt: serverTimestamp(),
       origin: trip.origin || "Current Location",
+      startLat: center.lat,
+      startLng: center.lng,
       status: 'active'
     };
 
@@ -878,6 +896,20 @@ function App() {
                          <button onClick={() => joinRide()} style={{ padding: '0.4rem 0.8rem', backgroundColor: '#444', border: 'none', borderRadius: '4px', cursor: 'pointer', color: 'white' }}>Join</button>
                        </div>
                      </div>
+
+                     {publicRides.length > 0 && (
+                       <div className="form-group" style={{ marginTop: '1rem' }}>
+                         <label style={{ fontSize: '0.65rem', color: 'var(--accent-color)' }}>📡 Nearby Public Rides</label>
+                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginTop: '0.4rem' }}>
+                           {publicRides.map(ride => (
+                             <div key={ride.id} style={{ background: 'rgba(255,255,255,0.05)', padding: '0.6rem', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span style={{ fontSize: '0.75rem', fontWeight: 'bold' }}>{ride.name}</span>
+                                <button onClick={() => joinRide(ride.id)} style={{ padding: '0.3rem 0.6rem', backgroundColor: '#34a853', color: 'white', border: 'none', borderRadius: '4px', fontSize: '0.65rem', cursor: 'pointer' }}>Join</button>
+                             </div>
+                           ))}
+                         </div>
+                       </div>
+                     )}
                    </>
                  ) : (
                    <div style={{ background: 'rgba(52,168,83,0.1)', padding: '1rem', borderRadius: '12px', border: '1px solid rgba(52,168,83,0.3)' }}>
@@ -957,6 +989,37 @@ function App() {
               >
                 🎯
               </button>
+              
+              {/* Public Rides Discovery */}
+              {publicRides.filter(r => r.id !== activeRide?.id).map(ride => (
+                <Marker 
+                  key={ride.id} 
+                  position={{ lat: ride.startLat, lng: ride.startLng }} 
+                  onClick={() => setSelectedPublicRide(ride)}
+                  icon={{
+                    url: 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png',
+                    scaledSize: new google.maps.Size(40, 40)
+                  }}
+                />
+              ))}
+
+              {selectedPublicRide && (
+                <InfoWindow 
+                  position={{ lat: selectedPublicRide.startLat, lng: selectedPublicRide.startLng }} 
+                  onCloseClick={() => setSelectedPublicRide(null)}
+                >
+                  <div style={{ padding: '0.5rem', color: '#333' }}>
+                    <h4 style={{ margin: 0 }}>👥 {selectedPublicRide.name}</h4>
+                    <p style={{ margin: '0.2rem 0', fontSize: '0.8rem' }}>Host: {selectedPublicRide.creatorId.substring(0, 5)}...</p>
+                    <button 
+                      onClick={() => { joinRide(selectedPublicRide.id); setSelectedPublicRide(null); }} 
+                      style={{ width: '100%', marginTop: '0.5rem', padding: '0.4rem', backgroundColor: '#34a853', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
+                    >
+                      Join Group Ride
+                    </button>
+                  </div>
+                </InfoWindow>
+              )}
               
       {/* Ride Participants */}
               {rideParticipants.map(p => {
