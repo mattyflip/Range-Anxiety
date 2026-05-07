@@ -148,6 +148,7 @@ function App() {
   const [isPro, setIsPro] = useState(false);
   const [isHostTier, setIsHostTier] = useState(false);
   const [hostTierExpiresAt, setHostTierExpiresAt] = useState<number | null>(null);
+  const [username, setUsername] = useState('');
   const [authEmail, setAuthEmail] = useState('');
   const [authPass, setAuthPass] = useState('');
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -157,6 +158,9 @@ function App() {
   const [showBikeResults, setShowBikeResults] = useState(false);
   const [savedBikes, setSavedBikes] = useState<SavedBike[]>([]);
   const [newBikeName, setNewBikeName] = useState('');
+
+  const [usernameInput, setUsernameInput] = useState('');
+  const [showUsernameEdit, setShowUsernameEdit] = useState(false);
 
   const [agreedToToS, setAgreedToToS] = useState(false);
   const [showToSPage, setShowToSPage] = useState(false);
@@ -226,6 +230,7 @@ function App() {
             setIsPro(data.isPro || false);
             setIsHostTier(data.isHostTier || false);
             setHostTierExpiresAt(data.hostTierExpiresAt?.toMillis() || null);
+            setUsername(data.username || '');
             if (data.bikes) setSavedBikes(data.bikes);
           } else {
             await setDoc(doc(db, "users", currentUser.uid), { email: currentUser.email, isPro: false, createdAt: new Date() });
@@ -272,6 +277,15 @@ function App() {
   };
 
   const handleSignOut = () => signOut(auth);
+
+  const updateUsername = async (newVal: string) => {
+    setUsername(newVal);
+    if (user) {
+      try {
+        await setDoc(doc(db, "users", user.uid), { username: newVal }, { merge: true });
+      } catch (e) { console.error("Username update failed:", e); }
+    }
+  };
 
   const handleUpgrade = async (tier: 'pro' | 'host' = 'pro') => {
     console.log(`Initiating upgrade to ${tier}...`);
@@ -785,6 +799,23 @@ function App() {
             {isPro && !isHostTier && (
                <button onClick={() => handleUpgrade('host')} style={{ width: '100%', marginTop: '0.5rem', padding: '0.6rem', background: 'linear-gradient(45deg, #ff6600, #ff9900)', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '0.75rem', cursor: 'pointer' }}>Upgrade to Host Tier ($9.99/mo)</button>
             )}
+            
+            {user && (
+              <div style={{ marginTop: '1rem', padding: '0.8rem', background: 'rgba(255,255,255,0.05)', borderRadius: '10px' }}>
+                <label style={{ fontSize: '0.6rem', color: '#888', textTransform: 'uppercase' }}>Social Profile</label>
+                {!showUsernameEdit ? (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '0.4rem' }}>
+                    <span style={{ fontSize: '0.9rem', color: 'white', fontWeight: 'bold' }}>{username || 'Anonymous Rider'}</span>
+                    <button onClick={() => { setUsernameInput(username); setShowUsernameEdit(true); }} style={{ background: 'none', border: 'none', color: '#ff6600', fontSize: '0.7rem', cursor: 'pointer', textDecoration: 'underline' }}>Edit</button>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.4rem' }}>
+                    <input type="text" placeholder="Username" value={usernameInput} onChange={e => setUsernameInput(e.target.value)} style={{ padding: '0.3rem', fontSize: '0.8rem' }} />
+                    <button onClick={() => { updateUsername(usernameInput); setShowUsernameEdit(false); }} style={{ padding: '0.3rem 0.6rem', backgroundColor: '#34a853', border: 'none', borderRadius: '4px', color: 'white', cursor: 'pointer', fontSize: '0.7rem' }}>Save</button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
           
           <section className="form-group" style={{ marginTop: '1.5rem', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '1.5rem' }}>
@@ -887,22 +918,31 @@ function App() {
               )}
               {response && <DirectionsRenderer options={{ directions: response }} />}
               
-              {/* Ride Participants */}
-              {rideParticipants.map(p => (
-                <Marker 
-                  key={p.userId} 
-                  position={{ lat: p.lat, lng: p.lng }} 
-                  label={{ text: p.userId === user?.uid ? "Me" : p.name, color: 'white', className: 'rider-label' }}
-                  icon={{
-                    path: google.maps.SymbolPath.CIRCLE,
-                    fillColor: p.userId === user?.uid ? '#34a853' : '#ff6600', // Green for me, Orange for others
-                    fillOpacity: 1,
-                    strokeColor: 'white',
-                    strokeWeight: 2,
-                    scale: 8
-                  }}
-                />
-              ))}
+      {/* Ride Participants */}
+              {rideParticipants.map(p => {
+                const isOrganizer = activeRide?.creatorId === p.userId;
+                return (
+                  <Marker 
+                    key={p.userId} 
+                    position={{ lat: p.lat, lng: p.lng }} 
+                    label={{ 
+                      text: p.name, 
+                      color: 'white', 
+                      className: 'rider-label',
+                      fontSize: '12px',
+                      fontWeight: 'bold'
+                    }}
+                    icon={{
+                      path: google.maps.SymbolPath.CIRCLE,
+                      fillColor: isOrganizer ? '#34a853' : '#ff6600', // Green for Organizer, Orange for Riders
+                      fillOpacity: 1,
+                      strokeColor: 'white',
+                      strokeWeight: 2,
+                      scale: 8
+                    }}
+                  />
+                );
+              })}
 
               {pois.map(poi => (<Marker key={poi.id} position={poi.position} title={poi.name} onClick={() => setSelectedPoi(poi)} />))}
               {selectedPoi && (
