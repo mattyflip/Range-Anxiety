@@ -626,17 +626,51 @@ function App() {
   const useCurrentLocation = () => { if (navigator.geolocation) { navigator.geolocation.getCurrentPosition((pos) => { setTrip(prev => ({ ...prev, origin: `${pos.coords.latitude},${pos.coords.longitude}` })); }); } };
 
   const searchPOIs = async (category: string) => {
-    if (!response) return; setPoiCategory(category);
-    const path = response.routes[0].overview_path.map(p => ({ lat: p.lat(), lng: p.lng() }));
-    try { const resp = await axios.post('/api/charging', { path, category }); setPois(resp.data.pois); }
-    catch (e) { console.error("POI search failed", e); }
+    if (!response || !isLoaded) return;
+    setPoiCategory(category);
+    
+    if (category === 'charging') {
+      const path = response.routes[0].overview_path.map(p => ({ lat: p.lat(), lng: p.lng() }));
+      try {
+        const resp = await axios.post('/api/charging', { path, category });
+        if (resp.data.pois) setPois(resp.data.pois);
+      } catch (e) { console.error("POI search failed", e); }
+    } else {
+      // Use Google Places for other amenities
+      const service = new google.maps.places.PlacesService(mapRef.current!);
+      const request = {
+        location: mapRef.current!.getCenter()!,
+        radius: 5000, // 5km
+        query: category
+      };
+      
+      service.textSearch(request, (results, status) => {
+        if (status === google.maps.places.PlacesServiceStatus.OK && results) {
+          const formatted = results.map(place => ({
+            id: place.place_id || Math.random().toString(),
+            name: place.name || 'Unknown',
+            address: place.formatted_address || '',
+            position: { lat: place.geometry!.location!.lat(), lng: place.geometry!.location!.lng() },
+            type: category
+          }));
+          setPois(formatted);
+        }
+      });
+    }
   };
 
   const searchByMapCenter = async () => {
     if (!mapRef.current || !poiCategory) return;
     const c = mapRef.current.getCenter(); if (!c) return;
-    try { const resp = await axios.post('/api/charging', { lat: c.lat(), lng: c.lng(), category: poiCategory, isRadius: true }); setPois(resp.data.pois); }
-    catch (e) { console.error("Radius search failed", e); }
+    
+    if (poiCategory === 'charging') {
+      try {
+        const resp = await axios.post('/api/charging', { lat: c.lat(), lng: c.lng(), category: poiCategory });
+        if (resp.data.pois) setPois(resp.data.pois);
+      } catch (e) { console.error("Radius search failed", e); }
+    } else {
+      searchPOIs(poiCategory);
+    }
   };
 
   const addPOIAsWaypoint = (poi: POI) => { setTrip(prev => ({ ...prev, waypoints: [...prev.waypoints, poi.address] })); setResponse(null); setMetrics(null); };
@@ -970,6 +1004,7 @@ function App() {
                 <div className="map-controls">
                     <button onClick={() => searchPOIs('cafe')}>☕ Cafes</button>
                     <button onClick={() => searchPOIs('bike shop')}>🚲 Shops</button>
+                    <button onClick={() => searchPOIs('charging')}>⚡ Charging</button>
                     <button onClick={searchByMapCenter}>🔍 Search Area</button>
                 </div>
               )}
