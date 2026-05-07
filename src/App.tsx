@@ -209,17 +209,41 @@ function App() {
     return () => unsubscribe();
   }, [user, isPro, center]);
 
-  // Sync Participants
+  // Sync Participants and Auto-End Logic
   useEffect(() => {
-    if (!activeRide) return;
+    if (!activeRide || !user) return;
     const q = collection(db, `group_rides/${activeRide.id}/participants`);
     const unsubscribe = onSnapshot(q, (snap) => {
       const parts: Participant[] = [];
-      snap.forEach(doc => parts.push(doc.data() as Participant));
+      snap.forEach(docSnap => parts.push(docSnap.data() as Participant));
       setRideParticipants(parts);
+
+      // Auto-End Check: Only the host monitors this
+      if (user.uid === activeRide.creatorId && parts.length > 0 && response) {
+        const dest = response.routes[0].legs[0].end_location;
+        const everyoneReached = parts.every(p => {
+          const dist = Math.sqrt(Math.pow(p.lat - dest.lat(), 2) + Math.pow(p.lng - dest.lng(), 2));
+          return dist < 0.001; // Approx 100 meters
+        });
+
+        if (everyoneReached && activeRide.status === 'active') {
+          console.log("Everyone reached destination. Ending ride...");
+          endRide();
+        }
+      }
     });
-    return () => unsubscribe();
-  }, [activeRide]);
+
+    // Listen to the RIDE itself to detect when it ends (for participants)
+    const rideUnsub = onSnapshot(doc(db, "group_rides", activeRide.id), (snap) => {
+      if (snap.exists() && snap.data().status === 'offline') {
+        alert(`The ride has ended. Thank you for joining ${activeRide.name}!`);
+        setActiveRide(null);
+        setRideParticipants([]);
+      }
+    });
+
+    return () => { unsubscribe(); rideUnsub(); };
+  }, [activeRide?.id, user?.uid, response]);
 
   // Upload Location every 15s - ONLY ACTIVE DURING A RIDE
   useEffect(() => {
@@ -234,7 +258,6 @@ function App() {
           const newLoc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
           const lastLoc = lastUploadedLocRef.current;
           
-          // Optimization: Only upload if moved > 10 meters (roughly 0.0001 degrees)
           const hasMoved = !lastLoc || 
             Math.abs(newLoc.lat - lastLoc.lat) > 0.0001 || 
             Math.abs(newLoc.lng - lastLoc.lng) > 0.0001;
@@ -256,9 +279,7 @@ function App() {
       }
     };
 
-    // Run once immediately
     updateLocation();
-
     const interval = setInterval(updateLocation, 15000);
     return () => clearInterval(interval);
   }, [activeRide?.id, user?.uid, username]);
@@ -304,17 +325,13 @@ function App() {
           return;
         }
         const userCredential = await createUserWithEmailAndPassword(auth, authEmail, authPass);
-        
-        // Save to marketing list
         try {
           await setDoc(doc(db, "marketing_emails", userCredential.user.uid), {
             email: authEmail,
             subscribedAt: serverTimestamp(),
             source: "account_creation"
           });
-        } catch (e) {
-          console.error("Marketing email log failed:", e);
-        }
+        } catch (e) { console.error("Marketing email log failed:", e); }
       } else {
         await signInWithEmailAndPassword(auth, authEmail, authPass);
       }
@@ -338,11 +355,7 @@ function App() {
     if (!user) { setShowAuthModal(true); return; }
     try {
       const resp = await axios.post('/api/create-checkout-session', { userId: user.uid, email: user.email, tier });
-      console.log("Checkout session response:", resp.data);
-      if (resp.data.url) { 
-        console.log("Redirecting to:", resp.data.url);
-        window.location.href = resp.data.url; 
-      }
+      if (resp.data.url) { window.location.href = resp.data.url; }
       else { throw new Error("No checkout URL returned from server."); }
     } catch (err: any) {
       console.error("Upgrade error:", err);
@@ -350,19 +363,30 @@ function App() {
     }
   };
 
+  const endRide = async () => {
+    if (!user || !activeRide) return;
+    try {
+      await setDoc(doc(db, "group_rides", activeRide.id), { status: 'offline' }, { merge: true });
+      setActiveRide(null);
+      setRideParticipants([]);
+    } catch (e) { console.error("End ride failed:", e); }
+  };
+
   const createRide = async () => {
     if (!user) { setShowAuthModal(true); return; }
     if (!isHostTier) { setError("Only HOST TIER users can create rides."); return; }
+    
+    // Enforce single active ride
+    const activeCheckQ = query(collection(db, "group_rides"), where("creatorId", "==", user.uid), where("status", "==", "active"));
+    const activeSnap = await getDocs(activeCheckQ);
+    if (!activeSnap.empty) {
+      setError("You already have an active ride. Please end it before starting a new one.");
+      return;
+    }
+
     if (!groupRideName) { setError("Please name your ride."); return; }
     
     try {
-      // Deactivate previous rides by this host
-      const prevQ = query(collection(db, "group_rides"), where("creatorId", "==", user.uid), where("status", "==", "active"));
-      const prevSnap = await getDocs(prevQ);
-      for (const d of prevSnap.docs) {
-        await setDoc(doc(db, "group_rides", d.id), { status: 'offline' }, { merge: true });
-      }
-
       const pin = Math.floor(1000 + Math.random() * 9000).toString();
       const rideData = {
         name: groupRideName,
@@ -376,22 +400,18 @@ function App() {
         status: 'active'
       };
 
-      console.log("Attempting to create ride with data:", rideData);
       const rideRef = await addDoc(collection(db, "group_rides"), rideData);
-      console.log("Ride created successfully. ID:", rideRef.id);
       setActiveRide({ id: rideRef.id, ...rideData } as any);
       setGroupRideName('');
-      // Automatically join as participant
       await setDoc(doc(db, `group_rides/${rideRef.id}/participants`, user.uid), {
         userId: user.uid,
-        name: username || user.email?.split('@')[0] || "Rider",
+        name: username || "Host",
         lat: center.lat,
         lng: center.lng,
         lastUpdatedAt: Date.now()
       });
     } catch (e: any) { 
-      console.error("FULL FIREBASE ERROR:", e); 
-      setError(`Create ride failed: ${e.message || "Unknown error"}`); 
+      setError(`Create ride failed: ${e.message}`); 
     }
   };
 
