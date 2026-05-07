@@ -598,6 +598,21 @@ function App() {
 
   const addPOIAsWaypoint = (poi: POI) => { setTrip(prev => ({ ...prev, waypoints: [...prev.waypoints, poi.address] })); setResponse(null); setMetrics(null); };
 
+  const recenterMap = () => {
+    if (mapRef.current) {
+      if (lastUploadedLocation) {
+        mapRef.current.panTo(lastUploadedLocation);
+        mapRef.current.setZoom(15);
+      } else if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition((pos) => {
+          const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+          mapRef.current?.panTo(loc);
+          mapRef.current?.setZoom(15);
+        });
+      }
+    }
+  };
+
   const downloadShareCard = async () => {
     if (!shareCardRef.current) return;
     try { const dataUrl = await toPng(shareCardRef.current, { cacheBust: true }); const link = document.createElement('a'); link.download = `trip-${Date.now()}.png`; link.href = dataUrl; link.click(); }
@@ -917,6 +932,31 @@ function App() {
                 />
               )}
               {response && <DirectionsRenderer options={{ directions: response }} />}
+              
+              <button 
+                onClick={recenterMap}
+                style={{
+                  position: 'absolute',
+                  bottom: '2rem',
+                  right: '1rem',
+                  zIndex: 10,
+                  width: '50px',
+                  height: '50px',
+                  borderRadius: '50%',
+                  backgroundColor: '#ff6600',
+                  color: 'white',
+                  border: 'none',
+                  boxShadow: '0 4px 15px rgba(0,0,0,0.5)',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '1.5rem'
+                }}
+                title="Recenter Map"
+              >
+                🎯
+              </button>
               
       {/* Ride Participants */}
               {rideParticipants.map(p => {
