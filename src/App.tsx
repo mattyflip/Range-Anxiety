@@ -165,7 +165,7 @@ function App() {
   // Group Rides State
   const [activeRide, setActiveRide] = useState<GroupRide | null>(null);
   const [rideParticipants, setRideParticipants] = useState<Participant[]>([]);
-  const [newRideName, setNewRideNameLocal] = useState('');
+  const [groupRideName, setGroupRideName] = useState('');
   const [joinPin, setJoinPin] = useState('');
   const [isPublicRide, setIsPublicRide] = useState(true);
   const [lastUploadedLocation, setLastUploadedLocation] = useState<google.maps.LatLngLiteral | null>(null);
@@ -274,11 +274,16 @@ function App() {
   const handleSignOut = () => signOut(auth);
 
   const handleUpgrade = async (tier: 'pro' | 'host' = 'pro') => {
+    console.log(`Initiating upgrade to ${tier}...`);
     if (!user) { setShowAuthModal(true); return; }
     try {
       const resp = await axios.post('/api/create-checkout-session', { userId: user.uid, email: user.email, tier });
-      if (resp.data.url) { window.location.href = resp.data.url; }
-      else { throw new Error("No checkout URL returned."); }
+      console.log("Checkout session response:", resp.data);
+      if (resp.data.url) { 
+        console.log("Redirecting to:", resp.data.url);
+        window.location.href = resp.data.url; 
+      }
+      else { throw new Error("No checkout URL returned from server."); }
     } catch (err: any) {
       console.error("Upgrade error:", err);
       setError(`Checkout Error: ${err.response?.data?.error || err.message}`);
@@ -286,12 +291,13 @@ function App() {
   };
 
   const createRide = async () => {
-    if (!user || !isHostTier) return;
-    if (!newRideName) { setError("Please name your ride."); return; }
+    if (!user) { setShowAuthModal(true); return; }
+    if (!isHostTier) { setError("Only HOST TIER users can create rides."); return; }
+    if (!groupRideName) { setError("Please name your ride."); return; }
     
     const pin = Math.floor(1000 + Math.random() * 9000).toString();
     const rideData = {
-      name: newRideName,
+      name: groupRideName,
       isPublic: isPublicRide,
       pin,
       creatorId: user.uid,
@@ -303,7 +309,7 @@ function App() {
     try {
       const rideRef = await addDoc(collection(db, "group_rides"), rideData);
       setActiveRide({ id: rideRef.id, ...rideData } as any);
-      setNewRideNameLocal('');
+      setGroupRideName('');
       // Automatically join as participant
       await setDoc(doc(db, `group_rides/${rideRef.id}/participants`, user.uid), {
         userId: user.uid,
@@ -316,7 +322,8 @@ function App() {
   };
 
   const joinRide = async (rideId?: string) => {
-    if (!user || !isHostTier) return;
+    if (!user) { setShowAuthModal(true); return; }
+    if (!isPro) { setError("You must be at least a PRO user to join group rides."); return; }
 
     try {
       let rideDoc;
@@ -799,7 +806,7 @@ function App() {
                        <div className="form-group">
                          <label style={{ fontSize: '0.65rem' }}>Host a New Ride</label>
                          <div style={{ display: 'flex', gap: '0.5rem' }}>
-                           <input type="text" placeholder="Ride Name" value={newRideName} onChange={e => setNewRideNameLocal(e.target.value)} />
+                           <input type="text" placeholder="Ride Name" value={groupRideName} onChange={e => setGroupRideName(e.target.value)} />
                            <button onClick={createRide} style={{ padding: '0.4rem 0.8rem', backgroundColor: '#ff6600', border: 'none', borderRadius: '4px', cursor: 'pointer', color: 'white' }}>Host</button>
                          </div>
                          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.4rem', fontSize: '0.65rem', textTransform: 'none' }}>
