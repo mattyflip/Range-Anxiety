@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
+import ReactGA from "react-ga4"
 import { GoogleMap, useJsApiLoader, DirectionsService, DirectionsRenderer, Marker, InfoWindow, Polyline } from '@react-google-maps/api'
 import axios from 'axios'
 import { toPng } from 'html-to-image'
@@ -373,6 +374,7 @@ function App() {
 
   const handleUpgrade = async (tier: 'pro' | 'host' = 'pro') => {
     console.log(`Initiating upgrade to ${tier}...`);
+    ReactGA.event({ category: "Conversion", action: "Initiate Upgrade", label: tier });
     if (!user) { setShowAuthModal(true); return; }
     try {
       const resp = await axios.post('/api/create-checkout-session', { userId: user.uid, email: user.email, tier });
@@ -424,6 +426,7 @@ function App() {
     if (!groupRideName) { setRideError("Please name your ride."); return; }
     
     try {
+      ReactGA.event({ category: "Engagement", action: "Create Group Ride", label: groupRideName });
       const pin = Math.floor(1000 + Math.random() * 9000).toString();
       const rideData = {
         name: groupRideName,
@@ -472,6 +475,7 @@ function App() {
 
       if (rideDoc && rideDoc.exists()) {
         const data = rideDoc.data();
+        ReactGA.event({ category: "Engagement", action: "Join Group Ride", label: data.name });
         setActiveRide({ id: rideDoc.id, ...data } as any);
         await setDoc(doc(db, `group_rides/${rideDoc.id}/participants`, user.uid), {
           userId: user.uid,
@@ -510,6 +514,7 @@ function App() {
       return;
     }
     if (!newBikeName) return;
+    ReactGA.event({ category: "Engagement", action: "Save Bike", label: newBikeName });
     const newBike = { name: newBikeName, specs };
     const updated = [...savedBikes, newBike];
     setSavedBikes(updated);
@@ -548,6 +553,7 @@ function App() {
   };
 
   const loadBike = (bike: SavedBike) => {
+    ReactGA.event({ category: "Engagement", action: "Load Bike", label: bike.name });
     setSpecs(bike.specs);
     setBikeSearchQuery(bike.name);
     setShowBikeResults(false);
@@ -698,11 +704,16 @@ function App() {
         recommendedSpeedMph: mode === 'eco' || pasLevel <= 2 ? 18 : 25,
         windConditions: { speed: windSpeed, direction: windDir, headwindComponent: headwindMph }
       });
+      ReactGA.event({ category: "Engagement", action: "Calculation Success", label: `${distMiles.toFixed(1)} miles` });
       setIsLoading(false);
     } catch (e: any) { console.error("Calculation error", e); setError("Failed to calculate metrics."); setIsLoading(false); }
   };
 
-  const handleCalculate = () => { if (!trip.origin || !trip.destination) return; setIsLoading(true); setResponse(null); setMetrics(null); setError(null); setPois([]); };
+  const handleCalculate = () => { 
+    if (!trip.origin || !trip.destination) return; 
+    ReactGA.event({ category: "Engagement", action: "Calculate Route", label: `${trip.origin} to ${trip.destination}` });
+    setIsLoading(true); setResponse(null); setMetrics(null); setError(null); setPois([]); 
+  };
   const useCurrentLocation = () => { if (navigator.geolocation) { navigator.geolocation.getCurrentPosition((pos) => { setTrip(prev => ({ ...prev, origin: `${pos.coords.latitude},${pos.coords.longitude}` })); }); } };
 
   const searchPOIs = async (category: string) => {
