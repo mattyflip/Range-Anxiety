@@ -1079,7 +1079,12 @@ function App() {
                       <p style={{ margin: 0, fontWeight: 'bold', color: '#34a853' }}>LIVE: {activeRide.name}</p>
                       <p style={{ margin: '0.2rem 0', fontSize: '0.7rem', color: '#888' }}>PIN: <span style={{ color: 'white', fontWeight: 'bold' }}>{activeRide.pin}</span></p>
                       <p style={{ margin: '0.5rem 0', fontSize: '0.7rem' }}>👥 {rideParticipants.length} riders active</p>
-                      <button onClick={leaveRide} style={{ width: '100%', marginTop: '0.5rem', padding: '0.4rem', backgroundColor: '#d93025', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Leave Ride</button>
+                      <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                        <button onClick={leaveRide} style={{ flex: 1, padding: '0.4rem', backgroundColor: '#444', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem' }}>Leave</button>
+                        {user?.uid === activeRide.creatorId && (
+                          <button onClick={endRide} style={{ flex: 2, padding: '0.4rem', backgroundColor: '#d93025', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.75rem' }}>End Ride</button>
+                        )}
+                      </div>
                    </div>
                  )}
               </div>
