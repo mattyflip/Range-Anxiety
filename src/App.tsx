@@ -779,6 +779,11 @@ function App() {
             <label style={{ color: '#ff6600', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                👥 Group Ride Tracker
                {!isHostTier && <span style={{ fontSize: '0.6rem', background: '#333', padding: '2px 6px', borderRadius: '4px' }}>HOST TIER</span>}
+               {isHostTier && hostTierExpiresAt && (
+                 <span style={{ fontSize: '0.55rem', color: '#888', marginLeft: 'auto' }}>
+                   Expires: {new Date(hostTierExpiresAt).toLocaleDateString()}
+                 </span>
+               )}
             </label>
             
             {!isHostTier ? (
@@ -796,6 +801,10 @@ function App() {
                          <input type="text" placeholder="Ride Name" value={newRideName} onChange={e => setNewRideNameLocal(e.target.value)} />
                          <button onClick={createRide} style={{ padding: '0.4rem 0.8rem', backgroundColor: '#ff6600', border: 'none', borderRadius: '4px', cursor: 'pointer', color: 'white' }}>Host</button>
                        </div>
+                       <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.4rem', fontSize: '0.65rem', textTransform: 'none' }}>
+                         <input type="checkbox" checked={isPublicRide} onChange={e => setIsPublicRide(e.target.checked)} style={{ width: 'auto' }} />
+                         Visible on public map
+                       </label>
                      </div>
                      <div className="form-group">
                        <label style={{ fontSize: '0.65rem' }}>Join by ID/PIN</label>
