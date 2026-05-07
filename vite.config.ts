@@ -8,10 +8,16 @@ export default defineConfig({
     chunkSizeWarningLimit: 1000,
     rollupOptions: {
       output: {
-        manualChunks: {
-          'vendor-google': ['@react-google-maps/api'],
-          'vendor-firebase': ['firebase/app', 'firebase/auth', 'firebase/firestore'],
-          'vendor-utils': ['axios', 'html-to-image']
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('@react-google-maps')) {
+              return 'vendor-google';
+            }
+            if (id.includes('firebase')) {
+              return 'vendor-firebase';
+            }
+            return 'vendor-libs';
+          }
         }
       }
     }
