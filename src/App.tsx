@@ -184,11 +184,29 @@ function App() {
     const q = query(collection(db, "group_rides"), where("isPublic", "==", true), where("status", "==", "active"));
     const unsubscribe = onSnapshot(q, (snap) => {
       const rides: GroupRide[] = [];
-      snap.forEach(doc => rides.push({ id: doc.id, ...doc.data() } as GroupRide));
+      const userLat = center.lat;
+      const userLng = center.lng;
+
+      snap.forEach(docSnap => {
+        const data = docSnap.data();
+        // Haversine formula for 20-mile radius
+        const R = 3958.8; // Miles
+        const dLat = (data.startLat - userLat) * Math.PI / 180;
+        const dLon = (data.startLng - userLng) * Math.PI / 180;
+        const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                  Math.cos(userLat * Math.PI / 180) * Math.cos(data.startLat * Math.PI / 180) * 
+                  Math.sin(dLon/2) * Math.sin(dLon/2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        const distance = R * c;
+
+        if (distance <= 20) {
+          rides.push({ id: docSnap.id, ...data } as GroupRide);
+        }
+      });
       setPublicRides(rides);
     });
     return () => unsubscribe();
-  }, [user, isPro]);
+  }, [user, isPro, center]);
 
   // Sync Participants
   useEffect(() => {
@@ -220,7 +238,7 @@ function App() {
             try {
               await setDoc(doc(db, `group_rides/${activeRide.id}/participants`, user.uid), {
                 userId: user.uid,
-                name: user.email?.split('@')[0] || "Rider",
+                name: username || user.email?.split('@')[0] || "Rider",
                 lat: newLoc.lat,
                 lng: newLoc.lng,
                 lastUpdatedAt: Date.now()
@@ -233,7 +251,7 @@ function App() {
     }, 15000);
 
     return () => clearInterval(interval);
-  }, [activeRide, user, lastUploadedLocation]);
+  }, [activeRide, user, lastUploadedLocation, username]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -325,20 +343,27 @@ function App() {
     if (!isHostTier) { setError("Only HOST TIER users can create rides."); return; }
     if (!groupRideName) { setError("Please name your ride."); return; }
     
-    const pin = Math.floor(1000 + Math.random() * 9000).toString();
-    const rideData = {
-      name: groupRideName,
-      isPublic: isPublicRide,
-      pin,
-      creatorId: user.uid,
-      createdAt: serverTimestamp(),
-      origin: trip.origin || "Current Location",
-      startLat: center.lat,
-      startLng: center.lng,
-      status: 'active'
-    };
-
     try {
+      // Deactivate previous rides by this host
+      const prevQ = query(collection(db, "group_rides"), where("creatorId", "==", user.uid), where("status", "==", "active"));
+      const prevSnap = await getDocs(prevQ);
+      for (const d of prevSnap.docs) {
+        await setDoc(doc(db, "group_rides", d.id), { status: 'offline' }, { merge: true });
+      }
+
+      const pin = Math.floor(1000 + Math.random() * 9000).toString();
+      const rideData = {
+        name: groupRideName,
+        isPublic: isPublicRide,
+        pin,
+        creatorId: user.uid,
+        createdAt: serverTimestamp(),
+        origin: trip.origin || "Current Location",
+        startLat: center.lat,
+        startLng: center.lng,
+        status: 'active'
+      };
+
       console.log("Attempting to create ride with data:", rideData);
       const rideRef = await addDoc(collection(db, "group_rides"), rideData);
       console.log("Ride created successfully. ID:", rideRef.id);
@@ -347,7 +372,7 @@ function App() {
       // Automatically join as participant
       await setDoc(doc(db, `group_rides/${rideRef.id}/participants`, user.uid), {
         userId: user.uid,
-        name: user.email?.split('@')[0] || "Rider",
+        name: username || user.email?.split('@')[0] || "Rider",
         lat: center.lat,
         lng: center.lng,
         lastUpdatedAt: Date.now()
