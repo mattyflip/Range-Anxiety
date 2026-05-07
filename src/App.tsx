@@ -878,11 +878,32 @@ function App() {
               <h3 style={{ fontSize: '0.9rem', color: '#ff6600' }}>ESTIMATED METRICS</h3>
               <p style={{ fontSize: '1.4rem', fontWeight: 'bold', color: 'white' }}>Battery Left: {metrics.batteryPercentUsed.toFixed(1)}%</p>
               <p style={{ fontSize: '0.8rem', color: '#b0b0b0' }}>Est. End Voltage: {(getBatteryLevels(Number(specs.voltage)).min + (metrics.batteryPercentUsed / 100) * (getBatteryLevels(Number(specs.voltage)).max - getBatteryLevels(Number(specs.voltage)).min)).toFixed(1)}V</p>
-              <div style={{ marginTop: '0.5rem', fontSize: '0.8rem', color: '#b0b0b0' }}>
-                <div>Dist: {metrics.distanceMiles.toFixed(1)} mi</div>
-                <div>Gain: {metrics.elevationGainFeet.toFixed(0)} ft</div>
-                <div>Wh/mile: {(metrics.estimatedWh / metrics.distanceMiles).toFixed(1)}</div>
+              
+              <div style={{ marginTop: '0.8rem', padding: '0.8rem', background: 'rgba(255,255,255,0.03)', borderRadius: '8px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: '0.4rem' }}>
+                  <span style={{ color: '#888' }}>Travel Time:</span>
+                  <span style={{ color: 'white', fontWeight: 'bold' }}>{Math.floor(metrics.durationMin / 60)}h {Math.round(metrics.durationMin % 60)}m</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: '0.4rem' }}>
+                  <span style={{ color: '#888' }}>Distance:</span>
+                  <span style={{ color: 'white' }}>{metrics.distanceMiles.toFixed(1)} mi</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: '0.4rem' }}>
+                  <span style={{ color: '#888' }}>Elevation Gain:</span>
+                  <span style={{ color: 'white' }}>{metrics.elevationGainFeet.toFixed(0)} ft</span>
+                </div>
+                {metrics.windConditions && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#34a853' }}>
+                    <span>🌬️ Wind:</span>
+                    <span>{metrics.windConditions.speed.toFixed(1)} mph ({metrics.windConditions.headwindComponent > 0 ? 'Headwind' : 'Tailwind'})</span>
+                  </div>
+                )}
               </div>
+
+              <div style={{ marginTop: '0.5rem', fontSize: '0.7rem', color: '#777', textAlign: 'center' }}>
+                Wh/mile: {(metrics.estimatedWh / metrics.distanceMiles).toFixed(1)}
+              </div>
+
               <button onClick={() => {
                   let url = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(trip.origin)}&destination=${encodeURIComponent(trip.destination)}&travelmode=bicycling`;
                   window.open(url, '_blank');
