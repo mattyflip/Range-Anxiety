@@ -376,6 +376,21 @@ function App() {
     } catch (e) { console.error("End ride failed:", e); }
   };
 
+  const endAllPublicRides = async () => {
+    if (!user || user.email !== 'mattyflip@gmail.com') return;
+    if (!window.confirm("Are you sure you want to end ALL public group rides?")) return;
+    
+    try {
+      const q = query(collection(db, "group_rides"), where("isPublic", "==", true), where("status", "==", "active"));
+      const snap = await getDocs(q);
+      const batchPromises = snap.docs.map(rideDoc => 
+        setDoc(doc(db, "group_rides", rideDoc.id), { status: 'offline' }, { merge: true })
+      );
+      await Promise.all(batchPromises);
+      alert(`Successfully ended ${snap.size} public rides.`);
+    } catch (e) { console.error("End all rides failed:", e); setError("Failed to end all public rides."); }
+  };
+
   const createRide = async () => {
     if (!user) { setShowAuthModal(true); return; }
     if (!isHostTier) { setError("Only HOST TIER users can create rides."); return; }
@@ -1062,7 +1077,12 @@ function App() {
 
                      {publicRides.length > 0 && (
                        <div className="form-group" style={{ marginTop: '1rem' }}>
-                         <label style={{ fontSize: '0.65rem', color: 'var(--accent-color)' }}>📡 Nearby Public Rides</label>
+                         <label style={{ fontSize: '0.65rem', color: 'var(--accent-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                           📡 Nearby Public Rides
+                           {user?.email === 'mattyflip@gmail.com' && (
+                             <button onClick={endAllPublicRides} style={{ background: 'none', border: 'none', color: '#d93025', fontSize: '0.6rem', cursor: 'pointer', textDecoration: 'underline' }}>End All</button>
+                           )}
+                         </label>
                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginTop: '0.4rem' }}>
                            {publicRides.map(ride => (
                              <div key={ride.id} style={{ background: 'rgba(255,255,255,0.05)', padding: '0.6rem', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
