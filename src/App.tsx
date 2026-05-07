@@ -888,14 +888,14 @@ function App() {
               {response && <DirectionsRenderer options={{ directions: response }} />}
               
               {/* Ride Participants */}
-              {rideParticipants.filter(p => p.userId !== user?.uid).map(p => (
+              {rideParticipants.map(p => (
                 <Marker 
                   key={p.userId} 
                   position={{ lat: p.lat, lng: p.lng }} 
-                  label={{ text: p.name, color: 'white', className: 'rider-label' }}
+                  label={{ text: p.userId === user?.uid ? "Me" : p.name, color: 'white', className: 'rider-label' }}
                   icon={{
                     path: google.maps.SymbolPath.CIRCLE,
-                    fillColor: '#ff6600',
+                    fillColor: p.userId === user?.uid ? '#34a853' : '#ff6600', // Green for me, Orange for others
                     fillOpacity: 1,
                     strokeColor: 'white',
                     strokeWeight: 2,
