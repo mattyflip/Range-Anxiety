@@ -794,9 +794,9 @@ function App() {
       // Wait for a few frames to ensure the browser has painted the now-opaque element
       await new Promise(resolve => setTimeout(resolve, 600));
       
-      // Explicitly define dimensions to help the library
-      const width = 500;
-      const height = el.offsetHeight || 700;
+      // Explicitly define 9:16 dimensions (540x960) for the poster
+      const width = 540;
+      const height = 960;
 
       const dataUrl = await toPng(el, { 
         cacheBust: true,
@@ -806,7 +806,8 @@ function App() {
         style: {
           opacity: '1',
           visibility: 'visible',
-          display: 'block'
+          display: 'flex',
+          flexDirection: 'column'
         }
       });
       
@@ -1450,103 +1451,98 @@ function App() {
           <div 
             ref={shareCardRef}
             style={{ 
-              width: '100%',
-              maxWidth: '500px', 
+              width: '540px',
+              height: '960px', 
               background: 'linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%)', 
-              padding: '3rem', 
+              padding: '3.5rem 3rem', 
               color: 'white', 
               fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
               border: '1px solid rgba(255,102,0,0.3)',
-              borderRadius: '24px',
+              borderRadius: '32px',
               boxShadow: '0 20px 50px rgba(0,0,0,0.8)',
               position: 'relative',
-              overflow: 'hidden'
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column'
             }}
           >
               {/* Decorative background elements */}
-              <div style={{ position: 'absolute', top: '-10%', right: '-10%', width: '200px', height: '200px', background: 'radial-gradient(circle, rgba(255,102,0,0.1) 0%, transparent 70%)', pointerEvents: 'none' }} />
-              <div style={{ position: 'absolute', bottom: '-10%', left: '-10%', width: '250px', height: '250px', background: 'radial-gradient(circle, rgba(255,102,0,0.05) 0%, transparent 70%)', pointerEvents: 'none' }} />
+              <div style={{ position: 'absolute', top: '-5%', right: '-5%', width: '300px', height: '300px', background: 'radial-gradient(circle, rgba(255,102,0,0.15) 0%, transparent 70%)', pointerEvents: 'none' }} />
+              <div style={{ position: 'absolute', bottom: '10%', left: '-10%', width: '350px', height: '350px', background: 'radial-gradient(circle, rgba(255,102,0,0.08) 0%, transparent 70%)', pointerEvents: 'none' }} />
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '3rem', position: 'relative' }}>
-                <div>
-                  <div style={{ fontSize: '2.2rem', fontWeight: 900, letterSpacing: '-1.5px', color: '#ff6600', marginBottom: '2px', textTransform: 'uppercase' }}>Range Anxiety</div>
-                  <div style={{ fontSize: '0.8rem', color: '#ff6600', fontWeight: 'bold', letterSpacing: '2px', textTransform: 'uppercase', opacity: 0.8 }}>Trip Analytics Report</div>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: '0.75rem', color: '#666', fontWeight: 'bold' }}>VERSION 0.0.0</div>
-                  <div style={{ fontSize: '0.75rem', color: '#888' }}>{new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
-                </div>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '4rem', position: 'relative', textAlign: 'center' }}>
+                <div style={{ fontSize: '2.8rem', fontWeight: 900, letterSpacing: '-2px', color: '#ff6600', marginBottom: '4px', textTransform: 'uppercase', lineHeight: 1 }}>Range Anxiety</div>
+                <div style={{ fontSize: '0.9rem', color: '#ff6600', fontWeight: 'bold', letterSpacing: '4px', textTransform: 'uppercase', opacity: 0.8 }}>Trip Analytics</div>
               </div>
 
-              <div style={{ marginBottom: '2.5rem', position: 'relative' }}>
-                <div style={{ fontSize: '0.65rem', color: '#ff6600', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '0.6rem' }}>Vehicle Configuration</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(255,102,0,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>🚲</div>
+              <div style={{ marginBottom: '3.5rem', position: 'relative' }}>
+                <div style={{ fontSize: '0.7rem', color: '#ff6600', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '1rem' }}>Vehicle Data</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', background: 'rgba(255,255,255,0.02)', padding: '1.5rem', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                  <div style={{ fontSize: '2rem' }}>🚲</div>
                   <div>
                     <div style={{ fontSize: '1.4rem', fontWeight: 'bold', color: 'white' }}>
                       {savedBikes.find(b => JSON.stringify(b.specs) === JSON.stringify(specs))?.name || 
                        STANDARD_BIKES.find(b => JSON.stringify(b.specs) === JSON.stringify(specs))?.name || 
-                       'Custom Configuration'}
+                       'Custom Build'}
                     </div>
-                    <div style={{ fontSize: '0.75rem', color: '#888' }}>{specs.voltage}V • {specs.capacityAh}{capacityInputMode === 'ah' ? 'Ah' : 'Wh'} • {specs.motorWatts}W</div>
+                    <div style={{ fontSize: '0.85rem', color: '#888' }}>{specs.voltage}V • {specs.capacityAh}{capacityInputMode === 'ah' ? 'Ah' : 'Wh'} • {specs.motorWatts}W</div>
                   </div>
                 </div>
               </div>
 
-              <div style={{ marginBottom: '2.5rem', position: 'relative' }}>
-                <div style={{ fontSize: '0.65rem', color: '#ff6600', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '0.6rem' }}>Trip Trajectory</div>
-                <div style={{ background: 'rgba(255,255,255,0.03)', padding: '1.2rem', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#ff6600' }} />
-                    <div style={{ fontSize: '0.9rem', fontWeight: 500, color: '#ccc', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{trip.origin || 'Current Location'}</div>
+              <div style={{ marginBottom: '3.5rem', position: 'relative' }}>
+                <div style={{ fontSize: '0.7rem', color: '#ff6600', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '1rem' }}>Journey</div>
+                <div style={{ background: 'rgba(255,255,255,0.02)', padding: '1.5rem', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#ff6600' }} />
+                    <div style={{ fontSize: '1rem', fontWeight: 500, color: '#eee', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{trip.origin || 'Start Point'}</div>
                   </div>
-                  <div style={{ height: '20px', width: '1px', borderLeft: '2px dashed rgba(255,102,0,0.3)', margin: '4px 3px' }} />
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div style={{ width: '8px', height: '8px', border: '2px solid #ff6600', borderRadius: '50%' }} />
-                    <div style={{ fontSize: '0.9rem', fontWeight: 500, color: '#ccc', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{trip.destination || 'Destination'}</div>
+                  <div style={{ height: '30px', width: '2px', borderLeft: '2px dashed rgba(255,102,0,0.3)', margin: '6px 4px' }} />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ width: '10px', height: '10px', border: '2px solid #ff6600', borderRadius: '50%' }} />
+                    <div style={{ fontSize: '1rem', fontWeight: 500, color: '#eee', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{trip.destination || 'End Point'}</div>
                   </div>
                 </div>
               </div>
 
-              <div style={{ background: 'linear-gradient(to right, rgba(255,102,0,0.15), rgba(255,102,0,0.05))', padding: '2rem', borderRadius: '20px', marginBottom: '2.5rem', textAlign: 'center', border: '1px solid rgba(255,102,0,0.2)' }}>
-                <div style={{ fontSize: '0.7rem', color: '#ff6600', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '0.5rem' }}>Estimated Arrival Energy</div>
-                <div style={{ fontSize: '4.5rem', fontWeight: 900, color: 'white', lineHeight: 1, letterSpacing: '-2px' }}>
-                  {metrics.batteryPercentUsed.toFixed(0)}<span style={{ fontSize: '2rem', color: '#ff6600', marginLeft: '2px' }}>%</span>
+              <div style={{ background: 'linear-gradient(to bottom, rgba(255,102,0,0.2), rgba(255,102,0,0.05))', padding: '3rem 2rem', borderRadius: '24px', marginBottom: '3.5rem', textAlign: 'center', border: '1px solid rgba(255,102,0,0.2)' }}>
+                <div style={{ fontSize: '0.8rem', color: '#ff6600', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '3px', marginBottom: '0.8rem' }}>Estimated Battery Left</div>
+                <div style={{ fontSize: '6rem', fontWeight: 900, color: 'white', lineHeight: 1, letterSpacing: '-4px' }}>
+                  {metrics.batteryPercentUsed.toFixed(0)}<span style={{ fontSize: '2.5rem', color: '#ff6600', marginLeft: '4px' }}>%</span>
                 </div>
-                <div style={{ fontSize: '0.8rem', color: '#888', marginTop: '0.5rem', fontWeight: 500 }}>REMAINING CHARGE</div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '3rem' }}>
-                <div style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)', borderRadius: '12px' }}>
-                  <div style={{ fontSize: '0.6rem', color: '#666', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '1px', marginBottom: '4px' }}>Distance</div>
-                  <div style={{ fontSize: '1.3rem', fontWeight: 'bold', color: 'white' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: 'auto' }}>
+                <div style={{ padding: '1.2rem', background: 'rgba(255,255,255,0.03)', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.03)' }}>
+                  <div style={{ fontSize: '0.65rem', color: '#666', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '1.5px', marginBottom: '6px' }}>Distance</div>
+                  <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'white' }}>
                     {unitSystem === 'imperial' ? `${metrics.distanceMiles.toFixed(1)}` : `${(metrics.distanceMiles * 1.60934).toFixed(1)}`}
-                    <span style={{ fontSize: '0.8rem', color: '#888', marginLeft: '4px' }}>{unitSystem === 'imperial' ? 'mi' : 'km'}</span>
+                    <span style={{ fontSize: '0.9rem', color: '#888', marginLeft: '4px' }}>{unitSystem === 'imperial' ? 'mi' : 'km'}</span>
                   </div>
                 </div>
-                <div style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)', borderRadius: '12px' }}>
-                  <div style={{ fontSize: '0.6rem', color: '#666', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '1px', marginBottom: '4px' }}>Travel Time</div>
-                  <div style={{ fontSize: '1.3rem', fontWeight: 'bold', color: 'white' }}>
+                <div style={{ padding: '1.2rem', background: 'rgba(255,255,255,0.03)', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.03)' }}>
+                  <div style={{ fontSize: '0.65rem', color: '#666', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '1.5px', marginBottom: '6px' }}>Travel Time</div>
+                  <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'white' }}>
                     {Math.floor(metrics.durationMin / 60)}h {Math.round(metrics.durationMin % 60)}m
                   </div>
                 </div>
-                <div style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)', borderRadius: '12px' }}>
-                  <div style={{ fontSize: '0.6rem', color: '#666', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '1px', marginBottom: '4px' }}>Elev. Gain</div>
-                  <div style={{ fontSize: '1.3rem', fontWeight: 'bold', color: 'white' }}>
+                <div style={{ padding: '1.2rem', background: 'rgba(255,255,255,0.03)', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.03)' }}>
+                  <div style={{ fontSize: '0.65rem', color: '#666', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '1.5px', marginBottom: '6px' }}>Elev. Gain</div>
+                  <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'white' }}>
                     {unitSystem === 'imperial' ? `${metrics.elevationGainFeet.toFixed(0)}` : `${(metrics.elevationGainFeet * 0.3048).toFixed(0)}`}
-                    <span style={{ fontSize: '0.8rem', color: '#888', marginLeft: '4px' }}>{unitSystem === 'imperial' ? 'ft' : 'm'}</span>
+                    <span style={{ fontSize: '0.9rem', color: '#888', marginLeft: '4px' }}>{unitSystem === 'imperial' ? 'ft' : 'm'}</span>
                   </div>
                 </div>
-                <div style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)', borderRadius: '12px' }}>
-                  <div style={{ fontSize: '0.6rem', color: '#666', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '1px', marginBottom: '4px' }}>Avg. Wind</div>
-                  <div style={{ fontSize: '1.3rem', fontWeight: 'bold', color: 'white' }}>
+                <div style={{ padding: '1.2rem', background: 'rgba(255,255,255,0.03)', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.03)' }}>
+                  <div style={{ fontSize: '0.65rem', color: '#666', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '1.5px', marginBottom: '6px' }}>Avg. Wind</div>
+                  <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'white' }}>
                     {metrics.windConditions ? (metrics.windConditions.headwindComponent > 0 ? 'Head' : 'Tail') : 'Calm'}
                   </div>
                 </div>
               </div>
 
-              <div style={{ marginTop: 'auto', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '1.5rem', textAlign: 'center' }}>
-                <div style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#444', letterSpacing: '3px', textTransform: 'uppercase' }}>RangeAnxiety.app</div>
+              <div style={{ marginTop: '2rem', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '2rem', textAlign: 'center' }}>
+                <div style={{ fontSize: '1rem', fontWeight: 'bold', color: '#555', letterSpacing: '5px', textTransform: 'uppercase' }}>RangeAnxiety.app</div>
               </div>
           </div>
 
