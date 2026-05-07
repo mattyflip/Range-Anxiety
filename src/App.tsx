@@ -20,6 +20,7 @@ interface GroupRide {
   origin: string;
   startLat: number;
   startLng: number;
+  status: string;
 }
 
 interface Participant {
@@ -1160,7 +1161,27 @@ function App() {
                 );
               })}
 
-              {pois.map(poi => (<Marker key={poi.id} position={poi.position} title={poi.name} onClick={() => setSelectedPoi(poi)} />))}
+              {pois.map(poi => (
+                <Marker 
+                  key={poi.id} 
+                  position={poi.position} 
+                  title={poi.name} 
+                  onClick={() => setSelectedPoi(poi)} 
+                  icon={poi.type === 'charging station' ? {
+                    path: google.maps.SymbolPath.CIRCLE,
+                    fillColor: '#d93025', // Red
+                    fillOpacity: 1,
+                    strokeColor: 'white',
+                    strokeWeight: 2,
+                    scale: 10
+                  } : undefined}
+                  label={poi.type === 'charging station' ? {
+                    text: '⚡',
+                    color: 'white',
+                    fontSize: '12px'
+                  } : undefined}
+                />
+              ))}
               {selectedPoi && (
                 <InfoWindow position={selectedPoi.position} onCloseClick={() => setSelectedPoi(null)}>
                   <div style={{ padding: '0.5rem', color: '#333' }}>
