@@ -153,6 +153,7 @@ function App() {
   const [pois, setPois] = useState<POI[]>([]);
   const [poiCategory, setPoiCategory] = useState<string | null>(null);
   const [selectedPoi, setSelectedPoi] = useState<POI | null>(null);
+  const [showSharePreview, setShowSharePreview] = useState(false);
 
   const [user, setUser] = useState<User | null>(null);
   const [isPro, setIsPro] = useState(false);
@@ -782,9 +783,50 @@ function App() {
   };
 
   const downloadShareCard = async () => {
-    if (!shareCardRef.current) return;
-    try { const dataUrl = await toPng(shareCardRef.current, { cacheBust: true }); const link = document.createElement('a'); link.download = `trip-${Date.now()}.png`; link.href = dataUrl; link.click(); }
-    catch (err) { console.error('Error sharing:', err); }
+    if (!shareCardRef.current || !metrics) return;
+    try {
+      setIsLoading(true);
+      
+      // Use opacity instead of visibility/display to keep it in the render tree
+      const el = shareCardRef.current;
+      el.style.opacity = '1';
+      
+      // Wait for a few frames to ensure the browser has painted the now-opaque element
+      await new Promise(resolve => setTimeout(resolve, 600));
+      
+      // Explicitly define dimensions to help the library
+      const width = 500;
+      const height = el.offsetHeight || 700;
+
+      const dataUrl = await toPng(el, { 
+        cacheBust: true,
+        backgroundColor: '#121212',
+        width: width,
+        height: height,
+        style: {
+          opacity: '1',
+          visibility: 'visible',
+          display: 'block'
+        }
+      });
+      
+      el.style.opacity = '0';
+      
+      if (!dataUrl || dataUrl.length < 100) {
+        throw new Error("Generated image is empty");
+      }
+
+      const link = document.createElement('a');
+      link.download = `range-anxiety-${Date.now()}.png`;
+      link.href = dataUrl;
+      link.click();
+      setIsLoading(false);
+    } catch (err) {
+      console.error('Error saving image:', err);
+      alert('Failed to save image. The browser might be blocking the capture. Please try again or take a screenshot.');
+      setIsLoading(false);
+      if (shareCardRef.current) shareCardRef.current.style.opacity = '0';
+    }
   };
 
   const filteredBikes = [...STANDARD_BIKES, ...savedBikes].filter(b => 
@@ -1032,7 +1074,10 @@ function App() {
                   window.open(url, '_blank');
               }} style={{ width: '100%', marginTop: '1rem', padding: '0.6rem', backgroundColor: '#34a853', color: 'white', border: 'none', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer' }}>🚀 Open Maps</button>
               
-              <button onClick={downloadShareCard} style={{ width: '100%', marginTop: '0.5rem', padding: '0.6rem', backgroundColor: '#444', color: 'white', border: 'none', borderRadius: '4px', fontSize: '0.8rem', cursor: 'pointer' }}>Save Image</button>
+              <button onClick={() => {
+                  ReactGA.event({ category: "Engagement", action: "Open Share Preview" });
+                  setShowSharePreview(true);
+              }} style={{ width: '100%', marginTop: '0.5rem', padding: '0.6rem', backgroundColor: '#444', color: 'white', border: 'none', borderRadius: '4px', fontSize: '0.8rem', cursor: 'pointer' }}>Save Image</button>
             </div>
           )}
 
@@ -1395,12 +1440,149 @@ function App() {
 
       {showToSPage && <TermsOfService onClose={() => setShowToSPage(false)} />}
 
-      {/* Off-screen ref for image generation */}
-      <div style={{ position: 'absolute', left: '-9999px', top: '-9999px' }} ref={shareCardRef}>
-          <div style={{ width: '500px', background: '#121212', padding: '2rem', color: 'white' }}>
-              <h2>Range Anxiety Report</h2>
-              {metrics && <p>Remaining Battery: {metrics.batteryPercentUsed.toFixed(1)}%</p>}
+      {showSharePreview && metrics && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.9)', zIndex: 10001, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px', overflowY: 'auto' }}>
+          <div style={{ marginBottom: '20px', textAlign: 'center' }}>
+            <h3 style={{ color: 'white', marginBottom: '5px' }}>Trip Summary Preview</h3>
+            <p style={{ color: '#888', fontSize: '0.8rem' }}>Click download to save this report as an image</p>
           </div>
+
+          <div 
+            ref={shareCardRef}
+            style={{ 
+              width: '100%',
+              maxWidth: '500px', 
+              background: 'linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%)', 
+              padding: '3rem', 
+              color: 'white', 
+              fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+              border: '1px solid rgba(255,102,0,0.3)',
+              borderRadius: '24px',
+              boxShadow: '0 20px 50px rgba(0,0,0,0.8)',
+              position: 'relative',
+              overflow: 'hidden'
+            }}
+          >
+              {/* Decorative background elements */}
+              <div style={{ position: 'absolute', top: '-10%', right: '-10%', width: '200px', height: '200px', background: 'radial-gradient(circle, rgba(255,102,0,0.1) 0%, transparent 70%)', pointerEvents: 'none' }} />
+              <div style={{ position: 'absolute', bottom: '-10%', left: '-10%', width: '250px', height: '250px', background: 'radial-gradient(circle, rgba(255,102,0,0.05) 0%, transparent 70%)', pointerEvents: 'none' }} />
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '3rem', position: 'relative' }}>
+                <div>
+                  <div style={{ fontSize: '2.2rem', fontWeight: 900, letterSpacing: '-1.5px', color: '#ff6600', marginBottom: '2px', textTransform: 'uppercase' }}>Range Anxiety</div>
+                  <div style={{ fontSize: '0.8rem', color: '#ff6600', fontWeight: 'bold', letterSpacing: '2px', textTransform: 'uppercase', opacity: 0.8 }}>Trip Analytics Report</div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: '0.75rem', color: '#666', fontWeight: 'bold' }}>VERSION 0.0.0</div>
+                  <div style={{ fontSize: '0.75rem', color: '#888' }}>{new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '2.5rem', position: 'relative' }}>
+                <div style={{ fontSize: '0.65rem', color: '#ff6600', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '0.6rem' }}>Vehicle Configuration</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(255,102,0,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>🚲</div>
+                  <div>
+                    <div style={{ fontSize: '1.4rem', fontWeight: 'bold', color: 'white' }}>
+                      {savedBikes.find(b => JSON.stringify(b.specs) === JSON.stringify(specs))?.name || 
+                       STANDARD_BIKES.find(b => JSON.stringify(b.specs) === JSON.stringify(specs))?.name || 
+                       'Custom Configuration'}
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: '#888' }}>{specs.voltage}V • {specs.capacityAh}{capacityInputMode === 'ah' ? 'Ah' : 'Wh'} • {specs.motorWatts}W</div>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '2.5rem', position: 'relative' }}>
+                <div style={{ fontSize: '0.65rem', color: '#ff6600', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '0.6rem' }}>Trip Trajectory</div>
+                <div style={{ background: 'rgba(255,255,255,0.03)', padding: '1.2rem', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#ff6600' }} />
+                    <div style={{ fontSize: '0.9rem', fontWeight: 500, color: '#ccc', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{trip.origin || 'Current Location'}</div>
+                  </div>
+                  <div style={{ height: '20px', width: '1px', borderLeft: '2px dashed rgba(255,102,0,0.3)', margin: '4px 3px' }} />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ width: '8px', height: '8px', border: '2px solid #ff6600', borderRadius: '50%' }} />
+                    <div style={{ fontSize: '0.9rem', fontWeight: 500, color: '#ccc', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{trip.destination || 'Destination'}</div>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ background: 'linear-gradient(to right, rgba(255,102,0,0.15), rgba(255,102,0,0.05))', padding: '2rem', borderRadius: '20px', marginBottom: '2.5rem', textAlign: 'center', border: '1px solid rgba(255,102,0,0.2)' }}>
+                <div style={{ fontSize: '0.7rem', color: '#ff6600', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '0.5rem' }}>Estimated Arrival Energy</div>
+                <div style={{ fontSize: '4.5rem', fontWeight: 900, color: 'white', lineHeight: 1, letterSpacing: '-2px' }}>
+                  {metrics.batteryPercentUsed.toFixed(0)}<span style={{ fontSize: '2rem', color: '#ff6600', marginLeft: '2px' }}>%</span>
+                </div>
+                <div style={{ fontSize: '0.8rem', color: '#888', marginTop: '0.5rem', fontWeight: 500 }}>REMAINING CHARGE</div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '3rem' }}>
+                <div style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)', borderRadius: '12px' }}>
+                  <div style={{ fontSize: '0.6rem', color: '#666', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '1px', marginBottom: '4px' }}>Distance</div>
+                  <div style={{ fontSize: '1.3rem', fontWeight: 'bold', color: 'white' }}>
+                    {unitSystem === 'imperial' ? `${metrics.distanceMiles.toFixed(1)}` : `${(metrics.distanceMiles * 1.60934).toFixed(1)}`}
+                    <span style={{ fontSize: '0.8rem', color: '#888', marginLeft: '4px' }}>{unitSystem === 'imperial' ? 'mi' : 'km'}</span>
+                  </div>
+                </div>
+                <div style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)', borderRadius: '12px' }}>
+                  <div style={{ fontSize: '0.6rem', color: '#666', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '1px', marginBottom: '4px' }}>Travel Time</div>
+                  <div style={{ fontSize: '1.3rem', fontWeight: 'bold', color: 'white' }}>
+                    {Math.floor(metrics.durationMin / 60)}h {Math.round(metrics.durationMin % 60)}m
+                  </div>
+                </div>
+                <div style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)', borderRadius: '12px' }}>
+                  <div style={{ fontSize: '0.6rem', color: '#666', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '1px', marginBottom: '4px' }}>Elev. Gain</div>
+                  <div style={{ fontSize: '1.3rem', fontWeight: 'bold', color: 'white' }}>
+                    {unitSystem === 'imperial' ? `${metrics.elevationGainFeet.toFixed(0)}` : `${(metrics.elevationGainFeet * 0.3048).toFixed(0)}`}
+                    <span style={{ fontSize: '0.8rem', color: '#888', marginLeft: '4px' }}>{unitSystem === 'imperial' ? 'ft' : 'm'}</span>
+                  </div>
+                </div>
+                <div style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)', borderRadius: '12px' }}>
+                  <div style={{ fontSize: '0.6rem', color: '#666', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '1px', marginBottom: '4px' }}>Avg. Wind</div>
+                  <div style={{ fontSize: '1.3rem', fontWeight: 'bold', color: 'white' }}>
+                    {metrics.windConditions ? (metrics.windConditions.headwindComponent > 0 ? 'Head' : 'Tail') : 'Calm'}
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ marginTop: 'auto', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '1.5rem', textAlign: 'center' }}>
+                <div style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#444', letterSpacing: '3px', textTransform: 'uppercase' }}>RangeAnxiety.app</div>
+              </div>
+          </div>
+
+          <div style={{ marginTop: '30px', display: 'flex', gap: '15px', width: '100%', maxWidth: '500px' }}>
+            <button 
+              onClick={() => setShowSharePreview(false)} 
+              style={{ flex: 1, padding: '12px', backgroundColor: '#333', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}
+            >
+              Close
+            </button>
+            <button 
+              onClick={async () => {
+                await downloadShareCard();
+                setShowSharePreview(false);
+              }} 
+              disabled={isLoading}
+              style={{ flex: 2, padding: '12px', backgroundColor: '#ff6600', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}
+            >
+              {isLoading ? 'Saving...' : 'Download PNG'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Legacy off-screen ref - kept for compatibility but modal ref is preferred */}
+      <div 
+        style={{ 
+          position: 'fixed', 
+          left: '-9999px', 
+          top: 0, 
+          width: '500px', 
+          opacity: 0,
+          pointerEvents: 'none'
+        }} 
+      >
+        {/* Hidden copy for background tasks if needed */}
       </div>
     </div>
   )
