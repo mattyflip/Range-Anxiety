@@ -1335,20 +1335,22 @@ function App() {
                 className="mobile-toggle-btn-floating"
                 onClick={() => setShowMobileMenu(!showMobileMenu)}
                 style={{
-                  position: 'absolute',
+                  position: 'fixed',
                   bottom: '6.5rem',
                   right: '1rem',
-                  zIndex: 10,
+                  zIndex: 20001,
                   padding: '0.8rem 1.2rem',
                   borderRadius: '30px',
-                  backgroundColor: 'rgba(30,30,30,0.9)',
+                  backgroundColor: '#ff6600',
                   color: 'white',
-                  border: '1px solid #ff6600',
-                  boxShadow: '0 4px 15px rgba(0,0,0,0.5)',
+                  border: 'none',
+                  boxShadow: '0 8px 25px rgba(255,102,0,0.4)',
                   cursor: 'pointer',
                   fontWeight: 'bold',
                   fontSize: '0.8rem',
-                  backdropFilter: 'blur(5px)'
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
                 }}
               >
                 {showMobileMenu ? 'Show Map' : 'Trip Settings'}
