@@ -9,6 +9,7 @@ import type { User } from 'firebase/auth'
 import { doc, getDoc, setDoc, collection, addDoc, serverTimestamp, onSnapshot, query, where, deleteDoc, getDocs, updateDoc, arrayUnion } from 'firebase/firestore'
 import AdBanner from './components/AdBanner'
 import TermsOfService from './components/TermsOfService'
+import InstallTutorial from './components/InstallTutorial'
 import heroLogo from './assets/logo-no-bg.png'
 
 const LIBRARIES: ("places")[] = ["places"];
@@ -177,6 +178,7 @@ function App() {
   const [agreedToToS, setAgreedToToS] = useState(false);
   const [showToSPage, setShowToSPage] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [showInstallTutorial, setShowInstallTutorial] = useState(false);
 
   // Group Rides State
   const [activeRide, setActiveRide] = useState<GroupRide | null>(null);
@@ -843,7 +845,23 @@ function App() {
             {showMobileMenu ? 'Map' : 'Trip Settings'}
           </button>
         </div>
-        <div className="nav-actions">
+        <div className="nav-actions" style={{ gap: '0.8rem' }}>
+          <button 
+            onClick={() => setShowInstallTutorial(true)}
+            style={{ 
+              background: 'linear-gradient(45deg, #ff6600, #ff9900)', 
+              color: 'white', 
+              border: 'none', 
+              borderRadius: '20px', 
+              padding: '0.4rem 1rem', 
+              fontSize: '0.75rem', 
+              fontWeight: 'bold',
+              cursor: 'pointer',
+              boxShadow: '0 4px 10px rgba(255,102,0,0.3)'
+            }}
+          >
+            Get App
+          </button>
           <button onClick={() => user ? handleSignOut() : setShowAuthModal(true)} style={{ background: 'rgba(255,255,255,0.1)', color: 'white', border: 'none', borderRadius: '20px', padding: '0.4rem 1rem', fontSize: '0.8rem', cursor: 'pointer' }}>
             {user ? `Sign Out (${isPro ? 'PRO' : 'Free'})` : 'Sign In'}
           </button>
@@ -1434,8 +1452,25 @@ function App() {
              <svg style={{ width: '20px', height: '20px', fill: '#444', cursor: 'pointer' }}><use href="/icons.svg#github-icon" /></svg>
              <svg style={{ width: '20px', height: '20px', fill: '#444', cursor: 'pointer' }}><use href="/icons.svg#x-icon" /></svg>
           </div>
+          <button 
+            onClick={() => setShowInstallTutorial(true)}
+            style={{ 
+              marginTop: '1.5rem',
+              background: 'none', 
+              border: '1px solid #444', 
+              color: '#888', 
+              borderRadius: '8px', 
+              padding: '0.5rem 1rem', 
+              fontSize: '0.7rem', 
+              cursor: 'pointer' 
+            }}
+          >
+            Install as Mobile App
+          </button>
         </div>
       </footer>
+      
+      {showInstallTutorial && <InstallTutorial onClose={() => setShowInstallTutorial(false)} />}
       
       {showAuthModal && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.85)', zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(10px)' }}>
