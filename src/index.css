@@ -224,7 +224,15 @@ main {
   color: #333;
 }
 
+.persistent-controls {
+  display: none;
+}
+
 @media (max-width: 800px) {
+  .persistent-controls {
+    display: flex;
+  }
+
   .mobile-toggle-btn {
     display: block;
   }
