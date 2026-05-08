@@ -1480,7 +1480,14 @@ function App() {
             <p style={{ color: '#ff6600', fontSize: '0.8rem' }}>Ready for high-res export</p>
           </div>
 
-          <div style={{ position: "relative", boxShadow: '0 30px 60px rgba(0,0,0,0.8)', borderRadius: '40px' }}>
+          <div style={{ 
+            position: "relative", 
+            boxShadow: '0 30px 60px rgba(0,0,0,0.8)', 
+            borderRadius: '40px',
+            transform: 'scale(0.65)',
+            transformOrigin: 'center center',
+            margin: '-120px 0' // Compensate for scaled-down height
+          }}>
             <div 
               ref={shareCardRef}
               style={{ 
