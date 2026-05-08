@@ -786,34 +786,34 @@ function App() {
     if (!shareCardRef.current || !metrics) return;
     try {
       setIsLoading(true);
-      
       const el = shareCardRef.current;
       el.style.opacity = '1';
       
       // Wait for rendering
       await new Promise(resolve => setTimeout(resolve, 800));
-      
+
       const dataUrl = await toPng(el, { 
         cacheBust: true,
-        backgroundColor: '#0f0f0f',
+        backgroundColor: "#121212",
+        pixelRatio: 2,
         style: {
           opacity: '1',
           visibility: 'visible',
         }
       });
-      
+
       el.style.opacity = '0';
       
       if (!dataUrl) throw new Error("Generated image is empty");
 
       const link = document.createElement('a');
-      link.download = `range-anxiety-analytics.png`;
+      link.download = `range-anxiety-trip-${Date.now()}.png`;
       link.href = dataUrl;
       link.click();
       setIsLoading(false);
     } catch (err) {
-      console.error('Error saving image:', err);
-      alert('Failed to save image. Please try again.');
+      console.error('Error sharing:', err);
+      setError("Failed to generate image report.");
       setIsLoading(false);
       if (shareCardRef.current) shareCardRef.current.style.opacity = '0';
     }
@@ -871,7 +871,7 @@ function App() {
           </section>
           
           <div style={{ textAlign: 'center', margin: '-0.5rem 0 0.5rem 0' }}>
-              <button onClick={() => setTrip(p => ({ ...p, origin: p.destination, destination: p.origin }))} style={{ background: 'none', border: 'none', color: 'var(--accent-color)', cursor: 'pointer', fontSize: '1.2rem' }}>⇅</button>
+              <button onClick={() => setTrip(p => ({ ...p, origin: p.destination, destination: p.origin }))} style={{ background: 'none', border: 'none', color: 'var(--accent-color)', cursor: 'pointer', fontSize: '1.2rem' }}>â‡…</button>
           </div>
 
           <section className="form-group"><label>Destination</label><input type="text" name="destination" value={trip.destination} onChange={handleInputChange} /></section>
@@ -911,7 +911,7 @@ function App() {
             <label style={{ color: 'var(--accent-color)', fontSize: '0.65rem' }}>Advanced Environment</label>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '0.5rem' }}>
                <section className="form-group">
-                 <label>Temp ({unitSystem === 'imperial' ? '°F' : '°C'})</label>
+                 <label>Temp ({unitSystem === 'imperial' ? 'Â°F' : 'Â°C'})</label>
                  <input type="number" value={ambientTempF} onChange={(e) => setAmbientTempF(parseFloat(e.target.value) || '')} />
                </section>
                <section className="form-group">
@@ -1042,7 +1042,7 @@ function App() {
                 </div>
                 {metrics.windConditions && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#34a853' }}>
-                    <span>🌬️ Wind:</span>
+                    <span>ðŸŒ¬ï¸ Wind:</span>
                     <span>
                       {unitSystem === 'imperial' 
                         ? `${metrics.windConditions.speed.toFixed(1)} mph` 
@@ -1062,7 +1062,7 @@ function App() {
               <button onClick={() => {
                   let url = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(trip.origin)}&destination=${encodeURIComponent(trip.destination)}&travelmode=bicycling`;
                   window.open(url, '_blank');
-              }} style={{ width: '100%', marginTop: '1rem', padding: '0.6rem', backgroundColor: '#34a853', color: 'white', border: 'none', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer' }}>🚀 Open Maps</button>
+              }} style={{ width: '100%', marginTop: '1rem', padding: '0.6rem', backgroundColor: '#34a853', color: 'white', border: 'none', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer' }}>ðŸš€ Open Maps</button>
               
               <button onClick={() => {
                   if (!isPro && !isHostTier) {
@@ -1110,7 +1110,7 @@ function App() {
             
             <section className="form-group" style={{ marginTop: '1.5rem', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '1.5rem' }}>
               <label style={{ color: '#ff6600', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                 👥 Group Ride Tracker
+                 ðŸ‘¥ Group Ride Tracker
                {!isHostTier && <span style={{ fontSize: '0.6rem', background: '#333', padding: '2px 6px', borderRadius: '4px' }}>{isPro ? 'PRO' : 'HOST TIER'}</span>}
                {isHostTier && hostTierExpiresAt && (
                  <span style={{ fontSize: '0.55rem', color: '#888', marginLeft: 'auto' }}>
@@ -1157,7 +1157,7 @@ function App() {
                      {publicRides.length > 0 && (
                        <div className="form-group" style={{ marginTop: '1rem' }}>
                          <label style={{ fontSize: '0.65rem', color: 'var(--accent-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                           📡 Nearby Public Rides
+                           ðŸ“¡ Nearby Public Rides
                            {user?.email === 'mattyfliptv@gmail.com' && (
                              <button onClick={endAllPublicRides} style={{ background: 'none', border: 'none', color: '#d93025', fontSize: '0.6rem', cursor: 'pointer', textDecoration: 'underline' }}>End All</button>
                            )}
@@ -1186,7 +1186,7 @@ function App() {
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                               <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: activeRide.creatorId === p.userId ? '#34a853' : '#ff6600' }} />
                               <span style={{ fontSize: '0.75rem' }}>
-                                {p.name} {activeRide.leaderId === p.userId && '⭐️'}
+                                {p.name} {activeRide.leaderId === p.userId && 'â­ï¸'}
                               </span>
                             </div>
                             {user?.uid === activeRide.creatorId && activeRide.leaderId !== p.userId && (
@@ -1233,10 +1233,10 @@ function App() {
             >
               {response && (
                 <div className="map-controls">
-                    <button onClick={() => searchPOIs('cafe')}>☕ Cafes</button>
-                    <button onClick={() => searchPOIs('bike shop')}>🚲 Shops</button>
-                    <button onClick={() => searchPOIs('charging')}>⚡ Charging</button>
-                    <button onClick={searchByMapCenter}>🔍 Search Area</button>
+                    <button onClick={() => searchPOIs('cafe')}>â˜• Cafes</button>
+                    <button onClick={() => searchPOIs('bike shop')}>ðŸš² Shops</button>
+                    <button onClick={() => searchPOIs('charging')}>âš¡ Charging</button>
+                    <button onClick={searchByMapCenter}>ðŸ” Search Area</button>
                 </div>
               )}
 
@@ -1295,7 +1295,7 @@ function App() {
                 }}
                 title="Recenter Map"
               >
-                🎯
+                ðŸŽ¯
               </button>
               
               {/* Public Rides Discovery */}
@@ -1317,7 +1317,7 @@ function App() {
                   onCloseClick={() => setSelectedPublicRide(null)}
                 >
                   <div style={{ padding: '0.5rem', color: '#333' }}>
-                    <h4 style={{ margin: 0 }}>👥 {selectedPublicRide.name}</h4>
+                    <h4 style={{ margin: 0 }}>ðŸ‘¥ {selectedPublicRide.name}</h4>
                     <p style={{ margin: '0.2rem 0', fontSize: '0.8rem' }}>Host: {selectedPublicRide.creatorId.substring(0, 5)}...</p>
                     <button 
                       onClick={() => { joinRide(selectedPublicRide.id); setSelectedPublicRide(null); }} 
@@ -1370,7 +1370,7 @@ function App() {
                     scale: 10
                   } : undefined}
                   label={poi.type === 'charging station' ? {
-                    text: '⚡',
+                    text: 'âš¡',
                     color: 'white',
                     fontSize: '12px'
                   } : undefined}
@@ -1442,128 +1442,82 @@ function App() {
             <p style={{ color: '#888', fontSize: '0.8rem' }}>Click download to save this report as an image</p>
           </div>
 
-          <div 
-            ref={shareCardRef}
-            style={{ 
-              width: '540px',
-              height: '960px', 
-              background: 'linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%)', 
-              padding: '2rem 2rem', 
-              color: 'white', 
-              fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-              border: '1px solid rgba(255,102,0,0.3)',
-              borderRadius: '32px',
-              boxShadow: '0 20px 50px rgba(0,0,0,0.8)',
-              position: 'relative',
-              overflow: 'hidden',
-              display: 'flex',
-              flexDirection: 'column'
-            }}
-          >
-              {/* Decorative background elements */}
-              <div style={{ position: 'absolute', top: '-5%', right: '-5%', width: '300px', height: '300px', background: 'radial-gradient(circle, rgba(255,102,0,0.15) 0%, transparent 70%)', pointerEvents: 'none' }} />
-              <div style={{ position: 'absolute', bottom: '10%', left: '-10%', width: '350px', height: '350px', background: 'radial-gradient(circle, rgba(255,102,0,0.08) 0%, transparent 70%)', pointerEvents: 'none' }} />
-
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '1.2rem', position: 'relative', textAlign: 'center' }}>
-                <div style={{ fontSize: '2.5rem', fontWeight: 900, letterSpacing: '-2px', color: '#ff6600', marginBottom: '2px', textTransform: 'uppercase', lineHeight: 1 }}>Range Anxiety</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <div style={{ fontSize: '0.7rem', color: '#ff6600', fontWeight: 'bold', letterSpacing: '3px', textTransform: 'uppercase', opacity: 0.8 }}>Trip Analytics</div>
-                  {username && (
-                    <div style={{ fontSize: '0.65rem', color: '#888', background: 'rgba(255,255,255,0.05)', padding: '2px 8px', borderRadius: '10px' }}>
-                      Rider: {username}
-                    </div>
-                  )}
+          <div style={{ position: "relative" }}>
+            <div 
+              ref={shareCardRef}
+              style={{ 
+                width: "500px", 
+                background: "#121212", 
+                padding: "2.5rem", 
+                color: "white",
+                fontFamily: "system-ui, -apple-system, sans-serif",
+                display: "flex",
+                flexDirection: "column",
+                gap: "1.5rem",
+                borderRadius: "24px",
+                border: "1px solid #333",
+                boxShadow: "0 20px 50px rgba(0,0,0,0.5)"
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                <div>
+                  <h1 style={{ color: "#ff6600", margin: 0, fontSize: "2rem", fontWeight: 900, letterSpacing: "-0.05em" }}>RANGE ANXIETY</h1>
+                  <p style={{ margin: 0, fontSize: "0.8rem", color: "#888" }}>Trip Report • {new Date().toLocaleDateString()}</p>
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <div style={{ fontSize: "1.5rem", fontWeight: "bold" }}>{specs.voltage}V {specs.capacityAh}Ah</div>
+                  <div style={{ fontSize: "0.7rem", color: "#666" }}>{bikeSearchQuery || "Custom Bike"}</div>
                 </div>
               </div>
 
-              <div style={{ marginBottom: '1rem', position: 'relative' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '0.5rem' }}>
-                  <div style={{ fontSize: '0.65rem', color: '#ff6600', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1.5px' }}>Vehicle & Style</div>
-                  <div style={{ fontSize: '0.65rem', color: '#888', textTransform: 'uppercase' }}>{ridingStyle} Mode</div>
+              <div style={{ background: "#1e1e1e", padding: "1.5rem", borderRadius: "12px", border: "1px solid #333" }}>
+                <div style={{ marginBottom: "1rem" }}>
+                  <div style={{ fontSize: "0.7rem", color: "#ff6600", fontWeight: "bold", textTransform: "uppercase", marginBottom: "0.2rem" }}>Route</div>
+                  <div style={{ fontSize: "1rem", fontWeight: "500" }}>{trip.origin || "Current Location"} ➔ {trip.destination}</div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'rgba(255,255,255,0.02)', padding: '0.9rem', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                  <div style={{ fontSize: '1.4rem' }}>🚲</div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "1rem" }}>
                   <div>
-                    <div style={{ fontSize: '1rem', fontWeight: 'bold', color: 'white' }}>
-                      {savedBikes.find(b => JSON.stringify(b.specs) === JSON.stringify(specs))?.name || 
-                       STANDARD_BIKES.find(b => JSON.stringify(b.specs) === JSON.stringify(specs))?.name || 
-                       'Custom Build'}
-                    </div>
-                    <div style={{ fontSize: '0.7rem', color: '#888' }}>{specs.voltage}V • {specs.capacityAh}{capacityInputMode === 'ah' ? 'Ah' : 'Wh'} • {specs.motorWatts}W</div>
+                    <div style={{ fontSize: "0.6rem", color: "#888", textTransform: "uppercase" }}>Distance</div>
+                    <div style={{ fontSize: "1.1rem", fontWeight: "bold" }}>{metrics?.distanceMiles.toFixed(1)} mi</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: "0.6rem", color: "#888", textTransform: "uppercase" }}>Gain</div>
+                    <div style={{ fontSize: "1.1rem", fontWeight: "bold" }}>{metrics?.elevationGainFeet.toFixed(0)} ft</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: "0.6rem", color: "#888", textTransform: "uppercase" }}>Duration</div>
+                    <div style={{ fontSize: "1.1rem", fontWeight: "bold" }}>{metrics?.durationMin.toFixed(0)} min</div>
                   </div>
                 </div>
               </div>
 
-              <div style={{ marginBottom: '1rem', position: 'relative' }}>
-                <div style={{ fontSize: '0.65rem', color: '#ff6600', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '0.5rem' }}>Route Preview</div>
-                <div style={{ width: '100%', height: '240px', borderRadius: '16px', overflow: 'hidden', border: '1px solid rgba(255,102,0,0.2)', background: '#111' }}>
-                  {response && (
-                    <img 
-                      src={`https://maps.googleapis.com/maps/api/staticmap?size=500x250&scale=2&maptype=roadmap&theme=dark&style=element:geometry%7Ccolor:0x242f3e&style=element:labels.text.stroke%7Ccolor:0x242f3e&style=element:labels.text.fill%7Ccolor:0x746855&style=feature:administrative.locality%7Celement:labels.text.fill%7Ccolor:0xd59563&style=feature:poi%7Celement:labels.text.fill%7Ccolor:0xd59563&style=feature:poi.park%7Celement:geometry%7Ccolor:0x263c3f&style=feature:poi.park%7Celement:labels.text.fill%7Ccolor:0x6b9a76&style=feature:road%7Celement:geometry%7Ccolor:0x38414e&style=feature:road%7Celement:geometry.stroke%7Ccolor:0x212a37&style=feature:road%7Celement:labels.text.fill%7Ccolor:0x9ca5b3&style=feature:road.highway%7Celement:geometry%7Ccolor:0x746855&style=feature:road.highway%7Celement:geometry.stroke%7Ccolor:0x1f2835&style=feature:road.highway%7Celement:labels.text.fill%7Ccolor:0xf3d19c&style=feature:transit%7Celement:geometry%7Ccolor:0x2f3948&style=feature:transit.station%7Celement:labels.text.fill%7Ccolor:0xd59563&style=feature:water%7Celement:geometry%7Ccolor:0x17263c&style=feature:water%7Celement:labels.text.fill%7Ccolor:0x515c6d&style=feature:water%7Celement:labels.text.stroke%7Ccolor:0x17263c&path=color:0xff6600%7Cweight:5%7Cenc:${encodeURIComponent(typeof response.routes[selectedRouteIndex || 0].overview_polyline === 'string' ? response.routes[selectedRouteIndex || 0].overview_polyline : (response.routes[selectedRouteIndex || 0].overview_polyline as any).points)}&key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY}`}
-                      alt="Route Map"
-                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                    />
-                  )}
+              <div style={{ background: "linear-gradient(135deg, #ff6600 0%, #ff9900 100%)", padding: "2rem", borderRadius: "12px", color: "white", textAlign: "center" }}>
+                <div style={{ fontSize: "0.8rem", fontWeight: "bold", textTransform: "uppercase", opacity: 0.9, marginBottom: "0.5rem" }}>Estimated Battery Remaining</div>
+                <div style={{ fontSize: "4rem", fontWeight: "900", letterSpacing: "-0.02em" }}>{metrics?.batteryPercentUsed.toFixed(1)}%</div>
+                <div style={{ fontSize: "1rem", fontWeight: "600", opacity: 0.9 }}>
+                  {metrics ? (getBatteryLevels(Number(specs.voltage)).min + (metrics.batteryPercentUsed / 100) * (getBatteryLevels(Number(specs.voltage)).max - getBatteryLevels(Number(specs.voltage)).min)).toFixed(1) : "--"}V
                 </div>
               </div>
 
-              <div style={{ marginBottom: '1rem', position: 'relative' }}>
-                <div style={{ fontSize: '0.65rem', color: '#ff6600', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '0.5rem' }}>Journey</div>
-                <div style={{ background: 'rgba(255,255,255,0.02)', padding: '0.9rem', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#ff6600' }} />
-                    <div style={{ fontSize: '0.8rem', fontWeight: 500, color: '#eee', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{trip.origin || 'Start Point'}</div>
-                  </div>
-                  <div style={{ height: '12px', width: '2px', borderLeft: '2px dashed rgba(255,102,0,0.3)', margin: '2px 2px' }} />
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div style={{ width: '6px', height: '6px', border: '2px solid #ff6600', borderRadius: '50%' }} />
-                    <div style={{ fontSize: '0.8rem', fontWeight: 500, color: '#eee', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{trip.destination || 'End Point'}</div>
-                  </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+                <div style={{ background: "#1e1e1e", padding: "1rem", borderRadius: "12px", border: "1px solid #333" }}>
+                   <div style={{ fontSize: "0.6rem", color: "#888", textTransform: "uppercase" }}>Efficiency</div>
+                   <div style={{ fontSize: "1.1rem", fontWeight: "bold" }}>{metrics ? (metrics.estimatedWh / metrics.distanceMiles).toFixed(1) : "--"} Wh/mi</div>
+                </div>
+                <div style={{ background: "#1e1e1e", padding: "1rem", borderRadius: "12px", border: "1px solid #333" }}>
+                   <div style={{ fontSize: "0.6rem", color: "#888", textTransform: "uppercase" }}>Conditions</div>
+                   <div style={{ fontSize: "1.1rem", fontWeight: "bold" }}>{ambientTempF}°F • {ridingStyle}</div>
                 </div>
               </div>
 
-              <div style={{ background: 'linear-gradient(to bottom, rgba(255,102,0,0.2), rgba(255,102,0,0.05))', padding: '1.2rem 1rem', borderRadius: '24px', marginBottom: '1.2rem', textAlign: 'center', border: '1px solid rgba(255,102,0,0.2)' }}>
-                <div style={{ fontSize: '0.65rem', color: '#ff6600', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '3px', marginBottom: '0.3rem' }}>Estimated Battery Left</div>
-                <div style={{ fontSize: '4rem', fontWeight: 900, color: 'white', lineHeight: 1, letterSpacing: '-3px' }}>
-                  {metrics.batteryPercentUsed.toFixed(0)}<span style={{ fontSize: '1.8rem', color: '#ff6600', marginLeft: '4px' }}>%</span>
-                </div>
+              <div style={{ textAlign: "center", marginTop: "1rem", borderTop: "1px solid #333", paddingTop: "1.5rem" }}>
+                <div style={{ fontSize: "0.9rem", fontWeight: "bold", color: "#ff6600" }}>rangeanxiety.app</div>
+                <div style={{ fontSize: "0.6rem", color: "#444", marginTop: "0.3rem" }}>* Estimates only. Actual range may vary based on conditions.</div>
               </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.8rem', marginBottom: 'auto' }}>
-                <div style={{ padding: '0.8rem', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.03)' }}>
-                  <div style={{ fontSize: '0.5rem', color: '#666', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '1px', marginBottom: '2px' }}>Distance</div>
-                  <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: 'white' }}>
-                    {unitSystem === 'imperial' ? `${metrics.distanceMiles.toFixed(1)}` : `${(metrics.distanceMiles * 1.60934).toFixed(1)}`}
-                    <span style={{ fontSize: '0.7rem', color: '#888', marginLeft: '3px' }}>{unitSystem === 'imperial' ? 'mi' : 'km'}</span>
-                  </div>
-                </div>
-                <div style={{ padding: '0.8rem', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.03)' }}>
-                  <div style={{ fontSize: '0.5rem', color: '#666', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '1px', marginBottom: '2px' }}>Travel Time</div>
-                  <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: 'white' }}>
-                    {Math.floor(metrics.durationMin / 60)}h {Math.round(metrics.durationMin % 60)}m
-                  </div>
-                </div>
-                <div style={{ padding: '0.8rem', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.03)' }}>
-                  <div style={{ fontSize: '0.5rem', color: '#666', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '1px', marginBottom: '2px' }}>Elev. Gain</div>
-                  <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: 'white' }}>
-                    {unitSystem === 'imperial' ? `${metrics.elevationGainFeet.toFixed(0)}` : `${(metrics.elevationGainFeet * 0.3048).toFixed(0)}`}
-                    <span style={{ fontSize: '0.7rem', color: '#888', marginLeft: '3px' }}>{unitSystem === 'imperial' ? 'ft' : 'm'}</span>
-                  </div>
-                </div>
-                <div style={{ padding: '0.8rem', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.03)' }}>
-                  <div style={{ fontSize: '0.5rem', color: '#666', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '1px', marginBottom: '2px' }}>Avg. Wind</div>
-                  <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: 'white' }}>
-                    {metrics.windConditions ? (metrics.windConditions.headwindComponent > 0 ? 'Head' : 'Tail') : 'Calm'}
-                  </div>
-                </div>
-              </div>
-
-              <div style={{ marginTop: 'auto', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '1rem', textAlign: 'center' }}>
-                <div style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#555', letterSpacing: '4px', textTransform: 'uppercase' }}>RangeAnxiety.app</div>
-              </div>
+            </div>
           </div>
 
-          <div style={{ marginTop: '30px', display: 'flex', gap: '15px', width: '100%', maxWidth: '500px' }}>
+          <div style={{ marginTop: "30px", display: "flex", gap: "15px", width: "100%", maxWidth: "500px" }}>
             <button 
               onClick={() => setShowSharePreview(false)} 
               style={{ flex: 1, padding: '12px', backgroundColor: '#333', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}
@@ -1584,18 +1538,19 @@ function App() {
         </div>
       )}
 
-      {/* Legacy off-screen ref - kept for compatibility but modal ref is preferred */}
-      <div 
-        style={{ 
-          position: 'fixed', 
-          left: '-9999px', 
-          top: 0, 
-          width: '500px', 
-          opacity: 0,
-          pointerEvents: 'none'
-        }} 
-      >
-        {/* Hidden copy for background tasks if needed */}
+      {/* Off-screen container for image generation (fallback) */}
+      <div style={{ position: "fixed", left: "-9999px", top: "0", pointerEvents: "none" }}>
+        <div 
+          style={{ 
+            width: "500px", 
+            background: "#121212", 
+            padding: "2.5rem", 
+            color: "white",
+            fontFamily: "system-ui, -apple-system, sans-serif"
+          }}
+        >
+          {/* This is intentionally simplified as the preview ref is used for capture */}
+        </div>
       </div>
     </div>
   )
