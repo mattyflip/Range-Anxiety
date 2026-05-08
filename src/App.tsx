@@ -839,11 +839,7 @@ function App() {
           <img src={heroLogo} alt="Ebike King Logo" style={{ height: '2.8rem', width: 'auto' }} />
           <div className="logo" style={{ display: 'flex', flexDirection: 'column' }}>
             <span>Range Anxiety</span>
-            <span style={{ fontSize: '0.6rem', color: '#888', letterSpacing: '0.1em' }}>Powered by Ebike King NJ</span>
           </div>
-          <button className="mobile-toggle-btn" onClick={() => setShowMobileMenu(!showMobileMenu)}>
-            {showMobileMenu ? 'Map' : 'Trip Settings'}
-          </button>
         </div>
         <div className="nav-actions" style={{ gap: '0.8rem' }}>
           <button 
@@ -1334,6 +1330,29 @@ function App() {
               >
                 🎯
               </button>
+
+              <button 
+                className="mobile-toggle-btn-floating"
+                onClick={() => setShowMobileMenu(!showMobileMenu)}
+                style={{
+                  position: 'absolute',
+                  bottom: '6.5rem',
+                  right: '1rem',
+                  zIndex: 10,
+                  padding: '0.8rem 1.2rem',
+                  borderRadius: '30px',
+                  backgroundColor: 'rgba(30,30,30,0.9)',
+                  color: 'white',
+                  border: '1px solid #ff6600',
+                  boxShadow: '0 4px 15px rgba(0,0,0,0.5)',
+                  cursor: 'pointer',
+                  fontWeight: 'bold',
+                  fontSize: '0.8rem',
+                  backdropFilter: 'blur(5px)'
+                }}
+              >
+                {showMobileMenu ? 'Show Map' : 'Trip Settings'}
+              </button>
               
               {/* Public Rides Discovery */}
               {publicRides.filter(r => r.id !== activeRide?.id).map(ride => (
@@ -1439,7 +1458,6 @@ function App() {
 
       <footer style={{ padding: '2rem', borderTop: '1px solid #333', background: '#1a1a1a', textAlign: 'center' }}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
-          <img src={heroLogo} alt="Ebike King" style={{ height: '2rem', opacity: 0.6 }} />
           <p style={{ fontSize: '0.8rem', color: '#666', margin: 0 }}>&copy; 2026 Range Anxiety. Estimates only. Ride safe!</p>
           <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
              <a href="https://ebikekingnj.com" target="_blank" rel="noreferrer" style={{ color: '#888', textDecoration: 'none', fontSize: '0.7rem' }}>ebikekingnj.com</a>
