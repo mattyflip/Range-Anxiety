@@ -9,6 +9,7 @@ import type { User } from 'firebase/auth'
 import { doc, getDoc, setDoc, collection, addDoc, serverTimestamp, onSnapshot, query, where, deleteDoc, getDocs, updateDoc, arrayUnion } from 'firebase/firestore'
 import AdBanner from './components/AdBanner'
 import TermsOfService from './components/TermsOfService'
+import heroLogo from './assets/hero.png'
 
 const LIBRARIES: ("places")[] = ["places"];
 
@@ -826,8 +827,12 @@ function App() {
   return (
     <div className="container">
       <header>
-        <div className="logo-container">
-          <div className="logo">Range Anxiety</div>
+        <div className="logo-container" style={{ flexDirection: 'row', alignItems: 'center', gap: '0.8rem' }}>
+          <img src={heroLogo} alt="Ebike King Logo" style={{ height: '2.8rem', width: 'auto' }} />
+          <div className="logo" style={{ display: 'flex', flexDirection: 'column' }}>
+            <span>Range Anxiety</span>
+            <span style={{ fontSize: '0.6rem', color: '#888', letterSpacing: '0.1em' }}>Powered by Ebike King NJ</span>
+          </div>
           <button className="mobile-toggle-btn" onClick={() => setShowMobileMenu(!showMobileMenu)}>
             {showMobileMenu ? 'Map' : 'Trip Settings'}
           </button>
@@ -871,7 +876,15 @@ function App() {
           </section>
           
           <div style={{ textAlign: 'center', margin: '-0.5rem 0 0.5rem 0' }}>
-              <button onClick={() => setTrip(p => ({ ...p, origin: p.destination, destination: p.origin }))} style={{ background: 'none', border: 'none', color: 'var(--accent-color)', cursor: 'pointer', fontSize: '1.2rem' }}>â‡…</button>
+              <button 
+                onClick={() => setTrip(p => ({ ...p, origin: p.destination, destination: p.origin }))} 
+                style={{ background: 'none', border: 'none', color: 'var(--accent-color)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%' }}
+                title="Swap Origin and Destination"
+              >
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
+                  <path d="M16 17.01V10h-2v7.01h-3L15 21l4-3.99h-3zM9 3L5 6.99h3V14h2V6.99h3L9 3z"/>
+                </svg>
+              </button>
           </div>
 
           <section className="form-group"><label>Destination</label><input type="text" name="destination" value={trip.destination} onChange={handleInputChange} /></section>
@@ -911,7 +924,7 @@ function App() {
             <label style={{ color: 'var(--accent-color)', fontSize: '0.65rem' }}>Advanced Environment</label>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '0.5rem' }}>
                <section className="form-group">
-                 <label>Temp ({unitSystem === 'imperial' ? 'Â°F' : 'Â°C'})</label>
+                 <label>Temp ({unitSystem === 'imperial' ? '°F' : '°C'})</label>
                  <input type="number" value={ambientTempF} onChange={(e) => setAmbientTempF(parseFloat(e.target.value) || '')} />
                </section>
                <section className="form-group">
@@ -1042,7 +1055,7 @@ function App() {
                 </div>
                 {metrics.windConditions && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#34a853' }}>
-                    <span>ðŸŒ¬ï¸ Wind:</span>
+                    <span>🌬️ Wind:</span>
                     <span>
                       {unitSystem === 'imperial' 
                         ? `${metrics.windConditions.speed.toFixed(1)} mph` 
@@ -1062,7 +1075,7 @@ function App() {
               <button onClick={() => {
                   let url = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(trip.origin)}&destination=${encodeURIComponent(trip.destination)}&travelmode=bicycling`;
                   window.open(url, '_blank');
-              }} style={{ width: '100%', marginTop: '1rem', padding: '0.6rem', backgroundColor: '#34a853', color: 'white', border: 'none', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer' }}>ðŸš€ Open Maps</button>
+              }} style={{ width: '100%', marginTop: '1rem', padding: '0.6rem', backgroundColor: '#34a853', color: 'white', border: 'none', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer' }}>🚀 Open Maps</button>
               
               <button onClick={() => {
                   if (!isPro && !isHostTier) {
@@ -1110,7 +1123,7 @@ function App() {
             
             <section className="form-group" style={{ marginTop: '1.5rem', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '1.5rem' }}>
               <label style={{ color: '#ff6600', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                 ðŸ‘¥ Group Ride Tracker
+                 👥 Group Ride Tracker
                {!isHostTier && <span style={{ fontSize: '0.6rem', background: '#333', padding: '2px 6px', borderRadius: '4px' }}>{isPro ? 'PRO' : 'HOST TIER'}</span>}
                {isHostTier && hostTierExpiresAt && (
                  <span style={{ fontSize: '0.55rem', color: '#888', marginLeft: 'auto' }}>
@@ -1157,7 +1170,7 @@ function App() {
                      {publicRides.length > 0 && (
                        <div className="form-group" style={{ marginTop: '1rem' }}>
                          <label style={{ fontSize: '0.65rem', color: 'var(--accent-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                           ðŸ“¡ Nearby Public Rides
+                           📡 Nearby Public Rides
                            {user?.email === 'mattyfliptv@gmail.com' && (
                              <button onClick={endAllPublicRides} style={{ background: 'none', border: 'none', color: '#d93025', fontSize: '0.6rem', cursor: 'pointer', textDecoration: 'underline' }}>End All</button>
                            )}
@@ -1186,7 +1199,7 @@ function App() {
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                               <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: activeRide.creatorId === p.userId ? '#34a853' : '#ff6600' }} />
                               <span style={{ fontSize: '0.75rem' }}>
-                                {p.name} {activeRide.leaderId === p.userId && 'â­ï¸'}
+                                {p.name} {activeRide.leaderId === p.userId && '⭐️'}
                               </span>
                             </div>
                             {user?.uid === activeRide.creatorId && activeRide.leaderId !== p.userId && (
@@ -1233,10 +1246,10 @@ function App() {
             >
               {response && (
                 <div className="map-controls">
-                    <button onClick={() => searchPOIs('cafe')}>â˜• Cafes</button>
-                    <button onClick={() => searchPOIs('bike shop')}>ðŸš² Shops</button>
-                    <button onClick={() => searchPOIs('charging')}>âš¡ Charging</button>
-                    <button onClick={searchByMapCenter}>ðŸ” Search Area</button>
+                    <button onClick={() => searchPOIs('cafe')}>☕ Cafes</button>
+                    <button onClick={() => searchPOIs('bike shop')}>🚲 Shops</button>
+                    <button onClick={() => searchPOIs('charging')}>⚡ Charging</button>
+                    <button onClick={searchByMapCenter}>🔍 Search Area</button>
                 </div>
               )}
 
@@ -1295,7 +1308,7 @@ function App() {
                 }}
                 title="Recenter Map"
               >
-                ðŸŽ¯
+                🎯
               </button>
               
               {/* Public Rides Discovery */}
@@ -1317,7 +1330,7 @@ function App() {
                   onCloseClick={() => setSelectedPublicRide(null)}
                 >
                   <div style={{ padding: '0.5rem', color: '#333' }}>
-                    <h4 style={{ margin: 0 }}>ðŸ‘¥ {selectedPublicRide.name}</h4>
+                    <h4 style={{ margin: 0 }}>👥 {selectedPublicRide.name}</h4>
                     <p style={{ margin: '0.2rem 0', fontSize: '0.8rem' }}>Host: {selectedPublicRide.creatorId.substring(0, 5)}...</p>
                     <button 
                       onClick={() => { joinRide(selectedPublicRide.id); setSelectedPublicRide(null); }} 
@@ -1370,7 +1383,7 @@ function App() {
                     scale: 10
                   } : undefined}
                   label={poi.type === 'charging station' ? {
-                    text: 'âš¡',
+                    text: '⚡',
                     color: 'white',
                     fontSize: '12px'
                   } : undefined}
@@ -1400,8 +1413,22 @@ function App() {
         </main>
       </div>
 
-      <footer>
-        <p>&copy; 2026 Range Anxiety. Estimates only.</p>
+      <footer style={{ padding: '2rem', borderTop: '1px solid #333', background: '#1a1a1a', textAlign: 'center' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+          <img src={heroLogo} alt="Ebike King" style={{ height: '2rem', opacity: 0.6 }} />
+          <p style={{ fontSize: '0.8rem', color: '#666', margin: 0 }}>&copy; 2026 Range Anxiety. Estimates only. Ride safe!</p>
+          <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
+             <a href="https://ebikekingnj.com" target="_blank" rel="noreferrer" style={{ color: '#888', textDecoration: 'none', fontSize: '0.7rem' }}>ebikekingnj.com</a>
+             <span style={{ color: '#444' }}>|</span>
+             <a href="#" onClick={(e) => { e.preventDefault(); setShowToSPage(true); }} style={{ color: '#888', textDecoration: 'none', fontSize: '0.7rem' }}>Terms of Service</a>
+          </div>
+          <div style={{ display: 'flex', gap: '1.5rem', marginTop: '1rem' }}>
+             <svg style={{ width: '20px', height: '20px', fill: '#444', cursor: 'pointer' }}><use href="/icons.svg#bluesky-icon" /></svg>
+             <svg style={{ width: '20px', height: '20px', fill: '#444', cursor: 'pointer' }}><use href="/icons.svg#discord-icon" /></svg>
+             <svg style={{ width: '20px', height: '20px', fill: '#444', cursor: 'pointer' }}><use href="/icons.svg#github-icon" /></svg>
+             <svg style={{ width: '20px', height: '20px', fill: '#444', cursor: 'pointer' }}><use href="/icons.svg#x-icon" /></svg>
+          </div>
+        </div>
       </footer>
       
       {showAuthModal && (
@@ -1446,73 +1473,65 @@ function App() {
             <div 
               ref={shareCardRef}
               style={{ 
-                width: "500px", 
+                width: "600px", 
                 background: "#121212", 
-                padding: "2.5rem", 
+                padding: "3rem", 
                 color: "white",
-                fontFamily: "system-ui, -apple-system, sans-serif",
+                fontFamily: "'Inter', sans-serif",
                 display: "flex",
                 flexDirection: "column",
-                gap: "1.5rem",
+                gap: "2.5rem",
                 borderRadius: "24px",
-                border: "1px solid #333",
+                border: "2px solid #ff6600",
                 boxShadow: "0 20px 50px rgba(0,0,0,0.5)"
               }}
             >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', borderBottom: '1px solid #333', paddingBottom: '1.5rem' }}>
+                <img src={heroLogo} alt="Logo" style={{ height: '4rem' }} />
                 <div>
-                  <h1 style={{ color: "#ff6600", margin: 0, fontSize: "2rem", fontWeight: 900, letterSpacing: "-0.05em" }}>RANGE ANXIETY</h1>
-                  <p style={{ margin: 0, fontSize: "0.8rem", color: "#888" }}>Trip Report • {new Date().toLocaleDateString()}</p>
-                </div>
-                <div style={{ textAlign: "right" }}>
-                  <div style={{ fontSize: "1.5rem", fontWeight: "bold" }}>{specs.voltage}V {specs.capacityAh}Ah</div>
-                  <div style={{ fontSize: "0.7rem", color: "#666" }}>{bikeSearchQuery || "Custom Bike"}</div>
+                  <h1 style={{ color: '#ff6600', margin: 0, textTransform: 'uppercase', fontSize: '2rem' }}>Trip Report</h1>
+                  <p style={{ color: '#888', margin: 0 }}>Range Anxiety Estimator</p>
                 </div>
               </div>
 
-              <div style={{ background: "#1e1e1e", padding: "1.5rem", borderRadius: "12px", border: "1px solid #333" }}>
-                <div style={{ marginBottom: "1rem" }}>
-                  <div style={{ fontSize: "0.7rem", color: "#ff6600", fontWeight: "bold", textTransform: "uppercase", marginBottom: "0.2rem" }}>Route</div>
-                  <div style={{ fontSize: "1rem", fontWeight: "500" }}>{trip.origin || "Current Location"} ➔ {trip.destination}</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+                <div>
+                  <h3 style={{ color: '#ff6600', fontSize: '0.8rem', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Route</h3>
+                  <p style={{ fontSize: '1.2rem', margin: '0.2rem 0' }}><strong>From:</strong> {trip.origin || 'Current Location'}</p>
+                  <p style={{ fontSize: '1.2rem', margin: '0.2rem 0' }}><strong>To:</strong> {trip.destination}</p>
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "1rem" }}>
+                <div>
+                  <h3 style={{ color: '#ff6600', fontSize: '0.8rem', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Vehicle</h3>
+                  <p style={{ fontSize: '1.2rem', margin: '0.2rem 0' }}>{bikeSearchQuery || 'Custom E-Bike'}</p>
+                  <p style={{ fontSize: '1rem', color: '#888', margin: 0 }}>{specs.voltage}V {specs.capacityAh}{capacityInputMode.toUpperCase()}</p>
+                </div>
+              </div>
+
+              <div style={{ background: 'rgba(255,102,0,0.1)', padding: '2rem', borderRadius: '16px', textAlign: 'center' }}>
+                <h2 style={{ fontSize: '1.2rem', color: '#ff6600', textTransform: 'uppercase', marginBottom: '1rem' }}>Battery Projection</h2>
+                <div style={{ fontSize: '4rem', fontWeight: '800', margin: '1rem 0' }}>
+                  {metrics.batteryPercentUsed.toFixed(1)}%
+                  <span style={{ fontSize: '1.5rem', color: '#888', fontWeight: '400', marginLeft: '0.5rem' }}>Remaining</span>
+                </div>
+                
+                <div style={{ display: 'flex', justifyContent: 'center', gap: '3rem', marginTop: '1.5rem', borderTop: '1px solid rgba(255,102,0,0.2)', paddingTop: '1.5rem' }}>
                   <div>
-                    <div style={{ fontSize: "0.6rem", color: "#888", textTransform: "uppercase" }}>Distance</div>
-                    <div style={{ fontSize: "1.1rem", fontWeight: "bold" }}>{metrics?.distanceMiles.toFixed(1)} mi</div>
+                    <div style={{ color: '#888', fontSize: '0.8rem' }}>DISTANCE</div>
+                    <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{unitSystem === 'imperial' ? `${metrics.distanceMiles.toFixed(1)} mi` : `${(metrics.distanceMiles * 1.60934).toFixed(1)} km`}</div>
                   </div>
                   <div>
-                    <div style={{ fontSize: "0.6rem", color: "#888", textTransform: "uppercase" }}>Gain</div>
-                    <div style={{ fontSize: "1.1rem", fontWeight: "bold" }}>{metrics?.elevationGainFeet.toFixed(0)} ft</div>
+                    <div style={{ color: '#888', fontSize: '0.8rem' }}>ELEVATION</div>
+                    <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{unitSystem === 'imperial' ? `${metrics.elevationGainFeet.toFixed(0)} ft` : `${(metrics.elevationGainFeet * 0.3048).toFixed(0)} m`}</div>
                   </div>
                   <div>
-                    <div style={{ fontSize: "0.6rem", color: "#888", textTransform: "uppercase" }}>Duration</div>
-                    <div style={{ fontSize: "1.1rem", fontWeight: "bold" }}>{metrics?.durationMin.toFixed(0)} min</div>
+                    <div style={{ color: '#888', fontSize: '0.8rem' }}>TIME</div>
+                    <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{Math.floor(metrics.durationMin / 60)}h {Math.round(metrics.durationMin % 60)}m</div>
                   </div>
                 </div>
               </div>
 
-              <div style={{ background: "linear-gradient(135deg, #ff6600 0%, #ff9900 100%)", padding: "2rem", borderRadius: "12px", color: "white", textAlign: "center" }}>
-                <div style={{ fontSize: "0.8rem", fontWeight: "bold", textTransform: "uppercase", opacity: 0.9, marginBottom: "0.5rem" }}>Estimated Battery Remaining</div>
-                <div style={{ fontSize: "4rem", fontWeight: "900", letterSpacing: "-0.02em" }}>{metrics?.batteryPercentUsed.toFixed(1)}%</div>
-                <div style={{ fontSize: "1rem", fontWeight: "600", opacity: 0.9 }}>
-                  {metrics ? (getBatteryLevels(Number(specs.voltage)).min + (metrics.batteryPercentUsed / 100) * (getBatteryLevels(Number(specs.voltage)).max - getBatteryLevels(Number(specs.voltage)).min)).toFixed(1) : "--"}V
-                </div>
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
-                <div style={{ background: "#1e1e1e", padding: "1rem", borderRadius: "12px", border: "1px solid #333" }}>
-                   <div style={{ fontSize: "0.6rem", color: "#888", textTransform: "uppercase" }}>Efficiency</div>
-                   <div style={{ fontSize: "1.1rem", fontWeight: "bold" }}>{metrics ? (metrics.estimatedWh / metrics.distanceMiles).toFixed(1) : "--"} Wh/mi</div>
-                </div>
-                <div style={{ background: "#1e1e1e", padding: "1rem", borderRadius: "12px", border: "1px solid #333" }}>
-                   <div style={{ fontSize: "0.6rem", color: "#888", textTransform: "uppercase" }}>Conditions</div>
-                   <div style={{ fontSize: "1.1rem", fontWeight: "bold" }}>{ambientTempF}°F • {ridingStyle}</div>
-                </div>
-              </div>
-
-              <div style={{ textAlign: "center", marginTop: "1rem", borderTop: "1px solid #333", paddingTop: "1.5rem" }}>
-                <div style={{ fontSize: "0.9rem", fontWeight: "bold", color: "#ff6600" }}>rangeanxiety.app</div>
-                <div style={{ fontSize: "0.6rem", color: "#444", marginTop: "0.3rem" }}>* Estimates only. Actual range may vary based on conditions.</div>
+              <div style={{ textAlign: 'center', color: '#555', fontSize: '0.8rem' }}>
+                Generated on {new Date().toLocaleDateString()} • Powered by Ebike King NJ
               </div>
             </div>
           </div>
@@ -1538,18 +1557,73 @@ function App() {
         </div>
       )}
 
-      {/* Off-screen container for image generation (fallback) */}
-      <div style={{ position: "fixed", left: "-9999px", top: "0", pointerEvents: "none" }}>
+      {/* Off-screen container for image generation (fallback/off-screen ref) */}
+      <div style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>
         <div 
+          ref={shareCardRef} 
           style={{ 
-            width: "500px", 
-            background: "#121212", 
-            padding: "2.5rem", 
-            color: "white",
-            fontFamily: "system-ui, -apple-system, sans-serif"
+            width: '600px', 
+            background: '#121212', 
+            padding: '3rem', 
+            color: 'white', 
+            fontFamily: "'Inter', sans-serif",
+            border: '2px solid #ff6600',
+            borderRadius: '24px',
+            opacity: 0 // Hidden by default, made visible during capture
           }}
         >
-          {/* This is intentionally simplified as the preview ref is used for capture */}
+          {/* Inner content matches the preview for consistency */}
+          {metrics && (
+            <>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', borderBottom: '1px solid #333', paddingBottom: '1.5rem' }}>
+                <img src={heroLogo} alt="Logo" style={{ height: '4rem' }} />
+                <div>
+                  <h1 style={{ color: '#ff6600', margin: 0, textTransform: 'uppercase', fontSize: '2rem' }}>Trip Report</h1>
+                  <p style={{ color: '#888', margin: 0 }}>Range Anxiety Estimator</p>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', marginTop: '2.5rem' }}>
+                <div>
+                  <h3 style={{ color: '#ff6600', fontSize: '0.8rem', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Route</h3>
+                  <p style={{ fontSize: '1.2rem', margin: '0.2rem 0' }}><strong>From:</strong> {trip.origin || 'Current Location'}</p>
+                  <p style={{ fontSize: '1.2rem', margin: '0.2rem 0' }}><strong>To:</strong> {trip.destination}</p>
+                </div>
+                <div>
+                  <h3 style={{ color: '#ff6600', fontSize: '0.8rem', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Vehicle</h3>
+                  <p style={{ fontSize: '1.2rem', margin: '0.2rem 0' }}>{bikeSearchQuery || 'Custom E-Bike'}</p>
+                  <p style={{ fontSize: '1rem', color: '#888', margin: 0 }}>{specs.voltage}V {specs.capacityAh}{capacityInputMode.toUpperCase()}</p>
+                </div>
+              </div>
+
+              <div style={{ background: 'rgba(255,102,0,0.1)', padding: '2rem', borderRadius: '16px', textAlign: 'center', marginTop: '2.5rem' }}>
+                <h2 style={{ fontSize: '1.2rem', color: '#ff6600', textTransform: 'uppercase', marginBottom: '1rem' }}>Battery Projection</h2>
+                <div style={{ fontSize: '4rem', fontWeight: '800', margin: '1rem 0' }}>
+                  {metrics.batteryPercentUsed.toFixed(1)}%
+                  <span style={{ fontSize: '1.5rem', color: '#888', fontWeight: '400', marginLeft: '0.5rem' }}>Remaining</span>
+                </div>
+                
+                <div style={{ display: 'flex', justifyContent: 'center', gap: '3rem', marginTop: '1.5rem', borderTop: '1px solid rgba(255,102,0,0.2)', paddingTop: '1.5rem' }}>
+                  <div>
+                    <div style={{ color: '#888', fontSize: '0.8rem' }}>DISTANCE</div>
+                    <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{unitSystem === 'imperial' ? `${metrics.distanceMiles.toFixed(1)} mi` : `${(metrics.distanceMiles * 1.60934).toFixed(1)} km`}</div>
+                  </div>
+                  <div>
+                    <div style={{ color: '#888', fontSize: '0.8rem' }}>ELEVATION</div>
+                    <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{unitSystem === 'imperial' ? `${metrics.elevationGainFeet.toFixed(0)} ft` : `${(metrics.elevationGainFeet * 0.3048).toFixed(0)} m`}</div>
+                  </div>
+                  <div>
+                    <div style={{ color: '#888', fontSize: '0.8rem' }}>TIME</div>
+                    <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{Math.floor(metrics.durationMin / 60)}h {Math.round(metrics.durationMin % 60)}m</div>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ textAlign: 'center', color: '#555', fontSize: '0.8rem', marginTop: '2.5rem' }}>
+                Generated on {new Date().toLocaleDateString()} • Powered by Ebike King NJ
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>
