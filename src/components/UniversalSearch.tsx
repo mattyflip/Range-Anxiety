@@ -28,9 +28,9 @@ const UniversalSearch: React.FC = () => {
     try {
       const lowerSearch = searchTerm.toLowerCase()
       
-      // Search Users by username
+      // Search Users by username (case-insensitive via lowercase field)
       const usersRef = collection(db, "users")
-      const userQuery = query(usersRef, where("username", ">=", lowerSearch), where("username", "<=", lowerSearch + '\uf8ff'), limit(5))
+      const userQuery = query(usersRef, where("usernameLowercase", ">=", lowerSearch), where("usernameLowercase", "<=", lowerSearch + '\uf8ff'), limit(5))
       const userSnap = await getDocs(userQuery)
       const foundUsers = userSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }))
 

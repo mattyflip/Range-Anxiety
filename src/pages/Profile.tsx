@@ -321,12 +321,12 @@ const Profile: React.FC = () => {
                   Garage
                   {isOwner && <span style={{ fontSize: '0.7rem', textTransform: 'none', color: '#444' }}>(Manage bikes on Map page)</span>}
                 </h3>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem' }}>
+                <div className="garage-grid">
                   {profileData.bikes.length === 0 ? (
                     <div style={{ color: '#444', fontSize: '0.9rem' }}>No bikes in garage yet.</div>
                   ) : (
                     profileData.bikes.map((bike: any, idx: number) => (
-                      <div key={bike.id || idx} style={{ background: '#1a1a1a', padding: '0', borderRadius: '16px', border: '1px solid #333', position: 'relative', overflow: 'hidden' }}>
+                      <div key={bike.id || idx} className="garage-item">
                         <div style={{ width: '100%', aspectRatio: '1/1', background: '#222', position: 'relative' }}>
                           {bike.image ? (
                             <img src={bike.image} alt={bike.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -345,14 +345,14 @@ const Profile: React.FC = () => {
                             </label>
                           )}
                         </div>
-                        <div style={{ padding: '1rem' }}>
-                          <div style={{ fontWeight: 'bold', color: 'white' }}>{bike.name}</div>
-                          <div style={{ fontSize: '0.8rem', color: '#888' }}>{bike.specs.voltage}V {bike.specs.capacityAh}Ah</div>
+                        <div style={{ padding: '0.8rem' }}>
+                          <div style={{ fontWeight: 'bold', color: 'white', fontSize: '0.85rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{bike.name}</div>
+                          <div style={{ fontSize: '0.7rem', color: '#888' }}>{bike.specs.voltage}V {bike.specs.capacityAh}Ah</div>
                         </div>
                         {isOwner && (
                           <button 
                             onClick={() => removeBike(bike)}
-                            style={{ position: 'absolute', bottom: '1rem', right: '1rem', background: 'none', border: 'none', color: '#444', cursor: 'pointer', fontSize: '0.9rem' }}
+                            style={{ position: 'absolute', bottom: '0.5rem', right: '0.5rem', background: 'none', border: 'none', color: '#444', cursor: 'pointer', fontSize: '0.8rem' }}
                           >
                             ✕
                           </button>
@@ -363,6 +363,27 @@ const Profile: React.FC = () => {
                 </div>
               </section>
             )}
+
+            <style>{`
+              .garage-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+                gap: 1rem;
+              }
+              .garage-item {
+                background: #1a1a1a;
+                border-radius: 12px;
+                border: 1px solid #333;
+                position: relative;
+                overflow: hidden;
+              }
+              @media (max-width: 600px) {
+                .garage-grid {
+                  grid-template-columns: 1fr 1fr;
+                  gap: 0.8rem;
+                }
+              }
+            `}</style>
 
             <section>
               <h3 style={{ color: '#ff6600', textTransform: 'uppercase', fontSize: '0.8rem', letterSpacing: '0.1em', marginBottom: '1.5rem' }}>Shared Trips & Posts</h3>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { db, auth, storage } from '../firebase'
 import { collection, query, orderBy, onSnapshot, doc, getDoc, updateDoc, arrayUnion, arrayRemove, addDoc, serverTimestamp } from 'firebase/firestore'
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
@@ -23,6 +24,7 @@ interface Post {
 }
 
 const Feed: React.FC = () => {
+  const navigate = useNavigate();
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
@@ -288,7 +290,10 @@ const Feed: React.FC = () => {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
             {posts.map(post => (
               <article key={post.id} style={{ background: '#1a1a1a', borderRadius: '24px', border: '1px solid #333', overflow: 'hidden' }}>
-                <div style={{ padding: '1rem', display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+                <div 
+                  style={{ padding: '1rem', display: 'flex', alignItems: 'center', gap: '0.8rem', cursor: 'pointer' }}
+                  onClick={() => navigate(`/profile/${post.authorUsername}`)}
+                >
                   <div style={{ 
                     width: '40px', 
                     height: '40px', 

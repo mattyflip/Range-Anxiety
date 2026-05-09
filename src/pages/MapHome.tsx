@@ -433,8 +433,11 @@ function MapHome() {
     setUsername(newVal);
     if (user) {
       try {
-        await setDoc(doc(db, "users", user.uid), { username: newVal }, { merge: true });
-      } catch (e) { console.error("Username update failed:", e); }
+        await setDoc(doc(db, "users", user.uid), { 
+          username: newVal,
+          usernameLowercase: newVal.toLowerCase()
+        }, { merge: true });
+      } catch (e) { console.error("Username update failed", e); }
     }
   };
 
