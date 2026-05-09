@@ -1,11 +1,24 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { db, auth } from '../firebase'
-import { doc, collection, query, where, onSnapshot, updateDoc, arrayRemove } from 'firebase/firestore'
+import { doc, collection, query, where, onSnapshot, updateDoc, arrayRemove, orderBy } from 'firebase/firestore'
 import { signOut } from 'firebase/auth'
 import NavBar from '../components/NavBar'
 import InstallTutorial from '../components/InstallTutorial'
 import AuthModal from '../components/AuthModal'
+import Cropper from 'react-easy-crop'
+import { getCroppedImg } from '../utils/imageUtils'
+
+interface Post {
+  id: string;
+  authorId: string;
+  authorUsername: string;
+  authorProfilePic?: string;
+  imageUrl: string;
+  caption: string;
+  likes: string[];
+  createdAt: any;
+}
 
 const Profile: React.FC = () => {
   const { username } = useParams<{ username: string }>();
@@ -15,10 +28,19 @@ const Profile: React.FC = () => {
   const [user, setUser] = useState<any>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showInstallTutorial, setShowInstallTutorial] = useState(false);
+  const [userPosts, setUserPosts] = useState<Post[]>([]);
 
   const [isEditing, setIsEditing] = useState(false);
   const [editBio, setEditBio] = useState('');
   const [isUploading, setIsUploading] = useState(false);
+
+  // Cropper states
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null);
+  const [tempImage, setTempImage] = useState<string | null>(null);
+  const [croppingType, setCroppingType] = useState<'profile' | 'bike' | null>(null);
+  const [activeBike, setActiveBike] = useState<any>(null);
 
   useEffect(() => {
     const unsub = auth.onAuthStateChanged(u => {
@@ -50,7 +72,7 @@ const Profile: React.FC = () => {
         const data = snap.docs[0].data();
         setProfileData({ ...data, id: snap.docs[0].id });
         setEditBio(data.bio || '');
-        setLoading(false);
+        fetchUserPosts(snap.docs[0].id);
       } else {
         // Fallback: Check if username parameter is actually a UID
         const docRef = doc(db, "users", target);
@@ -59,14 +81,25 @@ const Profile: React.FC = () => {
             const data = uSnap.data();
             setProfileData({ ...data, id: uSnap.id });
             setEditBio(data.bio || '');
+            fetchUserPosts(uSnap.id);
           }
-          setLoading(false);
         });
       }
+      setLoading(false);
     });
 
     return () => { if (unsubscribe) unsubscribe(); };
   }, [username, user?.uid]);
+
+  const fetchUserPosts = (userId: string) => {
+    const postsRef = collection(db, "posts");
+    const q = query(postsRef, where("authorId", "==", userId), orderBy("createdAt", "desc"));
+    onSnapshot(q, (snap) => {
+      const posts: Post[] = [];
+      snap.forEach(docSnap => posts.push({ id: docSnap.id, ...docSnap.data() } as Post));
+      setUserPosts(posts);
+    });
+  };
 
   const handleUpdateBio = async () => {
     if (!user || !profileData || user.uid !== profileData.id) return;
@@ -76,33 +109,52 @@ const Profile: React.FC = () => {
     } catch (e) { console.error("Bio update failed", e); }
   };
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>, type: 'profile' | 'bike', bike?: any) => {
     const file = e.target.files?.[0];
-    if (!file || !user || !profileData || user.uid !== profileData.id) return;
+    if (!file) return;
     
     if (file.size > 10 * 1024 * 1024) {
       alert("Image is too large. Please select a photo under 10MB.");
       return;
     }
 
-    setIsUploading(true);
-    try {
-      const base64 = await new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onload = (event) => resolve(event.target?.result);
-        reader.readAsDataURL(file);
-      });
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setTempImage(event.target?.result as string);
+      setCroppingType(type);
+      if (bike) setActiveBike(bike);
+    };
+    reader.readAsDataURL(file);
+  };
 
-      await updateDoc(doc(db, "users", user.uid), { 
-        profilePic: base64 
-      });
+  const onCropComplete = useCallback((_croppedArea: any, croppedAreaPixels: any) => {
+    setCroppedAreaPixels(croppedAreaPixels);
+  }, []);
 
-      alert("Profile picture updated!");
-    } catch (err: any) { 
-      console.error("Upload failed:", err);
-      alert(`Upload failed: ${err.message}`);
-    } finally { 
-      setIsUploading(false); 
+  const handleApplyCrop = async () => {
+    if (tempImage && croppedAreaPixels && user) {
+      setIsUploading(true);
+      try {
+        const croppedImage = await getCroppedImg(tempImage, croppedAreaPixels);
+        
+        if (croppingType === 'profile') {
+          await updateDoc(doc(db, "users", user.uid), { profilePic: croppedImage });
+        } else if (croppingType === 'bike' && activeBike) {
+          const updatedBikes = profileData.bikes.map((b: any) => 
+            b.name === activeBike.name ? { ...b, image: croppedImage } : b
+          );
+          await updateDoc(doc(db, "users", user.uid), { bikes: updatedBikes });
+        }
+
+        setTempImage(null);
+        setCroppingType(null);
+        setActiveBike(null);
+        alert("Image updated!");
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setIsUploading(false);
+      }
     }
   };
 
@@ -180,8 +232,7 @@ const Profile: React.FC = () => {
                     <input 
                       type="file" 
                       accept="image/*" 
-                      onChange={handleImageUpload} 
-                      disabled={isUploading} 
+                      onChange={(e) => handleImageSelect(e, 'profile')} 
                       style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer' }}
                     />
                   </label>
@@ -232,7 +283,7 @@ const Profile: React.FC = () => {
             </div>
 
             {profileData?.bikes && (
-              <section>
+              <section style={{ marginBottom: '4rem' }}>
                 <h3 style={{ color: '#ff6600', textTransform: 'uppercase', fontSize: '0.8rem', letterSpacing: '0.1em', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between' }}>
                   Garage
                   {isOwner && <span style={{ fontSize: '0.7rem', textTransform: 'none', color: '#444' }}>(Manage bikes on Map page)</span>}
@@ -242,13 +293,33 @@ const Profile: React.FC = () => {
                     <div style={{ color: '#444', fontSize: '0.9rem' }}>No bikes in garage yet.</div>
                   ) : (
                     profileData.bikes.map((bike: any, idx: number) => (
-                      <div key={idx} style={{ background: '#1a1a1a', padding: '1.2rem', borderRadius: '16px', border: '1px solid #333', position: 'relative' }}>
-                        <div style={{ fontWeight: 'bold', color: 'white' }}>{bike.name}</div>
-                        <div style={{ fontSize: '0.8rem', color: '#888', marginTop: '0.3rem' }}>{bike.specs.voltage}V {bike.specs.capacityAh}Ah</div>
+                      <div key={idx} style={{ background: '#1a1a1a', padding: '0', borderRadius: '16px', border: '1px solid #333', position: 'relative', overflow: 'hidden' }}>
+                        <div style={{ width: '100%', aspectRatio: '1/1', background: '#222', position: 'relative' }}>
+                          {bike.image ? (
+                            <img src={bike.image} alt={bike.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          ) : (
+                            <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem' }}>🚲</div>
+                          )}
+                          {isOwner && (
+                            <label style={{ 
+                              position: 'absolute', top: '0.5rem', right: '0.5rem', 
+                              background: 'rgba(0,0,0,0.6)', width: '30px', height: '30px', 
+                              borderRadius: '50%', display: 'flex', alignItems: 'center', 
+                              justifyContent: 'center', cursor: 'pointer', color: 'white'
+                            }}>
+                              📸
+                              <input type="file" accept="image/*" hidden onChange={(e) => handleImageSelect(e, 'bike', bike)} />
+                            </label>
+                          )}
+                        </div>
+                        <div style={{ padding: '1rem' }}>
+                          <div style={{ fontWeight: 'bold', color: 'white' }}>{bike.name}</div>
+                          <div style={{ fontSize: '0.8rem', color: '#888' }}>{bike.specs.voltage}V {bike.specs.capacityAh}Ah</div>
+                        </div>
                         {isOwner && (
                           <button 
                             onClick={() => removeBike(bike)}
-                            style={{ position: 'absolute', top: '0.5rem', right: '0.5rem', background: 'none', border: 'none', color: '#444', cursor: 'pointer', fontSize: '0.9rem' }}
+                            style={{ position: 'absolute', bottom: '1rem', right: '1rem', background: 'none', border: 'none', color: '#444', cursor: 'pointer', fontSize: '0.9rem' }}
                           >
                             ✕
                           </button>
@@ -259,11 +330,49 @@ const Profile: React.FC = () => {
                 </div>
               </section>
             )}
+
+            <section>
+              <h3 style={{ color: '#ff6600', textTransform: 'uppercase', fontSize: '0.8rem', letterSpacing: '0.1em', marginBottom: '1.5rem' }}>Shared Trips & Posts</h3>
+              {userPosts.length === 0 ? (
+                <div style={{ color: '#444', fontSize: '0.9rem', textAlign: 'center', padding: '2rem' }}>No trips shared yet.</div>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  {userPosts.map(post => (
+                    <div key={post.id} style={{ width: '100%', aspectRatio: '1/1', background: '#1a1a1a', borderRadius: '12px', overflow: 'hidden', border: '1px solid #333' }}>
+                      <img src={post.imageUrl} alt="Post" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
           </>
         ) : (
           <div style={{ color: 'white', textAlign: 'center' }}>User not found.</div>
         )}
       </main>
+
+      {/* Global Cropper Modal */}
+      {tempImage && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.95)', zIndex: 3000, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div style={{ position: 'relative', width: '100%', maxWidth: '500px', height: '400px', background: '#000', borderRadius: '12px', overflow: 'hidden' }}>
+            <Cropper
+              image={tempImage}
+              crop={crop}
+              zoom={zoom}
+              aspect={1}
+              onCropChange={setCrop}
+              onCropComplete={onCropComplete}
+              onZoomChange={setZoom}
+            />
+          </div>
+          <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem', width: '100%', maxWidth: '500px' }}>
+             <button onClick={() => { setTempImage(null); setCroppingType(null); setActiveBike(null); }} style={{ flex: 1, padding: '1rem', background: '#333', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>Cancel</button>
+             <button onClick={handleApplyCrop} disabled={isUploading} style={{ flex: 2, padding: '1rem', background: '#ff6600', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>
+               {isUploading ? 'Uploading...' : 'Save Photo'}
+             </button>
+          </div>
+        </div>
+      )}
 
       {showInstallTutorial && <InstallTutorial onClose={() => setShowInstallTutorial(false)} />}
       {showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} />}

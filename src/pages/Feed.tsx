@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react'
-import { db, auth, storage } from '../firebase'
+import React, { useState, useEffect, useCallback } from 'react'
+import { db, auth } from '../firebase'
 import { collection, query, orderBy, onSnapshot, doc, getDoc, updateDoc, arrayUnion, arrayRemove, addDoc, serverTimestamp } from 'firebase/firestore'
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
 import NavBar from '../components/NavBar'
 import InstallTutorial from '../components/InstallTutorial'
 import AuthModal from '../components/AuthModal'
 import UniversalSearch from '../components/UniversalSearch'
+import Cropper from 'react-easy-crop'
+import { getCroppedImg } from '../utils/imageUtils'
 
 interface Post {
   id: string;
@@ -30,6 +31,12 @@ const Feed: React.FC = () => {
   const [newCaption, setNewCaption] = useState('');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isPosting, setIsPosting] = useState(false);
+
+  // Cropper states
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null);
+  const [showCropper, setShowCropper] = useState(false);
 
   useEffect(() => {
     const unsub = auth.onAuthStateChanged(async (u) => {
@@ -78,7 +85,6 @@ const Feed: React.FC = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // High-res Blaze limit (10MB)
     if (file.size > 10 * 1024 * 1024) {
       alert("Image is too large. Please select a photo under 10MB.");
       return;
@@ -87,14 +93,30 @@ const Feed: React.FC = () => {
     const reader = new FileReader();
     reader.onload = (event) => {
       setSelectedImage(event.target?.result as string);
+      setShowCropper(true);
     };
     reader.readAsDataURL(file);
+  };
+
+  const onCropComplete = useCallback((_croppedArea: any, croppedAreaPixels: any) => {
+    setCroppedAreaPixels(croppedAreaPixels);
+  }, []);
+
+  const handleApplyCrop = async () => {
+    if (selectedImage && croppedAreaPixels) {
+      try {
+        const croppedImage = await getCroppedImg(selectedImage, croppedAreaPixels);
+        setSelectedImage(croppedImage);
+        setShowCropper(false);
+      } catch (e) {
+        console.error(e);
+      }
+    }
   };
 
   const handleCreatePost = async () => {
     if (!user || !selectedImage) return;
 
-    // Enforce profile completeness
     if (!userData?.username || !userData?.profilePic) {
       alert("Please complete your profile (set a username and upload a profile picture) before posting to the community!");
       return;
@@ -102,19 +124,11 @@ const Feed: React.FC = () => {
 
     setIsPosting(true);
     try {
-      // Professional Storage upload for high-res images
-      const response = await fetch(selectedImage);
-      const blob = await response.blob();
-
-      const imageRef = ref(storage, `posts/${user.uid}/${Date.now()}.png`);
-      await uploadBytes(imageRef, blob);
-      const imageUrl = await getDownloadURL(imageRef);
-
       await addDoc(collection(db, "posts"), {
         authorId: user.uid,
         authorUsername: userData.username,
         authorProfilePic: userData.profilePic,
-        imageUrl,
+        imageUrl: selectedImage,
         caption: newCaption || "",
         likes: [],
         createdAt: serverTimestamp()
@@ -126,7 +140,7 @@ const Feed: React.FC = () => {
       alert("Post shared with the community!");
     } catch (e: any) {
       console.error("Post creation failed", e);
-      alert(`Failed to share: ${e.message}. Check Storage CORS settings.`);
+      alert(`Failed to share: ${e.message}`);
     } finally {
       setIsPosting(false);
     }
@@ -167,47 +181,71 @@ const Feed: React.FC = () => {
             <div style={{ background: '#1a1a1a', padding: '2rem', borderRadius: '24px', border: '1px solid #333', maxWidth: '500px', width: '100%' }}>
               <h3 style={{ color: 'white', marginTop: 0 }}>New Post</h3>
               
-              <div style={{ 
-                width: '100%', height: '250px', background: '#222', 
-                borderRadius: '12px', border: '2px dashed #444', 
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                overflow: 'hidden', cursor: 'pointer', position: 'relative'
-              }}>
-                {selectedImage ? (
-                  <img src={selectedImage} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                ) : (
-                  <span style={{ color: '#666' }}>Tap to select photo</span>
-                )}
-                <input 
-                  type="file" 
-                  accept="image/*" 
-                  onChange={handleImageSelect} 
-                  style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer', zIndex: 5 }} 
-                />
-              </div>
+              {showCropper && selectedImage ? (
+                <div style={{ position: 'relative', width: '100%', height: '300px', marginBottom: '1rem' }}>
+                  <Cropper
+                    image={selectedImage}
+                    crop={crop}
+                    zoom={zoom}
+                    aspect={1}
+                    onCropChange={setCrop}
+                    onCropComplete={onCropComplete}
+                    onZoomChange={setZoom}
+                  />
+                  <button 
+                    onClick={handleApplyCrop}
+                    style={{ position: 'absolute', bottom: '1rem', right: '1rem', background: '#ff6600', color: 'white', border: 'none', padding: '0.5rem 1rem', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', zIndex: 1200 }}
+                  >
+                    Apply Crop
+                  </button>
+                </div>
+              ) : (
+                <div style={{ 
+                  width: '100%', height: '250px', background: '#222', 
+                  borderRadius: '12px', border: '2px dashed #444', 
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  overflow: 'hidden', cursor: 'pointer', position: 'relative'
+                }}>
+                  {selectedImage ? (
+                    <img src={selectedImage} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    <span style={{ color: '#666' }}>Tap to select photo</span>
+                  )}
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    onChange={handleImageSelect} 
+                    style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer', zIndex: 5 }} 
+                  />
+                </div>
+              )}
 
-              <textarea 
-                placeholder="Write a caption (optional)..."
-                value={newCaption}
-                onChange={e => setNewCaption(e.target.value)}
-                style={{ width: '100%', background: '#222', border: '1px solid #444', borderRadius: '8px', color: 'white', padding: '1rem', marginTop: '1.5rem', height: '100px', fontFamily: 'inherit' }}
-              />
+              {!showCropper && (
+                <>
+                  <textarea 
+                    placeholder="Write a caption (optional)..."
+                    value={newCaption}
+                    onChange={e => setNewCaption(e.target.value)}
+                    style={{ width: '100%', background: '#222', border: '1px solid #444', borderRadius: '8px', color: 'white', padding: '1rem', marginTop: '1.5rem', height: '100px', fontFamily: 'inherit' }}
+                  />
 
-              <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
-                <button 
-                  onClick={() => setShowCreatePost(false)}
-                  style={{ flex: 1, padding: '1rem', background: '#333', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
-                >
-                  Cancel
-                </button>
-                <button 
-                  onClick={handleCreatePost}
-                  disabled={isPosting || !selectedImage}
-                  style={{ flex: 2, padding: '1rem', background: '#ff6600', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', opacity: (isPosting || !selectedImage) ? 0.5 : 1 }}
-                >
-                  {isPosting ? 'Posting...' : 'Post to Community'}
-                </button>
-              </div>
+                  <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
+                    <button 
+                      onClick={() => setShowCreatePost(false)}
+                      style={{ flex: 1, padding: '1rem', background: '#333', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
+                    >
+                      Cancel
+                    </button>
+                    <button 
+                      onClick={handleCreatePost}
+                      disabled={isPosting || !selectedImage}
+                      style={{ flex: 2, padding: '1rem', background: '#ff6600', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', opacity: (isPosting || !selectedImage) ? 0.5 : 1 }}
+                    >
+                      {isPosting ? 'Posting...' : 'Post to Community'}
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         )}
@@ -242,7 +280,9 @@ const Feed: React.FC = () => {
                   <div style={{ fontWeight: 'bold', color: 'white' }}>{post.authorUsername}</div>
                 </div>
                 
-                <img src={post.imageUrl} alt="Trip Report" style={{ width: '100%', display: 'block' }} />
+                <div style={{ width: '100%', aspectRatio: '1/1', overflow: 'hidden' }}>
+                  <img src={post.imageUrl} alt="Trip Report" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                </div>
                 
                 <div style={{ padding: '1.2rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
