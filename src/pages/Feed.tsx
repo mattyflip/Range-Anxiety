@@ -10,6 +10,7 @@ interface Post {
   id: string;
   authorId: string;
   authorUsername: string;
+  authorProfilePic?: string;
   imageUrl: string;
   caption: string;
   likes: string[];
@@ -20,6 +21,7 @@ const Feed: React.FC = () => {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
+  const [userData, setUserData] = useState<any>(null);
   const [isPro, setIsPro] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showInstallTutorial, setShowInstallTutorial] = useState(false);
@@ -30,12 +32,15 @@ const Feed: React.FC = () => {
   const [isPosting, setIsPosting] = useState(false);
 
   useEffect(() => {
-    const unsub = auth.onAuthStateChanged(u => {
+    const unsub = auth.onAuthStateChanged(async (u) => {
       setUser(u);
       if (u) {
-        getDoc(doc(db, "users", u.uid)).then(snap => {
-          if (snap.exists()) setIsPro(snap.data().isPro || false);
-        });
+        const snap = await getDoc(doc(db, "users", u.uid));
+        if (snap.exists()) {
+          const data = snap.data();
+          setUserData(data);
+          setIsPro(data.isPro || false);
+        }
       }
     });
     return () => unsub();
@@ -89,6 +94,13 @@ const Feed: React.FC = () => {
 
   const handleCreatePost = async () => {
     if (!user || !selectedImage) return;
+
+    // Enforce profile completeness
+    if (!userData?.username || !userData?.profilePic) {
+      alert("Please complete your profile (set a username and upload a profile picture) before posting to the community!");
+      return;
+    }
+
     setIsPosting(true);
     try {
       // Professional Storage upload for high-res images
@@ -99,12 +111,10 @@ const Feed: React.FC = () => {
       await uploadBytes(imageRef, blob);
       const imageUrl = await getDownloadURL(imageRef);
 
-      const userSnap = await getDoc(doc(db, "users", user.uid));
-      const currentUsername = userSnap.exists() ? userSnap.data().username : (user.email?.split('@')[0] || "Rider");
-
       await addDoc(collection(db, "posts"), {
         authorId: user.uid,
-        authorUsername: currentUsername || "Rider",
+        authorUsername: userData.username,
+        authorProfilePic: userData.profilePic,
         imageUrl,
         caption: newCaption || "",
         likes: [],
@@ -137,7 +147,13 @@ const Feed: React.FC = () => {
           <h2 style={{ color: '#ff6600', textTransform: 'uppercase', fontSize: '1rem', letterSpacing: '0.2em', margin: 0 }}>Community Feed</h2>
           {user && (
             <button 
-              onClick={() => setShowCreatePost(true)}
+              onClick={() => {
+                if (!userData?.username || !userData?.profilePic) {
+                   alert("Please complete your profile (username and photo) first!");
+                   return;
+                }
+                setShowCreatePost(true);
+              }}
               style={{ background: '#ff6600', color: 'white', border: 'none', padding: '0.6rem 1.2rem', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}
             >
               + Create Post
@@ -207,7 +223,21 @@ const Feed: React.FC = () => {
             {posts.map(post => (
               <article key={post.id} style={{ background: '#1a1a1a', borderRadius: '24px', border: '1px solid #333', overflow: 'hidden' }}>
                 <div style={{ padding: '1rem', display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
-                  <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#333', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🚲</div>
+                  <div style={{ 
+                    width: '40px', 
+                    height: '40px', 
+                    borderRadius: '50%', 
+                    background: '#333', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    overflow: 'hidden',
+                    border: '1px solid #333'
+                  }}>
+                    {post.authorProfilePic ? (
+                      <img src={post.authorProfilePic} alt={post.authorUsername} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : '🚲'}
+                  </div>
                   <div style={{ fontWeight: 'bold', color: 'white' }}>{post.authorUsername}</div>
                 </div>
                 

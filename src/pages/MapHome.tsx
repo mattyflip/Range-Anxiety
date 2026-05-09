@@ -160,6 +160,7 @@ function MapHome() {
   const [showSharePreview, setShowSharePreview] = useState(false);
 
   const [user, setUser] = useState<User | null>(null);
+  const [userData, setUserData] = useState<any>(null);
   const [isPro, setIsPro] = useState(false);
   const [isHostTier, setIsHostTier] = useState(false);
   const [hostTierExpiresAt, setHostTierExpiresAt] = useState<number | null>(null);
