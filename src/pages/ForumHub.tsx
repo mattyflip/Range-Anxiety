@@ -5,6 +5,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import NavBar from '../components/NavBar'
 import InstallTutorial from '../components/InstallTutorial'
 import AuthModal from '../components/AuthModal'
+import UniversalSearch from '../components/UniversalSearch'
 
 interface Community {
   id: string;
@@ -68,6 +69,10 @@ const ForumHub: React.FC = () => {
       <NavBar user={user} onShowInstall={() => setShowInstallTutorial(true)} />
 
       <main style={{ padding: '2rem', maxWidth: '900px', margin: '0 auto' }}>
+        <div style={{ marginBottom: '2rem' }}>
+          <UniversalSearch />
+        </div>
+
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3rem' }}>
           <div>
             <h1 style={{ color: 'white', margin: 0, fontSize: '2rem' }}>Communities</h1>
