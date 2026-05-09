@@ -82,6 +82,7 @@ const Profile: React.FC = () => {
 
     setIsUploading(true);
     try {
+      console.log("Using bucket:", storage.app.options.storageBucket);
       console.log("Starting upload for user:", user.uid);
       const imageRef = ref(storage, `profiles/${user.uid}`);
       
