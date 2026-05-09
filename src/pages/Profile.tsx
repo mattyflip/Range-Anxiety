@@ -82,23 +82,30 @@ const Profile: React.FC = () => {
 
     setIsUploading(true);
     try {
+      console.log("Starting upload for user:", user.uid);
       const imageRef = ref(storage, `profiles/${user.uid}`);
       
-      // Upload the raw file blob directly for better reliability
       await uploadBytes(imageRef, file);
-      const imageUrl = await getDownloadURL(imageRef);
+      console.log("Bytes uploaded successfully.");
       
-      // Update Firestore with cache-busting timestamp to force browser refresh
+      const imageUrl = await getDownloadURL(imageRef);
+      console.log("Download URL retrieved:", imageUrl);
+      
       const finalUrl = `${imageUrl}${imageUrl.includes('?') ? '&' : '?'}t=${Date.now()}`;
       
+      // Update Firestore
       await updateDoc(doc(db, "users", user.uid), { 
         profilePic: finalUrl 
       });
+      console.log("Firestore document updated with new URL.");
+
+      // Manually update local state to guarantee a re-render even if listener is slow
+      setProfileData((prev: any) => ({ ...prev, profilePic: finalUrl }));
 
       alert("Profile picture updated successfully!");
     } catch (err: any) { 
-      console.error("Full upload error object:", err);
-      alert(`Upload failed: ${err.message || "Unknown error"}. Check if Firebase Storage is enabled in your project.`);
+      console.error("Upload process failed at step:", err);
+      alert(`Upload failed: ${err.message}`);
     } finally { 
       setIsUploading(false); 
     }
