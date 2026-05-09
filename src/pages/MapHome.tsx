@@ -805,6 +805,13 @@ function MapHome() {
 
   const searchPOIs = async (category: string) => {
     if (!response || !isLoaded) return;
+
+    if (category === 'charging' && !isPro && !isHostTier) {
+      alert("Charging station discovery is a PRO feature. Upgrade to unlock!");
+      handleUpgrade('pro');
+      return;
+    }
+
     setPoiCategory(category);
     
     if (category === 'charging') {
@@ -841,6 +848,12 @@ function MapHome() {
     if (!mapRef.current || !poiCategory) return;
     const c = mapRef.current.getCenter(); if (!c) return;
     
+    if (poiCategory === 'charging' && !isPro && !isHostTier) {
+      alert("Charging station discovery is a PRO feature. Upgrade to unlock!");
+      handleUpgrade('pro');
+      return;
+    }
+
     if (poiCategory === 'charging') {
       try {
         const resp = await axios.post('/api/charging', { lat: c.lat(), lng: c.lng(), category: poiCategory });
@@ -1369,7 +1382,7 @@ function MapHome() {
                 <div className="map-controls">
                     <button onClick={() => searchPOIs('cafe')}>☕ Cafes</button>
                     <button onClick={() => searchPOIs('bike shop')}>🚲 Shops</button>
-                    <button onClick={() => searchPOIs('charging')}>⚡ Charging</button>
+                    <button onClick={() => searchPOIs('charging')}>⚡ Charging (PRO)</button>
                     <button onClick={searchByMapCenter}>🔍 Search Area</button>
                 </div>
               )}
