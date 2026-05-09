@@ -67,8 +67,10 @@ interface RouteMetrics {
 }
 
 interface SavedBike {
+  id?: string;
   name: string;
   specs: BikeSpecs;
+  image?: string;
 }
 
 const STANDARD_BIKES: SavedBike[] = [
@@ -497,7 +499,11 @@ function MapHome() {
     }
     if (!newBikeName) return;
     ReactGA.event({ category: "Engagement", action: "Save Bike", label: newBikeName });
-    const newBike = { name: newBikeName, specs };
+    const newBike = { 
+      id: Date.now().toString(), // Unique ID for reliable updates/matching
+      name: newBikeName, 
+      specs 
+    };
     const updated = [...savedBikes, newBike];
     setSavedBikes(updated);
     

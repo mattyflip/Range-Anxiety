@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { db, auth } from '../firebase'
+import { db, auth, storage } from '../firebase'
 import { doc, collection, query, where, onSnapshot, updateDoc, arrayRemove, orderBy } from 'firebase/firestore'
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
 import { signOut } from 'firebase/auth'
 import NavBar from '../components/NavBar'
 import InstallTutorial from '../components/InstallTutorial'
@@ -83,6 +84,7 @@ const Profile: React.FC = () => {
             setEditBio(data.bio || '');
             fetchUserPosts(uSnap.id);
           }
+          setLoading(false);
         });
       }
       setLoading(false);
@@ -135,23 +137,45 @@ const Profile: React.FC = () => {
     if (tempImage && croppedAreaPixels && user) {
       setIsUploading(true);
       try {
-        const croppedImage = await getCroppedImg(tempImage, croppedAreaPixels);
+        const croppedImageBase64 = await getCroppedImg(tempImage, croppedAreaPixels);
         
+        // Convert base64 to blob for professional Storage upload
+        const response = await fetch(croppedImageBase64);
+        const blob = await response.blob();
+
         if (croppingType === 'profile') {
-          await updateDoc(doc(db, "users", user.uid), { profilePic: croppedImage });
+          const imageRef = ref(storage, `profiles/${user.uid}.jpg`);
+          await uploadBytes(imageRef, blob);
+          const imageUrl = await getDownloadURL(imageRef);
+          const finalUrl = `${imageUrl}${imageUrl.includes('?') ? '&' : '?'}t=${Date.now()}`;
+          await updateDoc(doc(db, "users", user.uid), { profilePic: finalUrl });
         } else if (croppingType === 'bike' && activeBike) {
-          const updatedBikes = profileData.bikes.map((b: any) => 
-            b.name === activeBike.name ? { ...b, image: croppedImage } : b
-          );
+          console.log("Updating photo for bike:", activeBike.name, "ID:", activeBike.id);
+          const bikeId = activeBike.id || activeBike.name; 
+          const imageRef = ref(storage, `bikes/${user.uid}/${bikeId}.jpg`);
+          
+          await uploadBytes(imageRef, blob);
+          const imageUrl = await getDownloadURL(imageRef);
+          const finalUrl = `${imageUrl}${imageUrl.includes('?') ? '&' : '?'}t=${Date.now()}`;
+          
+          const updatedBikes = profileData.bikes.map((b: any) => {
+            // Match by ID primarily, fallback to Name
+            const isMatch = (b.id && b.id === activeBike.id) || (!b.id && b.name === activeBike.name);
+            return isMatch ? { ...b, image: finalUrl } : b;
+          });
+
           await updateDoc(doc(db, "users", user.uid), { bikes: updatedBikes });
+          console.log("Garage updated in Firestore.");
+          alert(`Photo saved for ${activeBike.name}!`);
         }
 
         setTempImage(null);
         setCroppingType(null);
         setActiveBike(null);
         alert("Image updated!");
-      } catch (e) {
-        console.error(e);
+      } catch (e: any) {
+        console.error("Upload failed:", e);
+        alert(`Failed to save photo: ${e.message}`);
       } finally {
         setIsUploading(false);
       }
@@ -293,7 +317,7 @@ const Profile: React.FC = () => {
                     <div style={{ color: '#444', fontSize: '0.9rem' }}>No bikes in garage yet.</div>
                   ) : (
                     profileData.bikes.map((bike: any, idx: number) => (
-                      <div key={idx} style={{ background: '#1a1a1a', padding: '0', borderRadius: '16px', border: '1px solid #333', position: 'relative', overflow: 'hidden' }}>
+                      <div key={bike.id || idx} style={{ background: '#1a1a1a', padding: '0', borderRadius: '16px', border: '1px solid #333', position: 'relative', overflow: 'hidden' }}>
                         <div style={{ width: '100%', aspectRatio: '1/1', background: '#222', position: 'relative' }}>
                           {bike.image ? (
                             <img src={bike.image} alt={bike.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
