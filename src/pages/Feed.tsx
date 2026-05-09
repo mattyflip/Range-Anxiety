@@ -38,7 +38,6 @@ const Feed: React.FC = () => {
         if (snap.exists()) {
           const data = snap.data();
           setUserData(data);
-          setIsPro(data.isPro || false);
         }
       }
     });
