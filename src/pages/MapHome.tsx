@@ -3,10 +3,11 @@ import ReactGA from "react-ga4"
 import { GoogleMap, useJsApiLoader, DirectionsService, DirectionsRenderer, Marker, InfoWindow, Polyline } from '@react-google-maps/api'
 import axios from 'axios'
 import { toPng } from 'html-to-image'
-import { auth, db } from '../firebase'
+import { auth, db, storage } from '../firebase'
 import { onAuthStateChanged } from 'firebase/auth'
 import type { User } from 'firebase/auth'
 import { doc, getDoc, setDoc, collection, addDoc, serverTimestamp, onSnapshot, query, where, deleteDoc, getDocs, updateDoc, arrayUnion } from 'firebase/firestore'
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
 import AdBanner from '../components/AdBanner'
 import TermsOfService from '../components/TermsOfService'
 import InstallTutorial from '../components/InstallTutorial'
@@ -891,7 +892,7 @@ function MapHome() {
             <input type="text" placeholder="e.g. Onyx, Sur-Ron..." value={bikeSearchQuery} onFocus={() => setShowBikeResults(true)} onChange={(e) => { setBikeSearchQuery(e.target.value); setShowBikeResults(true); }} />
             {showBikeResults && bikeSearchQuery && (
               <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '4px', zIndex: 1000, maxHeight: '200px', overflowY: 'auto' }}>
-                {filteredBikes.map((bike, idx) => (<div key={idx} onClick={() => loadBike(bike)} style={{ padding: '0.8rem', cursor: 'pointer', borderBottom: '1px solid #222' }}>{bike.name}</div>))}
+                {filteredBikes.map((bike, idx) => (<div key={bike.id || idx} onClick={() => loadBike(bike)} style={{ padding: '0.8rem', cursor: 'pointer', borderBottom: '1px solid #222' }}>{bike.name}</div>))}
               </div>
             )}
             <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
