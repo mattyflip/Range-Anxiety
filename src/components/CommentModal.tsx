@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { db, auth } from '../firebase'
+import { db } from '../firebase'
 import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, getDoc, doc } from 'firebase/firestore'
 
 interface Comment {

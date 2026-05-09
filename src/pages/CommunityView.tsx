@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { db, auth } from '../firebase'
-import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, getDoc, doc, where, updateDoc, increment } from 'firebase/firestore'
+import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, getDoc, doc, updateDoc, increment } from 'firebase/firestore'
 import { useParams, Link } from 'react-router-dom'
 import NavBar from '../components/NavBar'
 import InstallTutorial from '../components/InstallTutorial'

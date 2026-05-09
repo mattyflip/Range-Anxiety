@@ -1,6 +1,5 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
-import UniversalSearch from './UniversalSearch'
 
 interface NavBarProps {
   user: any;
