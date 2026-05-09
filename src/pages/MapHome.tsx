@@ -438,14 +438,32 @@ function MapHome() {
   }, []);
 
   const updateUsername = async (newVal: string) => {
-    setUsername(newVal);
-    if (user) {
-      try {
+    if (!newVal.trim()) return;
+    const lowerVal = newVal.toLowerCase();
+    
+    // 1. Check if username is already taken (case-insensitive)
+    try {
+      const q = query(collection(db, "users"), where("usernameLowercase", "==", lowerVal));
+      const snap = await getDocs(q);
+      
+      // If a document exists and it's not the current user, it's taken
+      const isTaken = snap.docs.some(doc => doc.id !== user?.uid);
+      if (isTaken) {
+        alert("This username is already taken. Please choose another one!");
+        return;
+      }
+
+      setUsername(newVal);
+      if (user) {
         await setDoc(doc(db, "users", user.uid), { 
           username: newVal,
-          usernameLowercase: newVal.toLowerCase()
+          usernameLowercase: lowerVal
         }, { merge: true });
-      } catch (e) { console.error("Username update failed", e); }
+        alert("Username updated successfully!");
+      }
+    } catch (e) { 
+      console.error("Username check/update failed", e); 
+      alert("Failed to update username. Please try again.");
     }
   };
 
