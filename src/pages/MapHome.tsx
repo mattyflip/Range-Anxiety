@@ -13,7 +13,6 @@ import TermsOfService from '../components/TermsOfService'
 import InstallTutorial from '../components/InstallTutorial'
 import NavBar from '../components/NavBar'
 import AuthModal from '../components/AuthModal'
-import heroLogo from '../assets/logo-no-bg.png'
 
 const LIBRARIES: ("places" | "geometry")[] = ["places", "geometry"];
 
