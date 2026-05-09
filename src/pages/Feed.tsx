@@ -5,6 +5,7 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
 import NavBar from '../components/NavBar'
 import InstallTutorial from '../components/InstallTutorial'
 import AuthModal from '../components/AuthModal'
+import UniversalSearch from '../components/UniversalSearch'
 
 interface Post {
   id: string;
@@ -139,6 +140,10 @@ const Feed: React.FC = () => {
       />
 
       <main style={{ padding: '2rem', maxWidth: '600px', margin: '0 auto' }}>
+        <div style={{ marginBottom: '2rem' }}>
+          <UniversalSearch />
+        </div>
+
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
           <h2 style={{ color: '#ff6600', textTransform: 'uppercase', fontSize: '1rem', letterSpacing: '0.2em', margin: 0 }}>Community Feed</h2>
           {user && (

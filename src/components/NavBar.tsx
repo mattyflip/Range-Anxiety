@@ -1,6 +1,5 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
-import UniversalSearch from './UniversalSearch'
 
 interface NavBarProps {
   user: any;
@@ -26,8 +25,6 @@ const NavBar: React.FC<NavBarProps> = ({ user, onShowInstall }) => {
           <img src="/app-icon.png" alt="Logo" style={{ height: '2.5rem', width: 'auto' }} />
         </Link>
       </div>
-
-      <UniversalSearch />
 
       <div style={{ display: 'flex', gap: '1.2rem', alignItems: 'center' }}>
         <nav style={{ display: 'flex', gap: '1.2rem', alignItems: 'center' }}>
