@@ -620,7 +620,10 @@ function App() {
 
       let gainFeet = 0;
       try { 
-        const elevResp = await axios.post('/api/elevation', { path }); 
+        // Use encoded polyline for high-resolution elevation sampling (100+ points)
+        const encodedPath = google.maps.geometry.encoding.encodePath(route.overview_path);
+        const elevResp = await axios.post('/api/elevation', { encodedPath, samples: 100 }); 
+        
         if (elevResp.data && typeof elevResp.data.gain === 'number') {
           gainFeet = elevResp.data.gain; 
         } else {
