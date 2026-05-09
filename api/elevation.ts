@@ -12,6 +12,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const { path, encodedPath, samples = 100 } = req.method === 'POST' ? req.body : req.query;
+  // Prioritize a dedicated backend key (unrestricted) over the VITE frontend key (restricted)
   const GOOGLE_API_KEY = process.env.GOOGLE_MAPS_API_KEY || process.env.VITE_GOOGLE_MAPS_API_KEY;
 
   if (!GOOGLE_API_KEY) {
