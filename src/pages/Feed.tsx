@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react'
-import { db, auth, storage } from '../firebase'
+import { db, auth } from '../firebase'
 import { collection, query, orderBy, onSnapshot, doc, getDoc, updateDoc, arrayUnion, arrayRemove, addDoc, serverTimestamp } from 'firebase/firestore'
-import { ref, uploadString, getDownloadURL } from 'firebase/storage'
 import NavBar from '../components/NavBar'
 import InstallTutorial from '../components/InstallTutorial'
 import AuthModal from '../components/AuthModal'
@@ -84,17 +83,15 @@ const Feed: React.FC = () => {
     if (!user || !selectedImage || !newCaption) return;
     setIsPosting(true);
     try {
-      const imageRef = ref(storage, `posts/${user.uid}/${Date.now()}.png`);
-      await uploadString(imageRef, selectedImage, 'data_url');
-      const imageUrl = await getDownloadURL(imageRef);
-
       const userSnap = await getDoc(doc(db, "users", user.uid));
-      const username = userSnap.exists() ? userSnap.data().username : (user.email?.split('@')[0] || "Rider");
+      const currentUsername = userSnap.exists() ? userSnap.data().username : (user.email?.split('@')[0] || "Rider");
 
+      // Save the post directly to Firestore using the Base64 dataUrl
+      // This avoids the need for a paid Firebase Storage plan
       await addDoc(collection(db, "posts"), {
         authorId: user.uid,
-        authorUsername: username || "Rider",
-        imageUrl,
+        authorUsername: currentUsername || "Rider",
+        imageUrl: selectedImage, // Base64 string
         caption: newCaption,
         likes: [],
         createdAt: serverTimestamp()
@@ -103,8 +100,10 @@ const Feed: React.FC = () => {
       setNewCaption('');
       setSelectedImage(null);
       setShowCreatePost(false);
-    } catch (e) {
+      alert("Post created successfully!");
+    } catch (e: any) {
       console.error("Post creation failed", e);
+      alert(`Failed to post: ${e.message}`);
     } finally {
       setIsPosting(false);
     }
