@@ -821,24 +821,19 @@ function MapHome() {
       el.style.opacity = '1';
       await new Promise(resolve => setTimeout(resolve, 800));
 
-      const dataUrl = await toPng(el, { cacheBust: true, backgroundColor: "#121212", pixelRatio: 2 });
+      // Generate the high-res PNG
+      const dataUrl = await toPng(el, { cacheBust: true, backgroundColor: "#121212", pixelRatio: 1.5 });
       el.style.opacity = '0';
-
-      // Convert dataUrl to a Blob for more reliable uploading
-      const response = await fetch(dataUrl);
-      const blob = await response.blob();
-
-      const imageRef = ref(storage, `posts/${user.uid}/${Date.now()}.png`);
-      await uploadBytes(imageRef, blob);
-      const imageUrl = await getDownloadURL(imageRef);
 
       const userSnap = await getDoc(doc(db, "users", user.uid));
       const currentUsername = userSnap.exists() ? userSnap.data().username : (user.email?.split('@')[0] || "Rider");
 
+      // Save the post directly to Firestore using the Base64 dataUrl
+      // This avoids the need for a paid Firebase Storage plan
       await addDoc(collection(db, "posts"), {
         authorId: user.uid,
         authorUsername: currentUsername || "Rider",
-        imageUrl,
+        imageUrl: dataUrl, // Store Base64 string
         caption: `Rode from ${trip.origin || 'Current Location'} to ${trip.destination}. ${metrics.distanceMiles.toFixed(1)} miles with ${metrics.batteryPercentUsed.toFixed(1)}% battery remaining!`,
         likes: [],
         createdAt: serverTimestamp()
@@ -849,7 +844,7 @@ function MapHome() {
       setShowSharePreview(false);
     } catch (err: any) {
       console.error('Sharing error:', err);
-      alert(`Failed to post: ${err.message}. Ensure your Storage CORS is configured.`);
+      alert(`Failed to post: ${err.message}. Ensure your Firestore Database is created.`);
       setIsLoading(false);
     }
   };
