@@ -3,6 +3,7 @@ import { db, auth } from '../firebase'
 import { collection, query, orderBy, onSnapshot, doc, getDoc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore'
 import NavBar from '../components/NavBar'
 import InstallTutorial from '../components/InstallTutorial'
+import AuthModal from '../components/AuthModal'
 
 interface Post {
   id: string;
@@ -127,6 +128,7 @@ const Feed: React.FC = () => {
       </main>
 
       {showInstallTutorial && <InstallTutorial onClose={() => setShowInstallTutorial(false)} />}
+      {showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} />}
     </div>
   );
 };

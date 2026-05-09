@@ -4,6 +4,7 @@ import { db, auth } from '../firebase'
 import { doc, getDoc, collection, query, where, onSnapshot } from 'firebase/firestore'
 import NavBar from '../components/NavBar'
 import InstallTutorial from '../components/InstallTutorial'
+import AuthModal from '../components/AuthModal'
 
 const Profile: React.FC = () => {
   const { username } = useParams<{ username: string }>();
@@ -130,6 +131,7 @@ const Profile: React.FC = () => {
       </main>
 
       {showInstallTutorial && <InstallTutorial onClose={() => setShowInstallTutorial(false)} />}
+      {showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} />}
     </div>
   );
 };

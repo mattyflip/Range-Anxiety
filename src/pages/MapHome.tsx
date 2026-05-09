@@ -12,6 +12,7 @@ import AdBanner from '../components/AdBanner'
 import TermsOfService from '../components/TermsOfService'
 import InstallTutorial from '../components/InstallTutorial'
 import NavBar from '../components/NavBar'
+import AuthModal from '../components/AuthModal'
 import heroLogo from '../assets/logo-no-bg.png'
 
 const LIBRARIES: ("places" | "geometry")[] = ["places", "geometry"];
@@ -882,35 +883,12 @@ function App() {
 
   return (
     <div className="container">
-      <header>
-        <div className="logo-container" style={{ flexDirection: 'row', alignItems: 'center', gap: '0.8rem' }}>
-          <img src={heroLogo} alt="Ebike King Logo" style={{ height: '2.8rem', width: 'auto' }} />
-          <div className="logo" style={{ display: 'flex', flexDirection: 'column' }}>
-            <span>Range Anxiety</span>
-          </div>
-        </div>
-        <div className="nav-actions" style={{ gap: '0.8rem' }}>
-          <button 
-            onClick={() => setShowInstallTutorial(true)}
-            style={{ 
-              background: 'linear-gradient(45deg, #ff6600, #ff9900)', 
-              color: 'white', 
-              border: 'none', 
-              borderRadius: '20px', 
-              padding: '0.4rem 1rem', 
-              fontSize: '0.75rem', 
-              fontWeight: 'bold',
-              cursor: 'pointer',
-              boxShadow: '0 4px 10px rgba(255,102,0,0.3)'
-            }}
-          >
-            Get App
-          </button>
-          <button onClick={() => user ? handleSignOut() : setShowAuthModal(true)} style={{ background: 'rgba(255,255,255,0.1)', color: 'white', border: 'none', borderRadius: '20px', padding: '0.4rem 1rem', fontSize: '0.8rem', cursor: 'pointer' }}>
-            {user ? `Sign Out (${isPro ? 'PRO' : 'Free'})` : 'Sign In'}
-          </button>
-        </div>
-      </header>
+      <NavBar 
+        user={user} 
+        isPro={isPro} 
+        onShowAuth={() => setShowAuthModal(true)} 
+        onShowInstall={() => setShowInstallTutorial(true)} 
+      />
 
       <div className="main-layout">
         <aside className={`sidebar ${showMobileMenu ? 'mobile-visible' : ''}`}>
