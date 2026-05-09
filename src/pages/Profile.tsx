@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
-import { db, auth } from '../firebase'
-import { doc, getDoc, collection, query, where, onSnapshot } from 'firebase/firestore'
+import { db, auth, storage } from '../firebase'
+import { doc, getDoc, collection, query, where, onSnapshot, updateDoc, arrayRemove } from 'firebase/firestore'
+import { ref, uploadString, getDownloadURL } from 'firebase/storage'
 import NavBar from '../components/NavBar'
 import InstallTutorial from '../components/InstallTutorial'
 import AuthModal from '../components/AuthModal'
@@ -15,8 +16,11 @@ const Profile: React.FC = () => {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showInstallTutorial, setShowInstallTutorial] = useState(false);
 
+  const [isEditing, setIsEditing] = useState(false);
+  const [editBio, setEditBio] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
+
   useEffect(() => {
-    // Basic auth sync for NavBar
     const unsub = auth.onAuthStateChanged(u => {
       setUser(u);
       if (u) {
@@ -32,20 +36,25 @@ const Profile: React.FC = () => {
     const fetchProfile = async () => {
       setLoading(true);
       try {
-        // Search for user by username or UID
         const usersRef = collection(db, "users");
         const q = query(usersRef, where("username", "==", username));
-        onSnapshot(q, (snap) => {
+        const unsubscribe = onSnapshot(q, (snap) => {
           if (!snap.empty) {
-            setProfileData(snap.docs[0].data());
+            const data = snap.docs[0].data();
+            setProfileData({ ...data, id: snap.docs[0].id });
+            setEditBio(data.bio || '');
           } else {
-            // Fallback: Check if it's a UID
             getDoc(doc(db, "users", username!)).then(uSnap => {
-              if (uSnap.exists()) setProfileData(uSnap.data());
+              if (uSnap.exists()) {
+                const data = uSnap.data();
+                setProfileData({ ...data, id: uSnap.id });
+                setEditBio(data.bio || '');
+              }
             });
           }
           setLoading(false);
         });
+        return unsubscribe;
       } catch (e) {
         console.error("Profile fetch error:", e);
         setLoading(false);
@@ -54,7 +63,45 @@ const Profile: React.FC = () => {
     if (username) fetchProfile();
   }, [username]);
 
-  if (loading) return <div style={{ color: 'white', padding: '2rem' }}>Loading profile...</div>;
+  const handleUpdateBio = async () => {
+    if (!user || user.uid !== profileData.id) return;
+    try {
+      await updateDoc(doc(db, "users", user.uid), { bio: editBio });
+      setIsEditing(false);
+    } catch (e) { console.error("Bio update failed", e); }
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user || user.uid !== profileData.id) return;
+    
+    setIsUploading(true);
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const dataUrl = event.target?.result as string;
+      try {
+        const imageRef = ref(storage, `profiles/${user.uid}`);
+        await uploadString(imageRef, dataUrl, 'data_url');
+        const imageUrl = await getDownloadURL(imageRef);
+        await updateDoc(doc(db, "users", user.uid), { profilePic: imageUrl });
+      } catch (err) { console.error("Upload error:", err); }
+      finally { setIsUploading(false); }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removeBike = async (bike: any) => {
+    if (!user || user.uid !== profileData.id) return;
+    try {
+      await updateDoc(doc(db, "users", user.uid), {
+        bikes: arrayRemove(bike)
+      });
+    } catch (e) { console.error("Bike removal failed", e); }
+  };
+
+  if (loading) return <div style={{ color: 'white', padding: '2rem', textAlign: 'center' }}>Loading profile...</div>;
+
+  const isOwner = user && profileData && user.uid === profileData.id;
 
   return (
     <div className="container" style={{ minHeight: '100vh', background: '#121212' }}>
@@ -68,63 +115,96 @@ const Profile: React.FC = () => {
       <main style={{ padding: '2rem', maxWidth: '800px', margin: '0 auto' }}>
         {profileData ? (
           <div className="profile-header" style={{ textAlign: 'center', marginBottom: '3rem' }}>
-            <div style={{ 
-              width: '120px', 
-              height: '120px', 
-              borderRadius: '50%', 
-              background: '#333', 
-              margin: '0 auto 1.5rem',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '3rem',
-              border: '2px solid #ff6600'
-            }}>
-              {profileData.profilePic ? <img src={profileData.profilePic} alt="Profile" style={{ width: '100%', height: '100%', borderRadius: '50%' }} /> : '🚲'}
+            <div style={{ position: 'relative', width: '120px', height: '120px', margin: '0 auto 1.5rem' }}>
+              <div style={{ 
+                width: '100%', 
+                height: '100%', 
+                borderRadius: '50%', 
+                background: '#333', 
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '3rem',
+                border: '2px solid #ff6600',
+                overflow: 'hidden'
+              }}>
+                {profileData.profilePic ? <img src={profileData.profilePic} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '🚲'}
+              </div>
+              {isOwner && (
+                <label style={{ 
+                  position: 'absolute', bottom: 0, right: 0, 
+                  background: '#ff6600', width: '32px', height: '32px', 
+                  borderRadius: '50%', display: 'flex', alignItems: 'center', 
+                  justifyContent: 'center', cursor: 'pointer', border: '2px solid #121212' 
+                }}>
+                  <span style={{ fontSize: '1rem' }}>📷</span>
+                  <input type="file" hidden accept="image/*" onChange={handleImageUpload} disabled={isUploading} />
+                </label>
+              )}
             </div>
+
             <h1 style={{ color: 'white', margin: 0 }}>{profileData.username || 'Anonymous Rider'}</h1>
-            <p style={{ color: '#888', marginTop: '0.5rem' }}>{profileData.bio || 'No bio yet.'}</p>
+            
+            {isEditing ? (
+              <div style={{ marginTop: '1rem' }}>
+                <textarea 
+                  value={editBio} 
+                  onChange={e => setEditBio(e.target.value)}
+                  style={{ width: '100%', background: '#222', border: '1px solid #444', borderRadius: '8px', color: 'white', padding: '0.8rem', marginBottom: '0.5rem', fontFamily: 'inherit' }}
+                  placeholder="Tell us about your ride..."
+                />
+                <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
+                  <button onClick={handleUpdateBio} style={{ background: '#34a853', color: 'white', border: 'none', padding: '0.4rem 1.2rem', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Save</button>
+                  <button onClick={() => setIsEditing(false)} style={{ background: '#444', color: 'white', border: 'none', padding: '0.4rem 1.2rem', borderRadius: '4px', cursor: 'pointer' }}>Cancel</button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <p style={{ color: '#888', marginTop: '0.5rem' }}>{profileData.bio || 'No bio yet.'}</p>
+                {isOwner && <button onClick={() => setIsEditing(true)} style={{ background: 'none', border: 'none', color: '#ff6600', fontSize: '0.8rem', cursor: 'pointer', textDecoration: 'underline' }}>Edit Bio</button>}
+              </>
+            )}
             
             <div style={{ display: 'flex', justifyContent: 'center', gap: '2rem', marginTop: '1.5rem' }}>
               <div>
-                <div style={{ color: 'white', fontWeight: 'bold', fontSize: '1.2rem' }}>0</div>
+                <div style={{ color: 'white', fontWeight: 'bold', fontSize: '1.2rem' }}>{profileData.followers?.length || 0}</div>
                 <div style={{ color: '#666', fontSize: '0.7rem', textTransform: 'uppercase' }}>Followers</div>
               </div>
               <div>
-                <div style={{ color: 'white', fontWeight: 'bold', fontSize: '1.2rem' }}>0</div>
+                <div style={{ color: 'white', fontWeight: 'bold', fontSize: '1.2rem' }}>{profileData.following?.length || 0}</div>
                 <div style={{ color: '#666', fontSize: '0.7rem', textTransform: 'uppercase' }}>Following</div>
               </div>
             </div>
-
-            {user && user.uid !== profileData.uid && (
-              <button style={{ 
-                marginTop: '2rem', 
-                padding: '0.6rem 2rem', 
-                background: '#ff6600', 
-                color: 'white', 
-                border: 'none', 
-                borderRadius: '8px', 
-                fontWeight: 'bold',
-                cursor: 'pointer'
-              }}>
-                Follow
-              </button>
-            )}
           </div>
         ) : (
           <div style={{ color: 'white', textAlign: 'center' }}>User not found.</div>
         )}
 
-        {profileData?.bikes && profileData.bikes.length > 0 && (
+        {profileData?.bikes && (
           <section>
-            <h3 style={{ color: '#ff6600', textTransform: 'uppercase', fontSize: '0.8rem', letterSpacing: '0.1em', marginBottom: '1rem' }}>Garage</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-              {profileData.bikes.map((bike: any, idx: number) => (
-                <div key={idx} style={{ background: '#1a1a1a', padding: '1rem', borderRadius: '12px', border: '1px solid #333' }}>
-                  <div style={{ fontWeight: 'bold', color: 'white' }}>{bike.name}</div>
-                  <div style={{ fontSize: '0.8rem', color: '#666' }}>{bike.specs.voltage}V {bike.specs.capacityAh}Ah</div>
-                </div>
-              ))}
+            <h3 style={{ color: '#ff6600', textTransform: 'uppercase', fontSize: '0.8rem', letterSpacing: '0.1em', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between' }}>
+              Garage
+              {isOwner && <span style={{ fontSize: '0.7rem', textTransform: 'none', color: '#444' }}>(Manage bikes on Map page)</span>}
+            </h3>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem' }}>
+              {profileData.bikes.length === 0 ? (
+                <div style={{ color: '#444', fontSize: '0.9rem' }}>No bikes in garage yet.</div>
+              ) : (
+                profileData.bikes.map((bike: any, idx: number) => (
+                  <div key={idx} style={{ background: '#1a1a1a', padding: '1.2rem', borderRadius: '16px', border: '1px solid #333', position: 'relative' }}>
+                    <div style={{ fontWeight: 'bold', color: 'white' }}>{bike.name}</div>
+                    <div style={{ fontSize: '0.8rem', color: '#888', marginTop: '0.3rem' }}>{bike.specs.voltage}V {bike.specs.capacityAh}Ah</div>
+                    {isOwner && (
+                      <button 
+                        onClick={() => removeBike(bike)}
+                        style={{ position: 'absolute', top: '0.5rem', right: '0.5rem', background: 'none', border: 'none', color: '#444', cursor: 'pointer', fontSize: '0.9rem' }}
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                ))
+              )}
             </div>
           </section>
         )}

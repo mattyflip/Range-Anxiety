@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
-import { db, auth } from '../firebase'
-import { collection, query, orderBy, onSnapshot, doc, getDoc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore'
+import { db, auth, storage } from '../firebase'
+import { collection, query, orderBy, onSnapshot, doc, getDoc, updateDoc, arrayUnion, arrayRemove, addDoc, serverTimestamp } from 'firebase/firestore'
+import { ref, uploadString, getDownloadURL } from 'firebase/storage'
 import NavBar from '../components/NavBar'
 import InstallTutorial from '../components/InstallTutorial'
 import AuthModal from '../components/AuthModal'
@@ -22,6 +23,11 @@ const Feed: React.FC = () => {
   const [isPro, setIsPro] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showInstallTutorial, setShowInstallTutorial] = useState(false);
+
+  const [showCreatePost, setShowCreatePost] = useState(false);
+  const [newCaption, setNewCaption] = useState('');
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [isPosting, setIsPosting] = useState(false);
 
   useEffect(() => {
     const unsub = auth.onAuthStateChanged(u => {
@@ -64,6 +70,46 @@ const Feed: React.FC = () => {
     }
   };
 
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setSelectedImage(event.target?.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleCreatePost = async () => {
+    if (!user || !selectedImage || !newCaption) return;
+    setIsPosting(true);
+    try {
+      const imageRef = ref(storage, `posts/${user.uid}/${Date.now()}.png`);
+      await uploadString(imageRef, selectedImage, 'data_url');
+      const imageUrl = await getDownloadURL(imageRef);
+
+      const userSnap = await getDoc(doc(db, "users", user.uid));
+      const username = userSnap.exists() ? userSnap.data().username : (user.email?.split('@')[0] || "Rider");
+
+      await addDoc(collection(db, "posts"), {
+        authorId: user.uid,
+        authorUsername: username || "Rider",
+        imageUrl,
+        caption: newCaption,
+        likes: [],
+        createdAt: serverTimestamp()
+      });
+
+      setNewCaption('');
+      setSelectedImage(null);
+      setShowCreatePost(false);
+    } catch (e) {
+      console.error("Post creation failed", e);
+    } finally {
+      setIsPosting(false);
+    }
+  };
+
   return (
     <div className="container" style={{ minHeight: '100vh', background: '#121212' }}>
       <NavBar 
@@ -74,8 +120,63 @@ const Feed: React.FC = () => {
       />
 
       <main style={{ padding: '2rem', maxWidth: '600px', margin: '0 auto' }}>
-        <h2 style={{ color: '#ff6600', textTransform: 'uppercase', fontSize: '1rem', letterSpacing: '0.2em', marginBottom: '2rem' }}>Community Feed</h2>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+          <h2 style={{ color: '#ff6600', textTransform: 'uppercase', fontSize: '1rem', letterSpacing: '0.2em', margin: 0 }}>Community Feed</h2>
+          {user && (
+            <button 
+              onClick={() => setShowCreatePost(true)}
+              style={{ background: '#ff6600', color: 'white', border: 'none', padding: '0.6rem 1.2rem', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}
+            >
+              + Create Post
+            </button>
+          )}
+        </div>
         
+        {showCreatePost && (
+          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.9)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', backdropFilter: 'blur(10px)' }}>
+            <div style={{ background: '#1a1a1a', padding: '2rem', borderRadius: '24px', border: '1px solid #333', maxWidth: '500px', width: '100%' }}>
+              <h3 style={{ color: 'white', marginTop: 0 }}>New Post</h3>
+              
+              <div style={{ 
+                width: '100%', height: '250px', background: '#222', 
+                borderRadius: '12px', border: '2px dashed #444', 
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                overflow: 'hidden', cursor: 'pointer', position: 'relative'
+              }}>
+                {selectedImage ? (
+                  <img src={selectedImage} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                  <span style={{ color: '#666' }}>Tap to select photo</span>
+                )}
+                <input type="file" hidden accept="image/*" onChange={handleImageSelect} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer' }} />
+              </div>
+
+              <textarea 
+                placeholder="Write a caption..."
+                value={newCaption}
+                onChange={e => setNewCaption(e.target.value)}
+                style={{ width: '100%', background: '#222', border: '1px solid #444', borderRadius: '8px', color: 'white', padding: '1rem', marginTop: '1.5rem', height: '100px', fontFamily: 'inherit' }}
+              />
+
+              <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
+                <button 
+                  onClick={() => setShowCreatePost(false)}
+                  style={{ flex: 1, padding: '1rem', background: '#333', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={handleCreatePost}
+                  disabled={isPosting || !selectedImage || !newCaption}
+                  style={{ flex: 2, padding: '1rem', background: '#ff6600', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', opacity: (isPosting || !selectedImage || !newCaption) ? 0.5 : 1 }}
+                >
+                  {isPosting ? 'Posting...' : 'Post to Community'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {loading ? (
           <div style={{ color: '#666', textAlign: 'center' }}>Loading feed...</div>
         ) : posts.length === 0 ? (

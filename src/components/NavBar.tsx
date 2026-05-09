@@ -34,7 +34,6 @@ const NavBar: React.FC<NavBarProps> = ({ user, isPro, onShowAuth, onShowInstall 
       <div className="logo-container" style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
         <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', textDecoration: 'none', color: 'white' }}>
           <img src={heroLogo} alt="Logo" style={{ height: '2.5rem', width: 'auto' }} />
-          <span style={{ fontWeight: 'bold', fontSize: '1.2rem' }}>Range Anxiety</span>
         </Link>
       </div>
 
