@@ -108,11 +108,13 @@ const ThreadView: React.FC = () => {
       .map(comment => (
         <div key={comment.id} style={{ marginLeft: depth > 0 ? '1.5rem' : '0', marginTop: '1.5rem', borderLeft: depth > 0 ? '1px solid #333' : 'none', paddingLeft: depth > 0 ? '1rem' : '0' }}>
           <div style={{ display: 'flex', gap: '0.8rem' }}>
-            <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#333', overflow: 'hidden', flexShrink: 0 }}>
+            <Link to={`/profile/${comment.authorUsername}`} style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#333', overflow: 'hidden', flexShrink: 0, display: 'block' }}>
               {comment.authorProfilePic ? <img src={comment.authorProfilePic} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '🚲'}
-            </div>
+            </Link>
             <div style={{ flex: 1 }}>
-               <div style={{ fontSize: '0.8rem', fontWeight: 'bold', color: 'white' }}>{comment.authorUsername} <span style={{ color: '#444', fontWeight: 'normal', marginLeft: '0.5rem' }}>• {comment.createdAt?.toDate().toLocaleString()}</span></div>
+               <div style={{ fontSize: '0.8rem', fontWeight: 'bold', color: 'white' }}>
+                 <Link to={`/profile/${comment.authorUsername}`} style={{ color: 'white', textDecoration: 'none' }}>{comment.authorUsername}</Link> <span style={{ color: '#444', fontWeight: 'normal', marginLeft: '0.5rem' }}>• {comment.createdAt?.toDate().toLocaleString()}</span>
+               </div>
                <div style={{ color: '#ccc', fontSize: '0.95rem', marginTop: '0.4rem', lineHeight: '1.5' }}>{comment.text}</div>
                
                {user && (
@@ -161,7 +163,7 @@ const ThreadView: React.FC = () => {
             </div>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: '0.7rem', color: '#444', textTransform: 'uppercase', fontWeight: 'bold', marginBottom: '1rem' }}>
-                Posted by <span style={{ color: '#888' }}>{thread.authorUsername}</span> • {thread.createdAt?.toDate().toLocaleString()}
+                Posted by <Link to={`/profile/${thread.authorUsername}`} style={{ color: '#888', textDecoration: 'none' }}>{thread.authorUsername}</Link> • {thread.createdAt?.toDate().toLocaleString()}
               </div>
               <h1 style={{ color: 'white', margin: 0, fontSize: '1.8rem', lineHeight: '1.3' }}>{thread.title}</h1>
               {thread.body && (
