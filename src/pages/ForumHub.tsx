@@ -20,6 +20,7 @@ interface Community {
 const ForumHub: React.FC = () => {
   const [communities, setCommunities] = useState<Community[]>([]);
   const [loading, setLoading] = useState(true);
+  const [authLoading, setAuthLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
   const [userData, setUserData] = useState<any>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -35,7 +36,11 @@ const ForumHub: React.FC = () => {
       if (u) {
         const snap = await getDoc(doc(db, "users", u.uid));
         if (snap.exists()) setUserData(snap.data());
+      } else {
+        // Prompt for account creation if guest
+        setShowAuthModal(true);
       }
+      setAuthLoading(false);
     });
     return () => unsub();
   }, []);
@@ -81,59 +86,75 @@ const ForumHub: React.FC = () => {
       />
 
       <main style={{ padding: '2rem', maxWidth: '900px', margin: '0 auto' }}>
-        <div style={{ marginBottom: '2rem' }}>
-          <UniversalSearch />
-        </div>
-
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3rem' }}>
-          <div>
-            <h1 style={{ color: 'white', margin: 0, fontSize: '2rem' }}>Communities</h1>
-            <p style={{ color: '#666', marginTop: '0.5rem' }}>Discover and join specialized e-bike groups.</p>
-          </div>
-          {user && (
+        {!user && !authLoading ? (
+          <div style={{ textAlign: 'center', padding: '4rem 0' }}>
+            <div style={{ fontSize: '4rem', marginBottom: '1.5rem' }}>🔒</div>
+            <h2 style={{ color: 'white', marginBottom: '1rem' }}>Member Only Forum</h2>
+            <p style={{ color: '#888', marginBottom: '2rem', fontSize: '1.1rem' }}>Join the community to participate in specialized e-bike groups and discussions.</p>
             <button 
-              onClick={() => setShowCreateModal(true)}
-              style={{ background: '#ff6600', color: 'white', border: 'none', padding: '0.8rem 1.5rem', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer' }}
+              onClick={() => setShowAuthModal(true)}
+              style={{ padding: '1rem 2.5rem', background: '#ff6600', color: 'white', border: 'none', borderRadius: '12px', fontWeight: 'bold', fontSize: '1.1rem', cursor: 'pointer', boxShadow: '0 10px 20px rgba(255,102,0,0.2)' }}
             >
-              + Create Community
+              Create Account to Enter
             </button>
-          )}
-        </div>
-
-        {loading ? (
-          <div style={{ color: '#666', textAlign: 'center' }}>Loading communities...</div>
-        ) : communities.length === 0 ? (
-          <div style={{ color: '#444', textAlign: 'center', padding: '4rem' }}>
-            <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🚲</div>
-            <h2>No communities yet</h2>
-            <p>Be the first to start a group for your favorite bike or region!</p>
           </div>
         ) : (
           <>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.5rem' }}>
-              {communities.map(comm => (
-                <Link 
-                  to={`/forum/c/${comm.id}`} 
-                  key={comm.id}
-                  style={{ textDecoration: 'none', background: '#1a1a1a', padding: '2rem', borderRadius: '24px', border: '1px solid #333', transition: 'transform 0.2s, border-color 0.2s' }}
-                  onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#ff6600'; e.currentTarget.style.transform = 'translateY(-5px)'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#333'; e.currentTarget.style.transform = 'translateY(0)'; }}
+            <div style={{ marginBottom: '2rem' }}>
+              <UniversalSearch />
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3rem' }}>
+              <div>
+                <h1 style={{ color: 'white', margin: 0, fontSize: '2rem' }}>Communities</h1>
+                <p style={{ color: '#666', marginTop: '0.5rem' }}>Discover and join specialized e-bike groups.</p>
+              </div>
+              {user && (
+                <button 
+                  onClick={() => setShowCreateModal(true)}
+                  style={{ background: '#ff6600', color: 'white', border: 'none', padding: '0.8rem 1.5rem', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer' }}
                 >
-                  <div style={{ color: '#ff6600', fontWeight: 'bold', fontSize: '1.2rem', marginBottom: '0.8rem' }}>c/{comm.name}</div>
-                  <p style={{ color: '#888', fontSize: '0.9rem', marginBottom: '1.5rem', lineHeight: '1.4', height: '3.2rem', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-                    {comm.description || "No description provided."}
-                  </p>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ color: '#444', fontSize: '0.75rem', fontWeight: 'bold' }}>{comm.memberCount} Members</span>
-                    <span style={{ color: '#ff6600', fontSize: '0.8rem', fontWeight: 'bold' }}>Enter →</span>
-                  </div>
-                </Link>
-              ))}
+                  + Create Community
+                </button>
+              )}
             </div>
-            
-            <div style={{ marginTop: '4rem' }}>
-              <AdBanner isPro={userData?.isPro || false} />
-            </div>
+
+            {loading ? (
+              <div style={{ color: '#666', textAlign: 'center' }}>Loading communities...</div>
+            ) : communities.length === 0 ? (
+              <div style={{ color: '#444', textAlign: 'center', padding: '4rem' }}>
+                <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🚲</div>
+                <h2>No communities yet</h2>
+                <p>Be the first to start a group for your favorite bike or region!</p>
+              </div>
+            ) : (
+              <>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.5rem' }}>
+                  {communities.map(comm => (
+                    <Link 
+                      to={`/forum/c/${comm.id}`} 
+                      key={comm.id}
+                      style={{ textDecoration: 'none', background: '#1a1a1a', padding: '2rem', borderRadius: '24px', border: '1px solid #333', transition: 'transform 0.2s, border-color 0.2s' }}
+                      onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#ff6600'; e.currentTarget.style.transform = 'translateY(-5px)'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#333'; e.currentTarget.style.transform = 'translateY(0)'; }}
+                    >
+                      <div style={{ color: '#ff6600', fontWeight: 'bold', fontSize: '1.2rem', marginBottom: '0.8rem' }}>c/{comm.name}</div>
+                      <p style={{ color: '#888', fontSize: '0.9rem', marginBottom: '1.5rem', lineHeight: '1.4', height: '3.2rem', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                        {comm.description || "No description provided."}
+                      </p>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ color: '#444', fontSize: '0.75rem', fontWeight: 'bold' }}>{comm.memberCount} Members</span>
+                        <span style={{ color: '#ff6600', fontSize: '0.8rem', fontWeight: 'bold' }}>Enter →</span>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+                
+                <div style={{ marginTop: '4rem' }}>
+                  <AdBanner isPro={userData?.isPro || false} />
+                </div>
+              </>
+            )}
           </>
         )}
       </main>
