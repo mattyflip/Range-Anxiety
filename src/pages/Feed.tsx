@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { db, auth, storage } from '../firebase'
-import { collection, query, orderBy, onSnapshot, doc, getDoc, updateDoc, arrayUnion, arrayRemove, addDoc, serverTimestamp } from 'firebase/firestore'
+import { collection, query, orderBy, onSnapshot, doc, getDoc, updateDoc, arrayUnion, arrayRemove, addDoc, serverTimestamp, deleteDoc } from 'firebase/firestore'
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
 import NavBar from '../components/NavBar'
 import InstallTutorial from '../components/InstallTutorial'
@@ -32,6 +32,8 @@ const Feed: React.FC = () => {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showInstallTutorial, setShowInstallTutorial] = useState(false);
 
+  const isAdmin = user?.email?.toLowerCase() === 'mattyfliptv@gmail.com';
+
   const [showCreatePost, setShowCreatePost] = useState(false);
   const [newCaption, setNewCaption] = useState('');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -40,6 +42,10 @@ const Feed: React.FC = () => {
 
   // Comment Modal state
   const [activeCommentPost, setActiveCommentPost] = useState<Post | null>(null);
+
+  // Admin states
+  const [adminEditingPost, setAdminEditingPost] = useState<Post | null>(null);
+  const [adminEditValue, setAdminEditValue] = useState('');
 
   // Cropper states
   const [crop, setCrop] = useState({ x: 0, y: 0 });
@@ -90,6 +96,32 @@ const Feed: React.FC = () => {
     });
     return () => unsubscribe();
   }, [userData?.following]);
+
+  const handleDeletePost = async (post: Post) => {
+    if (!isAdmin) return;
+    if (!window.confirm("Are you sure you want to delete this post?")) return;
+    try {
+      await deleteDoc(doc(db, "posts", post.id));
+      alert("Post deleted by Admin.");
+    } catch (e) {
+      console.error("Delete failed", e);
+      alert("Failed to delete post.");
+    }
+  };
+
+  const handleSaveAdminEdit = async () => {
+    if (!isAdmin || !adminEditingPost) return;
+    try {
+      await updateDoc(doc(db, "posts", adminEditingPost.id), {
+        caption: adminEditValue
+      });
+      setAdminEditingPost(null);
+      alert("Post updated by Admin.");
+    } catch (e) {
+      console.error("Update failed", e);
+      alert("Failed to save edits.");
+    }
+  };
 
   const handleLike = async (post: Post) => {
     if (!user) {
@@ -369,6 +401,23 @@ const Feed: React.FC = () => {
                         </button>
                       </div>
                     )}
+
+                    {isAdmin && (
+                      <div style={{ display: 'flex', gap: '1rem', marginLeft: 'auto' }}>
+                         <button 
+                           onClick={() => { setAdminEditingPost(post); setAdminEditValue(post.caption); }}
+                           style={{ background: 'none', border: 'none', color: '#ffcc00', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}
+                         >
+                           EDIT
+                         </button>
+                         <button 
+                           onClick={() => handleDeletePost(post)}
+                           style={{ background: 'none', border: 'none', color: '#ff4444', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}
+                         >
+                           DELETE
+                         </button>
+                      </div>
+                    )}
                   </div>
                   
                   <p style={{ color: '#ccc', margin: 0, fontSize: '0.95rem', lineHeight: '1.4' }}>
@@ -396,6 +445,37 @@ const Feed: React.FC = () => {
 
       {showInstallTutorial && <InstallTutorial onClose={() => setShowInstallTutorial(false)} />}
       {showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} />}
+
+      {/* Admin Edit Modal */}
+      {adminEditingPost && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.9)', zIndex: 6000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+          <div style={{ background: '#1a1a1a', width: '100%', maxWidth: '450px', padding: '2rem', borderRadius: '24px', border: '1px solid #333' }}>
+            <h2 style={{ color: 'white', marginTop: 0 }}>Admin Post Edit</h2>
+            <p style={{ color: '#ffcc00', fontSize: '0.8rem', fontWeight: 'bold' }}>MODERATION MODE</p>
+
+            <textarea 
+              value={adminEditValue}
+              onChange={(e) => setAdminEditValue(e.target.value)}
+              style={{ width: '100%', height: '150px', background: '#222', border: '1px solid #444', borderRadius: '12px', color: 'white', padding: '1rem', fontFamily: 'inherit', marginBottom: '1.5rem' }}
+            />
+
+            <div style={{ display: 'flex', gap: '1rem' }}>
+              <button 
+                onClick={() => setAdminEditingPost(null)}
+                style={{ flex: 1, padding: '1rem', background: '#333', color: 'white', border: 'none', borderRadius: '12px', cursor: 'pointer' }}
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleSaveAdminEdit}
+                style={{ flex: 2, padding: '1rem', background: '#ffcc00', color: '#000', border: 'none', borderRadius: '12px', cursor: 'pointer', fontWeight: 'bold' }}
+              >
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

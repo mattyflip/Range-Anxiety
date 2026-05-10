@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { db, auth } from '../firebase'
-import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, getDoc, doc, updateDoc, increment } from 'firebase/firestore'
+import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, getDoc, doc, updateDoc, increment, deleteDoc } from 'firebase/firestore'
 import { useParams, Link } from 'react-router-dom'
 import NavBar from '../components/NavBar'
 import InstallTutorial from '../components/InstallTutorial'
@@ -23,6 +23,8 @@ const CommunityView: React.FC = () => {
   const [threads, setThreads] = useState<Thread[]>([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
+
+  const isAdmin = user?.email?.toLowerCase() === 'mattyfliptv@gmail.com';
   
   const [showCreateThread, setShowCreateThread] = useState(false);
   const [newTitle, setNewTitle] = useState('');
@@ -30,6 +32,10 @@ const CommunityView: React.FC = () => {
   
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showInstallTutorial, setShowInstallTutorial] = useState(false);
+
+  // Admin moderation states
+  const [adminEditingThread, setAdminEditingThread] = useState<Thread | null>(null);
+  const [adminEditValue, setAdminEditValue] = useState('');
 
   useEffect(() => {
     const unsub = auth.onAuthStateChanged(u => setUser(u));
@@ -60,6 +66,32 @@ const CommunityView: React.FC = () => {
 
     return () => unsubscribe();
   }, [communityId]);
+
+  const handleDeleteThread = async (thread: Thread) => {
+    if (!isAdmin || !communityId) return;
+    if (!window.confirm("Are you sure you want to delete this entire thread?")) return;
+    try {
+      await deleteDoc(doc(db, `communities/${communityId}/threads`, thread.id));
+      alert("Thread deleted by Admin.");
+    } catch (e) {
+      console.error("Delete failed", e);
+      alert("Failed to delete thread.");
+    }
+  };
+
+  const handleSaveAdminEdit = async () => {
+    if (!isAdmin || !adminEditingThread || !communityId) return;
+    try {
+      await updateDoc(doc(db, `communities/${communityId}/threads`, adminEditingThread.id), {
+        title: adminEditValue
+      });
+      setAdminEditingThread(null);
+      alert("Thread title updated by Admin.");
+    } catch (e) {
+      console.error("Update failed", e);
+      alert("Failed to save edits.");
+    }
+  };
 
   const handleCreateThread = async () => {
     if (!user || !newTitle.trim() || !communityId) return;
@@ -147,8 +179,24 @@ const CommunityView: React.FC = () => {
                     Posted by <Link to={`/profile/${thread.authorUsername.replace(/\s+/g, '_')}`} style={{ color: '#888', textDecoration: 'none' }}>{thread.authorUsername}</Link> • {thread.createdAt?.toDate().toLocaleDateString()}
                   </div>
                   <h3 style={{ color: 'white', margin: 0, fontSize: '1.2rem', lineHeight: '1.4' }}>{thread.title}</h3>
-                  <div style={{ color: '#666', fontSize: '0.8rem', marginTop: '1rem', fontWeight: 'bold' }}>
-                    💬 {thread.commentCount} Comments
+                  <div style={{ color: '#666', fontSize: '0.8rem', marginTop: '1rem', fontWeight: 'bold', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>💬 {thread.commentCount} Comments</span>
+                    {isAdmin && (
+                      <div style={{ display: 'flex', gap: '1rem' }}>
+                         <button 
+                           onClick={(e) => { e.preventDefault(); e.stopPropagation(); setAdminEditingThread(thread); setAdminEditValue(thread.title); }}
+                           style={{ background: 'none', border: 'none', color: '#ffcc00', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}
+                         >
+                           EDIT
+                         </button>
+                         <button 
+                           onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleDeleteThread(thread); }}
+                           style={{ background: 'none', border: 'none', color: '#ff4444', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}
+                         >
+                           DELETE
+                         </button>
+                      </div>
+                    )}
                   </div>
                 </Link>
               </div>
@@ -199,6 +247,37 @@ const CommunityView: React.FC = () => {
 
       {showInstallTutorial && <InstallTutorial onClose={() => setShowInstallTutorial(false)} />}
       {showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} />}
+
+      {/* Admin Edit Modal */}
+      {adminEditingThread && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.9)', zIndex: 6000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+          <div style={{ background: '#1a1a1a', width: '100%', maxWidth: '450px', padding: '2rem', borderRadius: '24px', border: '1px solid #333' }}>
+            <h2 style={{ color: 'white', marginTop: 0 }}>Admin Thread Edit</h2>
+            <p style={{ color: '#ffcc00', fontSize: '0.8rem', fontWeight: 'bold' }}>MODERATION MODE</p>
+
+            <textarea 
+              value={adminEditValue}
+              onChange={(e) => setAdminEditValue(e.target.value)}
+              style={{ width: '100%', height: '100px', background: '#222', border: '1px solid #444', borderRadius: '12px', color: 'white', padding: '1rem', fontFamily: 'inherit', marginBottom: '1.5rem' }}
+            />
+
+            <div style={{ display: 'flex', gap: '1rem' }}>
+              <button 
+                onClick={() => setAdminEditingThread(null)}
+                style={{ flex: 1, padding: '1rem', background: '#333', color: 'white', border: 'none', borderRadius: '12px', cursor: 'pointer' }}
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleSaveAdminEdit}
+                style={{ flex: 2, padding: '1rem', background: '#ffcc00', color: '#000', border: 'none', borderRadius: '12px', cursor: 'pointer', fontWeight: 'bold' }}
+              >
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

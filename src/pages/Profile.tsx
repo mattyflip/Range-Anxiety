@@ -70,6 +70,11 @@ const Profile: React.FC = () => {
   const [croppingType, setCroppingType] = useState<'profile' | 'bike' | null>(null);
   const [activeBike, setActiveBike] = useState<any>(null);
 
+  // Admin Edit states
+  const [adminEditingReview, setAdminEditingReview] = useState<Review | null>(null);
+  const [adminEditingPost, setAdminEditingPost] = useState<Post | null>(null);
+  const [adminEditValue, setAdminEditValue] = useState('');
+
   useEffect(() => {
     const unsub = auth.onAuthStateChanged(u => {
       setUser(u);
@@ -246,6 +251,42 @@ const Profile: React.FC = () => {
     } catch (e) {
       console.error("Delete post failed", e);
       alert("Failed to delete post.");
+    }
+  };
+
+  const handleSaveAdminEdit = async () => {
+    if (!isAdmin) return;
+    try {
+      if (adminEditingReview) {
+        await updateDoc(doc(db, "rider_reviews", adminEditingReview.id), {
+          comment: adminEditValue,
+          rating: newRating
+        });
+        
+        // Recalculate stats for the user
+        const q = query(collection(db, "rider_reviews"), where("targetUserId", "==", profileData.id));
+        const snap = await getDocs(q);
+        const reviews = snap.docs.map(d => d.data());
+        const newCount = reviews.length;
+        const newAvg = reviews.reduce((acc, r) => acc + r.rating, 0) / newCount;
+
+        await updateDoc(doc(db, "users", profileData.id), {
+          averageRating: newAvg,
+          ratingCount: newCount
+        });
+
+        alert("Review updated by Admin.");
+      } else if (adminEditingPost) {
+        await updateDoc(doc(db, "posts", adminEditingPost.id), {
+          caption: adminEditValue
+        });
+        alert("Post updated by Admin.");
+      }
+      setAdminEditingReview(null);
+      setAdminEditingPost(null);
+    } catch (e) {
+      console.error("Admin edit failed", e);
+      alert("Failed to save edits.");
     }
   };
 
@@ -635,12 +676,20 @@ const Profile: React.FC = () => {
                         <div style={{ color: 'white', fontSize: '0.75rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                           {post.likes.length} Likes
                           {isAdmin && (
-                            <button 
-                              onClick={(e) => { e.stopPropagation(); handleDeletePost(post); }}
-                              style={{ background: 'none', border: 'none', color: '#ff4444', cursor: 'pointer', fontSize: '0.65rem', fontWeight: 'bold' }}
-                            >
-                              DELETE
-                            </button>
+                            <div style={{ display: 'flex', gap: '0.4rem', borderLeft: '1px solid #333', paddingLeft: '0.5rem' }}>
+                              <button 
+                                onClick={(e) => { e.stopPropagation(); setAdminEditingPost(post); setAdminEditValue(post.caption); }}
+                                style={{ background: 'none', border: 'none', color: '#ffcc00', cursor: 'pointer', fontSize: '0.65rem', fontWeight: 'bold' }}
+                              >
+                                EDIT
+                              </button>
+                              <button 
+                                onClick={(e) => { e.stopPropagation(); handleDeletePost(post); }}
+                                style={{ background: 'none', border: 'none', color: '#ff4444', cursor: 'pointer', fontSize: '0.65rem', fontWeight: 'bold' }}
+                              >
+                                DELETE
+                              </button>
+                            </div>
                           )}
                         </div>
                         {(post.commentsEnabled !== false) && (
@@ -670,12 +719,20 @@ const Profile: React.FC = () => {
                         <div style={{ color: '#ffcc00', display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
                           <div>{'★'.repeat(review.rating)}{'☆'.repeat(5 - review.rating)}</div>
                           {isAdmin && (
-                            <button 
-                              onClick={() => handleDeleteReview(review)}
-                              style={{ background: 'none', border: 'none', color: '#ff4444', cursor: 'pointer', fontSize: '0.7rem', padding: '4px', borderLeft: '1px solid #333' }}
-                            >
-                              DELETE
-                            </button>
+                            <div style={{ display: 'flex', gap: '0.4rem', borderLeft: '1px solid #333', paddingLeft: '0.8rem' }}>
+                              <button 
+                                onClick={() => { setAdminEditingReview(review); setAdminEditValue(review.comment); setNewRating(review.rating); }}
+                                style={{ background: 'none', border: 'none', color: '#ffcc00', cursor: 'pointer', fontSize: '0.7rem', fontWeight: 'bold' }}
+                              >
+                                EDIT
+                              </button>
+                              <button 
+                                onClick={() => handleDeleteReview(review)}
+                                style={{ background: 'none', border: 'none', color: '#ff4444', cursor: 'pointer', fontSize: '0.7rem', fontWeight: 'bold' }}
+                              >
+                                DELETE
+                              </button>
+                            </div>
                           )}
                         </div>
                       </div>
@@ -798,6 +855,51 @@ const Profile: React.FC = () => {
 
       {showInstallTutorial && <InstallTutorial onClose={() => setShowInstallTutorial(false)} />}
       {showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} />}
+
+      {/* Admin Edit Modal */}
+      {(adminEditingReview || adminEditingPost) && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.9)', zIndex: 6000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+          <div style={{ background: '#1a1a1a', width: '100%', maxWidth: '450px', padding: '2rem', borderRadius: '24px', border: '1px solid #333' }}>
+            <h2 style={{ color: 'white', marginTop: 0 }}>Admin Edit</h2>
+            <p style={{ color: '#ffcc00', fontSize: '0.8rem', fontWeight: 'bold' }}>MODERATION MODE</p>
+            
+            {adminEditingReview && (
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', fontSize: '2rem', margin: '1.5rem 0' }}>
+                {[1,2,3,4,5].map(star => (
+                  <span 
+                    key={star} 
+                    onClick={() => setNewRating(star)}
+                    style={{ cursor: 'pointer', color: star <= newRating ? '#ffcc00' : '#333' }}
+                  >
+                    ★
+                  </span>
+                ))}
+              </div>
+            )}
+
+            <textarea 
+              value={adminEditValue}
+              onChange={(e) => setAdminEditValue(e.target.value)}
+              style={{ width: '100%', height: '150px', background: '#222', border: '1px solid #444', borderRadius: '12px', color: 'white', padding: '1rem', fontFamily: 'inherit', marginBottom: '1.5rem' }}
+            />
+
+            <div style={{ display: 'flex', gap: '1rem' }}>
+              <button 
+                onClick={() => { setAdminEditingReview(null); setAdminEditingPost(null); }}
+                style={{ flex: 1, padding: '1rem', background: '#333', color: 'white', border: 'none', borderRadius: '12px', cursor: 'pointer' }}
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleSaveAdminEdit}
+                style={{ flex: 2, padding: '1rem', background: '#ffcc00', color: '#000', border: 'none', borderRadius: '12px', cursor: 'pointer', fontWeight: 'bold' }}
+              >
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

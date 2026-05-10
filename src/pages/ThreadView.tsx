@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { db, auth } from '../firebase'
-import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, getDoc, doc, updateDoc, increment } from 'firebase/firestore'
+import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, getDoc, doc, updateDoc, increment, deleteDoc } from 'firebase/firestore'
 import { useParams, Link } from 'react-router-dom'
 import NavBar from '../components/NavBar'
 import InstallTutorial from '../components/InstallTutorial'
@@ -22,12 +22,18 @@ const ThreadView: React.FC = () => {
   const [comments, setComments] = useState<ForumComment[]>([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
+
+  const isAdmin = user?.email?.toLowerCase() === 'mattyfliptv@gmail.com';
   
   const [replyText, setReplyText] = useState('');
   const [activeReplyId, setActiveReplyId] = useState<string | null>(null);
   
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showInstallTutorial, setShowInstallTutorial] = useState(false);
+
+  // Admin states
+  const [adminEditingComment, setAdminEditingComment] = useState<ForumComment | null>(null);
+  const [adminEditValue, setAdminEditValue] = useState('');
 
   useEffect(() => {
     const unsub = auth.onAuthStateChanged(u => setUser(u));
@@ -58,6 +64,35 @@ const ThreadView: React.FC = () => {
 
     return () => { unsubThread(); unsubComments(); };
   }, [communityId, threadId]);
+
+  const handleDeleteComment = async (comment: ForumComment) => {
+    if (!isAdmin || !communityId || !threadId) return;
+    if (!window.confirm("Are you sure you want to delete this comment?")) return;
+    try {
+      await deleteDoc(doc(db, `communities/${communityId}/threads/${threadId}/comments`, comment.id));
+      await updateDoc(doc(db, `communities/${communityId}/threads`, threadId), {
+        commentCount: increment(-1)
+      });
+      alert("Comment deleted by Admin.");
+    } catch (e) {
+      console.error("Delete failed", e);
+      alert("Failed to delete comment.");
+    }
+  };
+
+  const handleSaveAdminEdit = async () => {
+    if (!isAdmin || !adminEditingComment || !communityId || !threadId) return;
+    try {
+      await updateDoc(doc(db, `communities/${communityId}/threads/${threadId}/comments`, adminEditingComment.id), {
+        text: adminEditValue
+      });
+      setAdminEditingComment(null);
+      alert("Comment updated by Admin.");
+    } catch (e) {
+      console.error("Update failed", e);
+      alert("Failed to save edits.");
+    }
+  };
 
   const handleSubmitComment = async (parentId: string | null = null) => {
     if (!replyText.trim() || !user || !communityId || !threadId) return;
@@ -124,6 +159,23 @@ const ThreadView: React.FC = () => {
                  >
                    Reply
                  </button>
+               )}
+
+               {isAdmin && (
+                 <div style={{ display: 'flex', gap: '0.8rem', marginTop: '0.5rem' }}>
+                    <button 
+                      onClick={() => { setAdminEditingComment(comment); setAdminEditValue(comment.text); }}
+                      style={{ background: 'none', border: 'none', color: '#ffcc00', fontSize: '0.7rem', fontWeight: 'bold', cursor: 'pointer', padding: 0 }}
+                    >
+                      EDIT
+                    </button>
+                    <button 
+                      onClick={() => handleDeleteComment(comment)}
+                      style={{ background: 'none', border: 'none', color: '#ff4444', fontSize: '0.7rem', fontWeight: 'bold', cursor: 'pointer', padding: 0 }}
+                    >
+                      DELETE
+                    </button>
+                 </div>
                )}
 
                {activeReplyId === comment.id && (
@@ -218,6 +270,37 @@ const ThreadView: React.FC = () => {
 
       {showInstallTutorial && <InstallTutorial onClose={() => setShowInstallTutorial(false)} />}
       {showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} />}
+
+      {/* Admin Edit Modal */}
+      {adminEditingComment && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.9)', zIndex: 6000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+          <div style={{ background: '#1a1a1a', width: '100%', maxWidth: '450px', padding: '2rem', borderRadius: '24px', border: '1px solid #333' }}>
+            <h2 style={{ color: 'white', marginTop: 0 }}>Admin Comment Edit</h2>
+            <p style={{ color: '#ffcc00', fontSize: '0.8rem', fontWeight: 'bold' }}>MODERATION MODE</p>
+
+            <textarea 
+              value={adminEditValue}
+              onChange={(e) => setAdminEditValue(e.target.value)}
+              style={{ width: '100%', height: '150px', background: '#222', border: '1px solid #444', borderRadius: '12px', color: 'white', padding: '1rem', fontFamily: 'inherit', marginBottom: '1.5rem' }}
+            />
+
+            <div style={{ display: 'flex', gap: '1rem' }}>
+              <button 
+                onClick={() => setAdminEditingComment(null)}
+                style={{ flex: 1, padding: '1rem', background: '#333', color: 'white', border: 'none', borderRadius: '12px', cursor: 'pointer' }}
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleSaveAdminEdit}
+                style={{ flex: 2, padding: '1rem', background: '#ffcc00', color: '#000', border: 'none', borderRadius: '12px', cursor: 'pointer', fontWeight: 'bold' }}
+              >
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
