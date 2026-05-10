@@ -73,7 +73,11 @@ const Profile: React.FC = () => {
   // Admin Edit states
   const [adminEditingReview, setAdminEditingReview] = useState<Review | null>(null);
   const [adminEditingPost, setAdminEditingPost] = useState<Post | null>(null);
+  const [adminEditingNickname, setAdminEditingNickname] = useState(false);
   const [adminEditValue, setAdminEditValue] = useState('');
+
+  const [isEditingNickname, setIsEditingNickname] = useState(false);
+  const [editNicknameValue, setEditNicknameValue] = useState('');
 
   useEffect(() => {
     const unsub = auth.onAuthStateChanged(u => {
@@ -263,7 +267,6 @@ const Profile: React.FC = () => {
           rating: newRating
         });
         
-        // Recalculate stats for the user
         const q = query(collection(db, "rider_reviews"), where("targetUserId", "==", profileData.id));
         const snap = await getDocs(q);
         const reviews = snap.docs.map(d => d.data());
@@ -281,9 +284,15 @@ const Profile: React.FC = () => {
           caption: adminEditValue
         });
         alert("Post updated by Admin.");
+      } else if (adminEditingNickname) {
+        await updateDoc(doc(db, "users", profileData.id), {
+          adminNickname: adminEditValue
+        });
+        alert("Nickname updated by Admin.");
       }
       setAdminEditingReview(null);
       setAdminEditingPost(null);
+      setAdminEditingNickname(false);
     } catch (e) {
       console.error("Admin edit failed", e);
       alert("Failed to save edits.");
@@ -515,6 +524,21 @@ const Profile: React.FC = () => {
 
               <h1 style={{ color: 'white', margin: 0 }}>{profileData.username || 'Anonymous Rider'}</h1>
               
+              {profileData.adminNickname && (
+                <div style={{ color: '#ffcc00', fontSize: '0.9rem', fontWeight: 'bold', fontStyle: 'italic', marginTop: '0.2rem' }}>
+                  "{profileData.adminNickname}"
+                </div>
+              )}
+
+              {isAdmin && (
+                <button 
+                  onClick={() => { setAdminEditingNickname(true); setAdminEditValue(profileData.adminNickname || ''); }}
+                  style={{ background: 'none', border: 'none', color: '#ffcc00', fontSize: '0.65rem', fontWeight: 'bold', cursor: 'pointer', textDecoration: 'underline', marginTop: '0.5rem' }}
+                >
+                  EDIT NICKNAME
+                </button>
+              )}
+
               {/* Average Rating Display */}
               <div style={{ marginTop: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
                 <div style={{ color: '#ffcc00', fontSize: '1.2rem' }}>
@@ -857,10 +881,12 @@ const Profile: React.FC = () => {
       {showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} />}
 
       {/* Admin Edit Modal */}
-      {(adminEditingReview || adminEditingPost) && (
+      {(adminEditingReview || adminEditingPost || adminEditingNickname) && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.9)', zIndex: 6000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
           <div style={{ background: '#1a1a1a', width: '100%', maxWidth: '450px', padding: '2rem', borderRadius: '24px', border: '1px solid #333' }}>
-            <h2 style={{ color: 'white', marginTop: 0 }}>Admin Edit</h2>
+            <h2 style={{ color: 'white', marginTop: 0 }}>
+              {adminEditingNickname ? 'Admin Nickname Edit' : 'Admin Edit'}
+            </h2>
             <p style={{ color: '#ffcc00', fontSize: '0.8rem', fontWeight: 'bold' }}>MODERATION MODE</p>
             
             {adminEditingReview && (
@@ -880,12 +906,13 @@ const Profile: React.FC = () => {
             <textarea 
               value={adminEditValue}
               onChange={(e) => setAdminEditValue(e.target.value)}
-              style={{ width: '100%', height: '150px', background: '#222', border: '1px solid #444', borderRadius: '12px', color: 'white', padding: '1rem', fontFamily: 'inherit', marginBottom: '1.5rem' }}
+              placeholder={adminEditingNickname ? "Enter a nickname for this rider..." : ""}
+              style={{ width: '100%', height: adminEditingNickname ? '80px' : '150px', background: '#222', border: '1px solid #444', borderRadius: '12px', color: 'white', padding: '1rem', fontFamily: 'inherit', marginBottom: '1.5rem' }}
             />
 
             <div style={{ display: 'flex', gap: '1rem' }}>
               <button 
-                onClick={() => { setAdminEditingReview(null); setAdminEditingPost(null); }}
+                onClick={() => { setAdminEditingReview(null); setAdminEditingPost(null); setAdminEditingNickname(false); }}
                 style={{ flex: 1, padding: '1rem', background: '#333', color: 'white', border: 'none', borderRadius: '12px', cursor: 'pointer' }}
               >
                 Cancel
