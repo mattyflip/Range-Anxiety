@@ -1104,14 +1104,17 @@ function MapHome() {
   };
 
   const downloadShareCard = async () => {
-    if (!shareCardRef.current || !metrics) return;
+    if (!shareCardRef.current || !metrics || !mapSnapshot) {
+      alert("Map data is still loading. Please wait a moment.");
+      return;
+    }
     try {
       setIsLoading(true);
       const el = shareCardRef.current;
       el.style.opacity = '1';
       
-      // Wait for rendering
-      await new Promise(resolve => setTimeout(resolve, 800));
+      // Wait longer for rendering and image decoding
+      await new Promise(resolve => setTimeout(resolve, 1500));
 
       const dataUrl = await toPng(el, { 
         cacheBust: true,
@@ -1908,63 +1911,68 @@ function MapHome() {
                 </div>
               </div>
 
-              {/* Route Map Snapshot */}
+              {/* Route Map Snapshot - MAIN FOCUS */}
               {mapSnapshot && (
-                <div style={{ width: '100%', height: '200px', borderRadius: '20px', overflow: 'hidden', border: '1px solid #333', position: 'relative', zIndex: 2 }}>
-                  <img src={mapSnapshot} alt="Route Snapshot" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <div style={{ flex: 1, width: '100%', borderRadius: '24px', overflow: 'hidden', border: '1px solid rgba(255,102,0,0.4)', position: 'relative', zIndex: 2, boxShadow: '0 10px 30px rgba(0,0,0,0.5)' }}>
+                  <img 
+                    src={mapSnapshot} 
+                    alt="Route Snapshot" 
+                    crossOrigin="anonymous"
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} 
+                  />
                 </div>
               )}
 
-              {/* Central Battery Display - METALLIC FRAME */}
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', position: 'relative', margin: '1rem 0' }}>
+              {/* Central Battery Display - SMALLER COMPACT FRAME */}
+              <div style={{ height: '240px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', position: 'relative', margin: '0.5rem 0', zIndex: 2 }}>
                 {/* Metallic Bezel */}
                 <div style={{ 
                   width: '100%', 
-                  padding: '2.5rem 1rem', 
+                  padding: '1.2rem 1rem', 
                   background: 'linear-gradient(145deg, #2a2a2a 0%, #1a1a1a 100%)', 
-                  borderRadius: '30px', 
+                  borderRadius: '25px', 
                   border: '2px solid #444',
-                  boxShadow: 'inset 0 2px 10px rgba(255,255,255,0.1), 0 20px 40px rgba(0,0,0,0.5)',
+                  boxShadow: 'inset 0 2px 10px rgba(255,255,255,0.1), 0 15px 30px rgba(0,0,0,0.5)',
                   position: 'relative',
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center'
                 }}>
                   {/* Screws */}
-                  <div style={{ position: 'absolute', top: '15px', left: '15px', width: '8px', height: '8px', background: '#444', borderRadius: '50%', boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.8)' }} />
-                  <div style={{ position: 'absolute', top: '15px', right: '15px', width: '8px', height: '8px', background: '#444', borderRadius: '50%', boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.8)' }} />
-                  <div style={{ position: 'absolute', bottom: '15px', left: '15px', width: '8px', height: '8px', background: '#444', borderRadius: '50%', boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.8)' }} />
-                  <div style={{ position: 'absolute', bottom: '15px', right: '15px', width: '8px', height: '8px', background: '#444', borderRadius: '50%', boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.8)' }} />
+                  <div style={{ position: 'absolute', top: '12px', left: '12px', width: '6px', height: '6px', background: '#444', borderRadius: '50%', boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.8)' }} />
+                  <div style={{ position: 'absolute', top: '12px', right: '12px', width: '6px', height: '6px', background: '#444', borderRadius: '50%', boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.8)' }} />
+                  <div style={{ position: 'absolute', bottom: '12px', left: '12px', width: '6px', height: '6px', background: '#444', borderRadius: '50%', boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.8)' }} />
+                  <div style={{ position: 'absolute', bottom: '12px', right: '12px', width: '6px', height: '6px', background: '#444', borderRadius: '50%', boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.8)' }} />
 
                   {/* Battery Icon Header */}
-                  <div style={{ display: 'flex', gap: '3px', marginBottom: '1.5rem' }}>
+                  <div style={{ display: 'flex', gap: '3px', marginBottom: '1rem' }}>
                     {[...Array(8)].map((_, i) => (
                       <div key={i} style={{ 
-                        width: '12px', 
-                        height: '24px', 
+                        width: '10px', 
+                        height: '20px', 
                         background: i < (metrics.batteryPercentUsed / 12.5) ? '#ff6600' : '#333',
                         borderRadius: '2px',
-                        boxShadow: i < (metrics.batteryPercentUsed / 12.5) ? '0 0 10px #ff6600' : 'none'
+                        boxShadow: i < (metrics.batteryPercentUsed / 12.5) ? '0 0 8px #ff6600' : 'none'
                       }} />
                     ))}
                   </div>
 
-                  <div style={{ fontSize: '0.7rem', color: '#ff6600', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.2em', marginBottom: '0.5rem' }}>Estimated Battery Remaining</div>
+                  <div style={{ fontSize: '0.6rem', color: '#ff6600', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.2em', marginBottom: '0.4rem' }}>Estimated Battery Remaining</div>
                   
                   {/* Glowing Screen */}
                   <div style={{ 
-                    background: 'radial-gradient(circle at center, rgba(255,102,0,0.15) 0%, rgba(0,0,0,0.4) 100%)',
-                    width: '85%',
-                    padding: '2rem 1rem',
-                    borderRadius: '15px',
-                    border: '1px solid rgba(255,102,0,0.4)',
+                    background: 'radial-gradient(circle at center, rgba(255,102,0,0.1) 0%, rgba(0,0,0,0.4) 100%)',
+                    width: '90%',
+                    padding: '1rem 0.5rem',
+                    borderRadius: '12px',
+                    border: '1px solid rgba(255,102,0,0.3)',
                     textAlign: 'center',
-                    boxShadow: 'inset 0 0 30px rgba(255,102,0,0.2)'
+                    boxShadow: 'inset 0 0 20px rgba(255,102,0,0.1)'
                   }}>
-                    <div style={{ fontSize: '6rem', fontWeight: 900, color: 'white', letterSpacing: '-0.05em', lineHeight: 1 }}>
+                    <div style={{ fontSize: '4.5rem', fontWeight: 900, color: 'white', letterSpacing: '-0.05em', lineHeight: 1 }}>
                       {metrics.batteryPercentUsed.toFixed(1)}%
                     </div>
-                    <div style={{ fontSize: '1.5rem', color: '#ff6600', fontWeight: 700, marginTop: '0.5rem' }}>
+                    <div style={{ fontSize: '1.2rem', color: '#ff6600', fontWeight: 700, marginTop: '0.2rem' }}>
                       {(getBatteryLevels(Number(specs.voltage)).min + (metrics.batteryPercentUsed / 100) * (getBatteryLevels(Number(specs.voltage)).max - getBatteryLevels(Number(specs.voltage)).min)).toFixed(1)}V
                     </div>
                   </div>
@@ -2102,60 +2110,68 @@ function MapHome() {
                 </div>
               </div>
 
-              {/* Route Map Snapshot */}
+              {/* Route Map Snapshot - MAIN FOCUS */}
               {mapSnapshot && (
-                <div style={{ width: '100%', height: '200px', borderRadius: '20px', overflow: 'hidden', border: '1px solid #333', position: 'relative', zIndex: 2 }}>
-                  <img src={mapSnapshot} alt="Route Snapshot" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <div style={{ flex: 1, width: '100%', borderRadius: '24px', overflow: 'hidden', border: '1px solid rgba(255,102,0,0.4)', position: 'relative', zIndex: 2, boxShadow: '0 10px 30px rgba(0,0,0,0.5)' }}>
+                  <img 
+                    src={mapSnapshot} 
+                    alt="Route Snapshot" 
+                    crossOrigin="anonymous"
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} 
+                  />
                 </div>
               )}
 
-              {/* Central Battery Display - METALLIC FRAME */}
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', position: 'relative', margin: '1rem 0' }}>
+              {/* Central Battery Display - SMALLER COMPACT FRAME */}
+              <div style={{ height: '240px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', position: 'relative', margin: '0.5rem 0', zIndex: 2 }}>
+                {/* Metallic Bezel */}
                 <div style={{ 
                   width: '100%', 
-                  padding: '2.5rem 1rem', 
+                  padding: '1.2rem 1rem', 
                   background: 'linear-gradient(145deg, #2a2a2a 0%, #1a1a1a 100%)', 
-                  borderRadius: '30px', 
+                  borderRadius: '25px', 
                   border: '2px solid #444',
-                  boxShadow: 'inset 0 2px 10px rgba(255,255,255,0.1), 0 20px 40px rgba(0,0,0,0.5)',
+                  boxShadow: 'inset 0 2px 10px rgba(255,255,255,0.1), 0 15px 30px rgba(0,0,0,0.5)',
                   position: 'relative',
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center'
                 }}>
                   {/* Screws */}
-                  <div style={{ position: 'absolute', top: '15px', left: '15px', width: '8px', height: '8px', background: '#444', borderRadius: '50%' }} />
-                  <div style={{ position: 'absolute', top: '15px', right: '15px', width: '8px', height: '8px', background: '#444', borderRadius: '50%' }} />
-                  <div style={{ position: 'absolute', bottom: '15px', left: '15px', width: '8px', height: '8px', background: '#444', borderRadius: '50%' }} />
-                  <div style={{ position: 'absolute', bottom: '15px', right: '15px', width: '8px', height: '8px', background: '#444', borderRadius: '50%' }} />
+                  <div style={{ position: 'absolute', top: '12px', left: '12px', width: '6px', height: '6px', background: '#444', borderRadius: '50%', boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.8)' }} />
+                  <div style={{ position: 'absolute', top: '12px', right: '12px', width: '6px', height: '6px', background: '#444', borderRadius: '50%', boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.8)' }} />
+                  <div style={{ position: 'absolute', bottom: '12px', left: '12px', width: '6px', height: '6px', background: '#444', borderRadius: '50%', boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.8)' }} />
+                  <div style={{ position: 'absolute', bottom: '12px', right: '12px', width: '6px', height: '6px', background: '#444', borderRadius: '50%', boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.8)' }} />
 
-                  {/* Battery Segments */}
-                  <div style={{ display: 'flex', gap: '3px', marginBottom: '1.5rem' }}>
+                  {/* Battery Icon Header */}
+                  <div style={{ display: 'flex', gap: '3px', marginBottom: '1rem' }}>
                     {[...Array(8)].map((_, i) => (
                       <div key={i} style={{ 
-                        width: '12px', 
-                        height: '24px', 
+                        width: '10px', 
+                        height: '20px', 
                         background: i < (metrics.batteryPercentUsed / 12.5) ? '#ff6600' : '#333',
                         borderRadius: '2px',
-                        boxShadow: i < (metrics.batteryPercentUsed / 12.5) ? '0 0 10px #ff6600' : 'none'
+                        boxShadow: i < (metrics.batteryPercentUsed / 12.5) ? '0 0 8px #ff6600' : 'none'
                       }} />
                     ))}
                   </div>
 
-                  <div style={{ fontSize: '0.7rem', color: '#ff6600', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.2em', marginBottom: '0.5rem' }}>Estimated Battery Remaining</div>
+                  <div style={{ fontSize: '0.6rem', color: '#ff6600', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.2em', marginBottom: '0.4rem' }}>Estimated Battery Remaining</div>
                   
+                  {/* Glowing Screen */}
                   <div style={{ 
-                    background: 'radial-gradient(circle at center, rgba(255,102,0,0.15) 0%, rgba(0,0,0,0.4) 100%)',
-                    width: '85%',
-                    padding: '2rem 1rem',
-                    borderRadius: '15px',
-                    border: '1px solid rgba(255,102,0,0.4)',
-                    textAlign: 'center'
+                    background: 'radial-gradient(circle at center, rgba(255,102,0,0.1) 0%, rgba(0,0,0,0.4) 100%)',
+                    width: '90%',
+                    padding: '1rem 0.5rem',
+                    borderRadius: '12px',
+                    border: '1px solid rgba(255,102,0,0.3)',
+                    textAlign: 'center',
+                    boxShadow: 'inset 0 0 20px rgba(255,102,0,0.1)'
                   }}>
-                    <div style={{ fontSize: '6rem', fontWeight: 900, color: 'white', letterSpacing: '-0.05em', lineHeight: 1 }}>
+                    <div style={{ fontSize: '4.5rem', fontWeight: 900, color: 'white', letterSpacing: '-0.05em', lineHeight: 1 }}>
                       {metrics.batteryPercentUsed.toFixed(1)}%
                     </div>
-                    <div style={{ fontSize: '1.5rem', color: '#ff6600', fontWeight: 700, marginTop: '0.5rem' }}>
+                    <div style={{ fontSize: '1.2rem', color: '#ff6600', fontWeight: 700, marginTop: '0.2rem' }}>
                       {(getBatteryLevels(Number(specs.voltage)).min + (metrics.batteryPercentUsed / 100) * (getBatteryLevels(Number(specs.voltage)).max - getBatteryLevels(Number(specs.voltage)).min)).toFixed(1)}V
                     </div>
                   </div>
