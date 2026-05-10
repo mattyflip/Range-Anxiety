@@ -132,13 +132,33 @@ const UniversalSearch: React.FC = () => {
               {results.posts.map(p => (
                 <div 
                   key={p.id} 
-                  onClick={() => { navigate(`/feed?post=${p.id}`); setShowResults(false); setSearchQuery(''); }}
-                  style={{ padding: '0.5rem', cursor: 'pointer', borderRadius: '8px' }}
+                  style={{ padding: '0.5rem', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                  className="search-result-item"
                   onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,102,0,0.1)'}
                   onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                 >
-                  <div style={{ color: 'white', fontSize: '0.85rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.caption}</div>
-                  <div style={{ fontSize: '0.7rem', color: '#666' }}>by {p.authorUsername}</div>
+                  <div 
+                    onClick={() => { navigate(`/feed?post=${p.id}`); setShowResults(false); setSearchQuery(''); }}
+                    style={{ cursor: 'pointer', flex: 1, minWidth: 0 }}
+                  >
+                    <div style={{ color: 'white', fontSize: '0.85rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.caption}</div>
+                    <div style={{ fontSize: '0.7rem', color: '#666' }}>by {p.authorUsername}</div>
+                  </div>
+                  {p.tripData && (
+                    <button 
+                      onClick={(e) => { 
+                        e.stopPropagation(); 
+                        localStorage.setItem('ebike_load_route', JSON.stringify(p.tripData)); 
+                        navigate('/'); 
+                        setShowResults(false); 
+                        setSearchQuery(''); 
+                      }}
+                      style={{ background: 'rgba(255,102,0,0.2)', border: '1px solid #ff6600', color: '#ff6600', padding: '2px 8px', borderRadius: '4px', fontSize: '0.6rem', fontWeight: 'bold', cursor: 'pointer' }}
+                      title="Load this route directly to map"
+                    >
+                      📍 LOAD
+                    </button>
+                  )}
                 </div>
               ))}
             </div>

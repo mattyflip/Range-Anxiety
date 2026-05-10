@@ -267,6 +267,7 @@ function MapHome() {
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   const [authInitialized, setAuthInitialized] = useState(false);
   const [mapSnapshot, setMapSnapshot] = useState<string | null>(null);
+  const [pendingBikeAutoSelect, setPendingBikeAutoSelect] = useState(false);
 
   // Group Rides State
   const [activeRide, setActiveRide] = useState<GroupRide | null>(null);
@@ -521,6 +522,11 @@ function MapHome() {
         setIsRoundTrip(data.isRoundTrip || false);
         setIsCustomReturn(data.isCustomReturn || false);
         
+        // Open Trip Settings automatically
+        setShowMobileMenu(true);
+        // Flag for bike auto-selection
+        setPendingBikeAutoSelect(true);
+
         // Remove from storage so it doesn't reload on every refresh
         localStorage.removeItem('ebike_load_route');
         
@@ -535,6 +541,24 @@ function MapHome() {
       }
     }
   }, []);
+
+  // Intelligent Bike Auto-Selection after Loading Route
+  useEffect(() => {
+    if (pendingBikeAutoSelect && authInitialized) {
+      if (savedBikes.length > 0) {
+        // Automatically load the first bike from their garage
+        loadBike(savedBikes[0]);
+        setPendingBikeAutoSelect(false);
+        // Trigger calculation with the new bike specs
+        setTimeout(() => {
+          handleCalculate();
+        }, 500);
+      } else if (authInitialized) {
+        // If they have no bikes or aren't logged in, just clear the flag
+        setPendingBikeAutoSelect(false);
+      }
+    }
+  }, [pendingBikeAutoSelect, savedBikes, authInitialized, user]);
 
   // Generate Map Snapshot for Share Card
   useEffect(() => {
