@@ -64,7 +64,7 @@ const About: React.FC = () => {
                 <li>Sur-Ron Light Bee X / Ultra Bee / Storm Bee</li>
                 <li>Talaria Sting R / MX5 Pro / XXX / Dragon</li>
                 <li>Onyx RCR / CTY2</li>
-                <li>Stark Varg / E Ride Pro SS</li>
+                <li>Stark Varg / E Ride Pro SS</li> and more!
               </ul>
             </div>
             <div>
@@ -73,7 +73,7 @@ const About: React.FC = () => {
                 <li>Specialized Turbo Levo / Vado / Creo</li>
                 <li>Trek Fuel EXe / Rail / Allant+</li>
                 <li>Aventon Aventure / Level / Soltera</li>
-                <li>Rad Power Radster / RadWagon / RadRunner</li>
+                <li>Rad Power Radster / RadWagon / RadRunner</li> and many more!
               </ul>
             </div>
           </div>
