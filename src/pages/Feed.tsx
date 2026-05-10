@@ -26,6 +26,7 @@ interface Post {
 
 const Feed: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleLoadRoute = (post: Post) => {
     if (!post.tripData) return;
