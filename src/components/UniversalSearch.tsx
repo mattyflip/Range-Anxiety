@@ -45,14 +45,18 @@ const UniversalSearch: React.FC = () => {
       snapOrig.docs.forEach(doc => usersMap.set(doc.id, { id: doc.id, ...doc.data() }))
       const foundUsers = Array.from(usersMap.values()).slice(0, 5)
 
-      // Search Posts by caption
+      // Search Posts by caption, city, or homeRegion
       const postsRef = collection(db, "posts")
-      const postQuery = query(postsRef, limit(20))
+      const postQuery = query(postsRef, limit(30))
       const postSnap = await getDocs(postQuery)
       const foundPosts = postSnap.docs
         .map(doc => ({ id: doc.id, ...doc.data() }))
-        .filter((p: any) => p.caption?.toLowerCase().includes(lowerSearch))
-        .slice(0, 5)
+        .filter((p: any) => 
+          p.caption?.toLowerCase().includes(lowerSearch) ||
+          p.city?.toLowerCase().includes(lowerSearch) ||
+          p.homeRegion?.toLowerCase().includes(lowerSearch)
+        )
+        .slice(0, 8)
 
       setResults({ users: foundUsers, posts: foundPosts })
     } catch (e) {

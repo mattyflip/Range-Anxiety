@@ -21,7 +21,16 @@ interface Post {
   likes: string[];
   commentsEnabled?: boolean;
   createdAt: any;
+  tripData?: any;
 }
+
+// ... (skipping to the map part)
+
+  const handleLoadRoute = (post: Post) => {
+    if (!post.tripData) return;
+    localStorage.setItem('ebike_load_route', JSON.stringify(post.tripData));
+    navigate('/');
+  };
 
 const Feed: React.FC = () => {
   const navigate = useNavigate();
@@ -400,6 +409,27 @@ const Feed: React.FC = () => {
                           💬
                         </button>
                       </div>
+                    )}
+
+                    {post.tripData && (
+                      <button 
+                        onClick={() => handleLoadRoute(post)}
+                        style={{ 
+                          background: 'rgba(255,102,0,0.1)', 
+                          border: '1px solid #ff6600', 
+                          color: '#ff6600', 
+                          padding: '0.4rem 0.8rem', 
+                          borderRadius: '8px', 
+                          fontSize: '0.75rem', 
+                          fontWeight: 'bold', 
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.4rem'
+                        }}
+                      >
+                        📍 Load Route
+                      </button>
                     )}
 
                     {isAdmin && (

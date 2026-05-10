@@ -21,6 +21,7 @@ interface Post {
   likes: string[];
   commentsEnabled?: boolean;
   createdAt: any;
+  tripData?: any;
 }
 
 interface Review {
@@ -515,6 +516,12 @@ const Profile: React.FC = () => {
     navigate('/');
   };
 
+  const handleLoadRoute = (post: Post) => {
+    if (!post.tripData) return;
+    localStorage.setItem('ebike_load_route', JSON.stringify(post.tripData));
+    navigate('/');
+  };
+
   if (loading) return <div style={{ color: 'white', padding: '2rem', textAlign: 'center' }}>Loading profile...</div>;
 
   const isOwner = user && profileData && user.uid === profileData.id;
@@ -967,6 +974,14 @@ const Profile: React.FC = () => {
                 </p>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginTop: '1rem' }}>
                    <span style={{ color: '#ff6600', fontWeight: 'bold' }}>🧡 {selectedFullPost.likes.length} Likes</span>
+                   {selectedFullPost.tripData && (
+                     <button 
+                       onClick={() => handleLoadRoute(selectedFullPost)}
+                       style={{ background: 'rgba(255,102,0,0.1)', border: '1px solid #ff6600', color: '#ff6600', padding: '0.5rem 1rem', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+                     >
+                       📍 Load Route
+                     </button>
+                   )}
                    {(selectedFullPost.commentsEnabled !== false) && (
                      <button onClick={() => { setActiveCommentPost(selectedFullPost); setSelectedFullPost(null); }} style={{ background: '#333', border: 'none', color: 'white', padding: '0.5rem 1rem', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>View Comments</button>
                    )}

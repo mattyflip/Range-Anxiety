@@ -505,6 +505,36 @@ function MapHome() {
     }
   }, [userData?.homeRegion]);
 
+  // Load Route from External Source (Community Feed)
+  useEffect(() => {
+    const savedRoute = localStorage.getItem('ebike_load_route');
+    if (savedRoute) {
+      try {
+        const data = JSON.parse(savedRoute);
+        setTrip({
+          origin: data.origin || "",
+          destination: data.destination || "",
+          waypoints: data.waypoints || [],
+          returnWaypoints: data.returnWaypoints || []
+        });
+        setIsRoundTrip(data.isRoundTrip || false);
+        setIsCustomReturn(data.isCustomReturn || false);
+        
+        // Remove from storage so it doesn't reload on every refresh
+        localStorage.removeItem('ebike_load_route');
+        
+        // Trigger calculation if origin and destination are present
+        if (data.origin && data.destination) {
+          setTimeout(() => {
+            handleCalculate();
+          }, 1000);
+        }
+      } catch (e) {
+        console.error("Failed to load external route", e);
+      }
+    }
+  }, []);
+
   const updateUsername = async (newVal: string) => {
     if (!newVal.trim()) return;
     
@@ -1071,7 +1101,19 @@ function MapHome() {
         caption: `Rode from ${trip.origin || 'Current Location'} to ${trip.destination}. ${metrics.distanceMiles.toFixed(1)} miles with ${metrics.batteryPercentUsed.toFixed(1)}% battery remaining!`,
         likes: [],
         commentsEnabled: commentsEnabled,
-        createdAt: serverTimestamp()
+        createdAt: serverTimestamp(),
+        // Location Metadata for Search
+        city: userData.city || "",
+        homeRegion: userData.homeRegion || "",
+        // Raw Trip Data for "Load Route" functionality
+        tripData: {
+          origin: trip.origin,
+          destination: trip.destination,
+          waypoints: trip.waypoints,
+          returnWaypoints: trip.returnWaypoints,
+          isRoundTrip,
+          isCustomReturn
+        }
       });
 
       alert("Successfully posted to the community feed!");
