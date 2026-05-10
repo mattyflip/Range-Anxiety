@@ -13,6 +13,7 @@ import TermsOfService from '../components/TermsOfService'
 import InstallTutorial from '../components/InstallTutorial'
 import NavBar from '../components/NavBar'
 import AuthModal from '../components/AuthModal'
+import WelcomeModal from '../components/WelcomeModal'
 
 const LIBRARIES: ("places" | "geometry")[] = ["places", "geometry"];
 
@@ -262,6 +263,8 @@ function MapHome() {
   const [showToSPage, setShowToSPage] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [showInstallTutorial, setShowInstallTutorial] = useState(false);
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false);
+  const [authInitialized, setAuthInitialized] = useState(false);
 
   // Group Rides State
   const [activeRide, setActiveRide] = useState<GroupRide | null>(null);
@@ -426,6 +429,7 @@ function MapHome() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
+      setAuthInitialized(true);
       if (currentUser) {
         try {
           const userDoc = await getDoc(doc(db, "users", currentUser.uid));
@@ -474,6 +478,20 @@ function MapHome() {
     });
     return () => unsubscribe();
   }, []);
+
+  // Onboarding Popup Logic
+  useEffect(() => {
+    if (authInitialized) {
+      const hasVisited = localStorage.getItem('ebike_portal_visited');
+      if (!hasVisited && !user) {
+        setShowWelcomeModal(true);
+      }
+      // Mark as visited if they are logged in OR have the flag
+      if (user || hasVisited) {
+        localStorage.setItem('ebike_portal_visited', 'true');
+      }
+    }
+  }, [authInitialized, user]);
 
   const updateUsername = async (newVal: string) => {
     if (!newVal.trim()) return;
@@ -2081,6 +2099,8 @@ function MapHome() {
       {showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} />}
 
       {showToSPage && <TermsOfService onClose={() => setShowToSPage(false)} />}
+
+      {showWelcomeModal && <WelcomeModal onClose={() => setShowWelcomeModal(false)} />}
     </div>
   )
 }
