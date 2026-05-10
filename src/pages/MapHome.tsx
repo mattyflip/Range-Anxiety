@@ -1898,8 +1898,11 @@ function MapHome() {
               </div>
 
               {/* Route Summary Text */}
-              <div style={{ fontSize: '0.8rem', color: '#ccc', textAlign: 'center', marginBottom: '0.8rem', fontStyle: 'italic', zIndex: 2, fontWeight: 500 }}>
-                {trip.origin || "Current Location"} ➔ {trip.destination}
+              <div style={{ fontSize: '1rem', color: 'white', textAlign: 'center', marginBottom: '0.8rem', zIndex: 2, fontWeight: 600 }}>
+                {trip.origin || "Current Location"} <span style={{ color: '#ff6600' }}>➔</span> {trip.destination}
+                <div style={{ fontSize: '0.65rem', color: '#ff6600', textTransform: 'uppercase', letterSpacing: '0.1em', marginTop: '0.2rem' }}>
+                  {isRoundTrip ? '🔄 Round Trip' : '➔ One Way'}
+                </div>
               </div>
 
               {/* Footer */}
@@ -2037,8 +2040,11 @@ function MapHome() {
               </div>
 
               {/* Route Summary Text */}
-              <div style={{ fontSize: '0.8rem', color: '#ccc', textAlign: 'center', marginBottom: '0.8rem', fontStyle: 'italic', zIndex: 2, fontWeight: 500 }}>
-                {trip.origin || "Current Location"} ➔ {trip.destination}
+              <div style={{ fontSize: '1rem', color: 'white', textAlign: 'center', marginBottom: '0.8rem', zIndex: 2, fontWeight: 600 }}>
+                {trip.origin || "Current Location"} <span style={{ color: '#ff6600' }}>➔</span> {trip.destination}
+                <div style={{ fontSize: '0.65rem', color: '#ff6600', textTransform: 'uppercase', letterSpacing: '0.1em', marginTop: '0.2rem' }}>
+                  {isRoundTrip ? '🔄 Round Trip' : '➔ One Way'}
+                </div>
               </div>
 
               {/* Footer */}
