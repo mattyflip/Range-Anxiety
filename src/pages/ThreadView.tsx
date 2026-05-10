@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { db, auth } from '../firebase'
-import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, getDoc, doc, updateDoc, increment, deleteDoc } from 'firebase/firestore'
+import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, getDoc, doc, updateDoc, increment, deleteDoc, arrayUnion, arrayRemove } from 'firebase/firestore'
 import { useParams, Link } from 'react-router-dom'
 import NavBar from '../components/NavBar'
 import InstallTutorial from '../components/InstallTutorial'
@@ -123,15 +123,64 @@ const ThreadView: React.FC = () => {
   };
 
   const handleVote = async (incrementVal: number) => {
-    if (!user || !communityId || !threadId) {
+    if (!user || !communityId || !threadId || !thread) {
       setShowAuthModal(true);
       return;
     }
+
+    const upvotedBy = thread.upvotedBy || [];
+    const downvotedBy = thread.downvotedBy || [];
+    const userId = user.uid;
+
+    const hasUpvoted = upvotedBy.includes(userId);
+    const hasDownvoted = downvotedBy.includes(userId);
+
     const threadRef = doc(db, `communities/${communityId}/threads`, threadId);
+    
     try {
-      await updateDoc(threadRef, {
-        score: increment(incrementVal)
-      });
+      if (incrementVal === 1) {
+        if (hasUpvoted) {
+          // Remove upvote
+          await updateDoc(threadRef, {
+            score: increment(-1),
+            upvotedBy: arrayRemove(userId)
+          });
+        } else if (hasDownvoted) {
+          // Switch from downvote to upvote
+          await updateDoc(threadRef, {
+            score: increment(2),
+            downvotedBy: arrayRemove(userId),
+            upvotedBy: arrayUnion(userId)
+          });
+        } else {
+          // New upvote
+          await updateDoc(threadRef, {
+            score: increment(1),
+            upvotedBy: arrayUnion(userId)
+          });
+        }
+      } else {
+        if (hasDownvoted) {
+          // Remove downvote
+          await updateDoc(threadRef, {
+            score: increment(1),
+            downvotedBy: arrayRemove(userId)
+          });
+        } else if (hasUpvoted) {
+          // Switch from upvote to downvote
+          await updateDoc(threadRef, {
+            score: increment(-2),
+            upvotedBy: arrayRemove(userId),
+            downvotedBy: arrayUnion(userId)
+          });
+        } else {
+          // New downvote
+          await updateDoc(threadRef, {
+            score: increment(-1),
+            downvotedBy: arrayUnion(userId)
+          });
+        }
+      }
     } catch (e) {
       console.error("Vote failed", e);
     }
@@ -211,9 +260,15 @@ const ThreadView: React.FC = () => {
         {thread && (
           <article style={{ background: '#1a1a1a', borderRadius: '24px', border: '1px solid #333', padding: '2rem', marginBottom: '2rem', display: 'flex', gap: '2rem' }}>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', background: '#121212', padding: '1rem', borderRadius: '12px', alignSelf: 'flex-start' }}>
-               <button onClick={() => handleVote(1)} style={{ background: 'none', border: 'none', color: '#666', cursor: 'pointer', fontSize: '1.5rem' }}>▲</button>
+               <button 
+                 onClick={() => handleVote(1)} 
+                 style={{ background: 'none', border: 'none', color: thread.upvotedBy?.includes(user?.uid) ? '#ff6600' : '#666', cursor: 'pointer', fontSize: '1.5rem' }}
+               >▲</button>
                <span style={{ color: 'white', fontWeight: 'bold', fontSize: '1.1rem' }}>{thread.score}</span>
-               <button onClick={() => handleVote(-1)} style={{ background: 'none', border: 'none', color: '#666', cursor: 'pointer', fontSize: '1.5rem' }}>▼</button>
+               <button 
+                 onClick={() => handleVote(-1)} 
+                 style={{ background: 'none', border: 'none', color: thread.downvotedBy?.includes(user?.uid) ? '#3b82f6' : '#666', cursor: 'pointer', fontSize: '1.5rem' }}
+               >▼</button>
             </div>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: '0.7rem', color: '#444', textTransform: 'uppercase', fontWeight: 'bold', marginBottom: '1rem' }}>

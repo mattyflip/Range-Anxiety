@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { db, auth } from '../firebase'
-import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, getDoc, doc, updateDoc, increment, deleteDoc } from 'firebase/firestore'
+import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, getDoc, doc, updateDoc, increment, deleteDoc, arrayUnion, arrayRemove } from 'firebase/firestore'
 import { useParams, Link } from 'react-router-dom'
 import NavBar from '../components/NavBar'
 import InstallTutorial from '../components/InstallTutorial'
@@ -15,6 +15,8 @@ interface Thread {
   score: number;
   commentCount: number;
   createdAt: any;
+  upvotedBy?: string[];
+  downvotedBy?: string[];
 }
 
 const CommunityView: React.FC = () => {
@@ -107,7 +109,9 @@ const CommunityView: React.FC = () => {
         body: newBody,
         score: 1,
         commentCount: 0,
-        createdAt: serverTimestamp()
+        createdAt: serverTimestamp(),
+        upvotedBy: [user.uid],
+        downvotedBy: []
       });
 
       setNewTitle('');
@@ -123,11 +127,63 @@ const CommunityView: React.FC = () => {
       setShowAuthModal(true);
       return;
     }
+
+    const thread = threads.find(t => t.id === threadId);
+    if (!thread) return;
+
+    const upvotedBy = thread.upvotedBy || [];
+    const downvotedBy = thread.downvotedBy || [];
+    const userId = user.uid;
+
+    const hasUpvoted = upvotedBy.includes(userId);
+    const hasDownvoted = downvotedBy.includes(userId);
+
     const threadRef = doc(db, `communities/${communityId}/threads`, threadId);
+    
     try {
-      await updateDoc(threadRef, {
-        score: increment(incrementVal)
-      });
+      if (incrementVal === 1) {
+        if (hasUpvoted) {
+          // Remove upvote
+          await updateDoc(threadRef, {
+            score: increment(-1),
+            upvotedBy: arrayRemove(userId)
+          });
+        } else if (hasDownvoted) {
+          // Switch from downvote to upvote
+          await updateDoc(threadRef, {
+            score: increment(2),
+            downvotedBy: arrayRemove(userId),
+            upvotedBy: arrayUnion(userId)
+          });
+        } else {
+          // New upvote
+          await updateDoc(threadRef, {
+            score: increment(1),
+            upvotedBy: arrayUnion(userId)
+          });
+        }
+      } else {
+        if (hasDownvoted) {
+          // Remove downvote
+          await updateDoc(threadRef, {
+            score: increment(1),
+            downvotedBy: arrayRemove(userId)
+          });
+        } else if (hasUpvoted) {
+          // Switch from upvote to downvote
+          await updateDoc(threadRef, {
+            score: increment(-2),
+            upvotedBy: arrayRemove(userId),
+            downvotedBy: arrayUnion(userId)
+          });
+        } else {
+          // New downvote
+          await updateDoc(threadRef, {
+            score: increment(-1),
+            downvotedBy: arrayUnion(userId)
+          });
+        }
+      }
     } catch (e) {
       console.error("Vote failed", e);
     }
@@ -170,9 +226,15 @@ const CommunityView: React.FC = () => {
             threads.map(thread => (
               <div key={thread.id} style={{ background: '#1a1a1a', borderRadius: '20px', border: '1px solid #333', display: 'flex', overflow: 'hidden' }}>
                 <div style={{ background: '#121212', width: '50px', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '1rem 0', gap: '0.5rem' }}>
-                   <button onClick={() => handleVote(thread.id, 1)} style={{ background: 'none', border: 'none', color: '#666', cursor: 'pointer', fontSize: '1.2rem' }}>▲</button>
+                   <button 
+                     onClick={() => handleVote(thread.id, 1)} 
+                     style={{ background: 'none', border: 'none', color: thread.upvotedBy?.includes(user?.uid) ? '#ff6600' : '#666', cursor: 'pointer', fontSize: '1.2rem' }}
+                   >▲</button>
                    <span style={{ color: 'white', fontWeight: 'bold', fontSize: '0.9rem' }}>{thread.score}</span>
-                   <button onClick={() => handleVote(thread.id, -1)} style={{ background: 'none', border: 'none', color: '#666', cursor: 'pointer', fontSize: '1.2rem' }}>▼</button>
+                   <button 
+                     onClick={() => handleVote(thread.id, -1)} 
+                     style={{ background: 'none', border: 'none', color: thread.downvotedBy?.includes(user?.uid) ? '#3b82f6' : '#666', cursor: 'pointer', fontSize: '1.2rem' }}
+                   >▼</button>
                 </div>
                 <Link to={`/forum/c/${communityId}/t/${thread.id}`} style={{ flex: 1, padding: '1.5rem', textDecoration: 'none' }}>
                   <div style={{ fontSize: '0.7rem', color: '#444', textTransform: 'uppercase', fontWeight: 'bold', marginBottom: '0.5rem' }}>
