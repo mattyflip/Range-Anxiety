@@ -2093,46 +2093,59 @@ function MapHome() {
         </div>
       </div>
       {/* Floating UI Controls (Persistent) */}
-      <div className="persistent-controls" style={{ position: 'fixed', bottom: '3rem', right: '2rem', zIndex: 20002, display: 'flex', flexDirection: 'column', gap: '1.2rem', alignItems: 'center' }}>
+      <div className="persistent-controls" style={{ 
+        position: 'fixed', 
+        bottom: '2rem', 
+        left: '50%',
+        transform: 'translateX(-50%)',
+        zIndex: 20002, 
+        display: 'flex', 
+        flexDirection: 'row', 
+        gap: '1rem', 
+        alignItems: 'center',
+        background: 'rgba(20,20,20,0.8)',
+        padding: '0.8rem 1.5rem',
+        borderRadius: '40px',
+        backdropFilter: 'blur(10px)',
+        border: '1px solid rgba(255,255,255,0.1)',
+        boxShadow: '0 10px 40px rgba(0,0,0,0.8)'
+      }}>
           <button 
             className="mobile-toggle-btn-floating"
             onClick={() => setShowMobileMenu(!showMobileMenu)}
             style={{
-              padding: '1rem 1.5rem',
-              borderRadius: '30px',
+              padding: '0.8rem 1.2rem',
+              borderRadius: '25px',
               backgroundColor: '#ff6600',
               color: 'white',
               border: 'none',
-              boxShadow: '0 10px 30px rgba(255,102,0,0.5)',
               cursor: 'pointer',
               fontWeight: 800,
-              fontSize: '0.85rem',
+              fontSize: '0.75rem',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               whiteSpace: 'nowrap',
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em'
+              textTransform: 'uppercase'
             }}
           >
-            {showMobileMenu ? '✕ Close' : (metrics ? '📊 Trip Stats' : '⚙️ Trip Settings')}
+            {showMobileMenu ? '✕ Close' : (metrics ? '📊 Stats' : '⚙️ Settings')}
           </button>
 
           <button 
             onClick={recenterMap}
             style={{
-              width: '55px',
-              height: '55px',
+              width: '45px',
+              height: '45px',
               borderRadius: '50%',
-              backgroundColor: '#ff6600',
+              backgroundColor: '#333',
               color: 'white',
-              border: 'none',
-              boxShadow: '0 10px 30px rgba(255,102,0,0.5)',
+              border: '1px solid #444',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontSize: '1.8rem'
+              fontSize: '1.4rem'
             }}
             title="Recenter Map"
           >
