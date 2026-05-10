@@ -28,15 +28,16 @@ const NavBar: React.FC<NavBarProps> = ({ user, onShowInstall, onShowAuth }) => {
       </div>
 
       <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', minWidth: 0 }}>
-        <nav style={{ 
-          display: 'flex', 
-          gap: '1rem', 
-          alignItems: 'center',
-          overflowX: 'auto',
-          paddingBottom: '4px',
-          msOverflowStyle: 'none',
-          scrollbarWidth: 'none'
-        }}>
+        <nav 
+          className="nav-scroll-hint"
+          style={{ 
+            display: 'flex', 
+            gap: '1rem', 
+            alignItems: 'center',
+            overflowX: 'auto',
+            paddingBottom: '8px'
+          }}
+        >
           <Link to="/" style={{ color: '#888', textDecoration: 'none', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>Map</Link>
           <Link to="/how-it-works" style={{ color: '#888', textDecoration: 'none', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>Info</Link>
           <Link to="/feed" style={{ color: '#888', textDecoration: 'none', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>Feed</Link>
