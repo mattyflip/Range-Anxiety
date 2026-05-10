@@ -79,7 +79,7 @@ const NavBar: React.FC<NavBarProps> = ({ user, onShowInstall, onShowAuth }) => {
               boxShadow: user ? '0 4px 10px rgba(255,102,0,0.3)' : 'none'
             }}
           >
-            App
+            Get App
           </button>
         </nav>
       </div>
