@@ -1,12 +1,21 @@
 import React, { useState, useEffect } from 'react'
-import { auth } from '../firebase'
+import { auth, db } from '../firebase'
+import { getDoc, doc } from 'firebase/firestore'
 import NavBar from '../components/NavBar'
+import AdBanner from '../components/AdBanner'
 
 const About: React.FC = () => {
   const [user, setUser] = useState<any>(null);
+  const [userData, setUserData] = useState<any>(null);
 
   useEffect(() => {
-    const unsub = auth.onAuthStateChanged((u) => setUser(u));
+    const unsub = auth.onAuthStateChanged(async (u) => {
+      setUser(u);
+      if (u) {
+        const snap = await getDoc(doc(db, "users", u.uid));
+        if (snap.exists()) setUserData(snap.data());
+      }
+    });
     return () => unsub();
   }, []);
 
@@ -85,6 +94,11 @@ const About: React.FC = () => {
             When you plan a trip, we generate a high-impact <strong>Share Card</strong>. This isn't just a screenshot; it's a data-rich report that includes your route map, wind direction, elevation profile, and exact battery percentages. Shared trips are indexed by city and state, allowing the community to discover and "Load Route" popular rides in their local area.
           </p>
         </section>
+
+        {/* Strategic Ad Placement for Info Page */}
+        <div style={{ marginBottom: '4rem' }}>
+          <AdBanner isPro={userData?.isPro || false} />
+        </div>
 
         <div style={{ width: '100%', maxWidth: '500px', margin: '0 auto 4rem auto', borderRadius: '30px', overflow: 'hidden', boxShadow: '0 30px 60px rgba(0,0,0,0.6)', border: '1px solid #333' }}>
           <img 

@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react'
 import { db, auth } from '../firebase'
-import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp } from 'firebase/firestore'
+import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, getDoc, doc } from 'firebase/firestore'
 import { useNavigate, Link } from 'react-router-dom'
 import NavBar from '../components/NavBar'
 import InstallTutorial from '../components/InstallTutorial'
 import AuthModal from '../components/AuthModal'
 import UniversalSearch from '../components/UniversalSearch'
+import AdBanner from '../components/AdBanner'
 
 interface Community {
   id: string;
@@ -20,6 +21,7 @@ const ForumHub: React.FC = () => {
   const [communities, setCommunities] = useState<Community[]>([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
+  const [userData, setUserData] = useState<any>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newCommName, setNewCommName] = useState('');
   const [newCommDesc, setNewCommDesc] = useState('');
@@ -28,7 +30,13 @@ const ForumHub: React.FC = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const unsub = auth.onAuthStateChanged(u => setUser(u));
+    const unsub = auth.onAuthStateChanged(async u => {
+      setUser(u);
+      if (u) {
+        const snap = await getDoc(doc(db, "users", u.uid));
+        if (snap.exists()) setUserData(snap.data());
+      }
+    });
     return () => unsub();
   }, []);
 
@@ -97,26 +105,32 @@ const ForumHub: React.FC = () => {
             <p>Be the first to start a group for your favorite bike or region!</p>
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.5rem' }}>
-            {communities.map(comm => (
-              <Link 
-                to={`/forum/c/${comm.id}`} 
-                key={comm.id}
-                style={{ textDecoration: 'none', background: '#1a1a1a', padding: '2rem', borderRadius: '24px', border: '1px solid #333', transition: 'transform 0.2s, border-color 0.2s' }}
-                onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#ff6600'; e.currentTarget.style.transform = 'translateY(-5px)'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#333'; e.currentTarget.style.transform = 'translateY(0)'; }}
-              >
-                <div style={{ color: '#ff6600', fontWeight: 'bold', fontSize: '1.2rem', marginBottom: '0.8rem' }}>c/{comm.name}</div>
-                <p style={{ color: '#888', fontSize: '0.9rem', marginBottom: '1.5rem', lineHeight: '1.4', height: '3.2rem', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-                  {comm.description || "No description provided."}
-                </p>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ color: '#444', fontSize: '0.75rem', fontWeight: 'bold' }}>{comm.memberCount} Members</span>
-                  <span style={{ color: '#ff6600', fontSize: '0.8rem', fontWeight: 'bold' }}>Enter →</span>
-                </div>
-              </Link>
-            ))}
-          </div>
+          <>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.5rem' }}>
+              {communities.map(comm => (
+                <Link 
+                  to={`/forum/c/${comm.id}`} 
+                  key={comm.id}
+                  style={{ textDecoration: 'none', background: '#1a1a1a', padding: '2rem', borderRadius: '24px', border: '1px solid #333', transition: 'transform 0.2s, border-color 0.2s' }}
+                  onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#ff6600'; e.currentTarget.style.transform = 'translateY(-5px)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#333'; e.currentTarget.style.transform = 'translateY(0)'; }}
+                >
+                  <div style={{ color: '#ff6600', fontWeight: 'bold', fontSize: '1.2rem', marginBottom: '0.8rem' }}>c/{comm.name}</div>
+                  <p style={{ color: '#888', fontSize: '0.9rem', marginBottom: '1.5rem', lineHeight: '1.4', height: '3.2rem', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                    {comm.description || "No description provided."}
+                  </p>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ color: '#444', fontSize: '0.75rem', fontWeight: 'bold' }}>{comm.memberCount} Members</span>
+                    <span style={{ color: '#ff6600', fontSize: '0.8rem', fontWeight: 'bold' }}>Enter →</span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+            
+            <div style={{ marginTop: '4rem' }}>
+              <AdBanner isPro={userData?.isPro || false} />
+            </div>
+          </>
         )}
       </main>
 

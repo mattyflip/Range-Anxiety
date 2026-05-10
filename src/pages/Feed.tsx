@@ -10,6 +10,7 @@ import UniversalSearch from '../components/UniversalSearch'
 import Cropper from 'react-easy-crop'
 import { getCroppedImg } from '../utils/imageUtils'
 import CommentModal from '../components/CommentModal'
+import AdBanner from '../components/AdBanner'
 
 interface Post {
   id: string;
@@ -358,125 +359,132 @@ const Feed: React.FC = () => {
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-            {posts.map(post => (
-              <article key={post.id} style={{ background: '#1a1a1a', borderRadius: '24px', border: '1px solid #333', overflow: 'hidden' }}>
-                <div 
-                  style={{ padding: '1rem', display: 'flex', alignItems: 'center', gap: '0.8rem', cursor: 'pointer' }}
-                  onClick={() => navigate(`/profile/${post.authorUsername.replace(/\s+/g, '_')}`)}
-                >
-                  <div style={{ 
-                    width: '40px', 
-                    height: '40px', 
-                    borderRadius: '50%', 
-                    background: '#333', 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'center',
-                    overflow: 'hidden',
-                    border: '1px solid #333'
-                  }}>
-                    {post.authorProfilePic ? (
-                      <img src={post.authorProfilePic} alt={post.authorUsername} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    ) : '🚲'}
-                  </div>
-                  <div style={{ fontWeight: 'bold', color: 'white' }}>{post.authorUsername}</div>
-                </div>
-                
-                <div 
-                  style={{ width: '100%', aspectRatio: '1/1', overflow: 'hidden', cursor: 'pointer' }}
-                  onClick={() => setSelectedFullPost(post)}
-                >
-                  <img src={post.imageUrl} alt="Trip Report" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                </div>
-                
-                <div style={{ padding: '1.2rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', marginBottom: '1rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                      <button 
-                        onClick={() => handleLike(post)}
-                        style={{ 
-                          background: 'none', 
-                          border: 'none', 
-                          color: post.likes.includes(user?.uid) ? '#ff6600' : 'white', 
-                          fontSize: '1.5rem', 
-                          cursor: 'pointer',
-                          padding: 0
-                        }}
-                      >
-                        {post.likes.includes(user?.uid) ? '🧡' : '🤍'}
-                      </button>
-                      <span style={{ color: '#888', fontSize: '0.9rem' }}>{post.likes.length}</span>
+            {posts.map((post, index) => (
+              <React.Fragment key={post.id}>
+                <article style={{ background: '#1a1a1a', borderRadius: '24px', border: '1px solid #333', overflow: 'hidden' }}>
+                  <div 
+                    style={{ padding: '1rem', display: 'flex', alignItems: 'center', gap: '0.8rem', cursor: 'pointer' }}
+                    onClick={() => navigate(`/profile/${post.authorUsername.replace(/\s+/g, '_')}`)}
+                  >
+                    <div style={{ 
+                      width: '40px', 
+                      height: '40px', 
+                      borderRadius: '50%', 
+                      background: '#333', 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center',
+                      overflow: 'hidden',
+                      border: '1px solid #333'
+                    }}>
+                      {post.authorProfilePic ? (
+                        <img src={post.authorProfilePic} alt={post.authorUsername} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ) : '🚲'}
                     </div>
-
-                    {(post.commentsEnabled !== false) && (
+                    <div style={{ fontWeight: 'bold', color: 'white' }}>{post.authorUsername}</div>
+                  </div>
+                  
+                  <div 
+                    style={{ width: '100%', aspectRatio: '1/1', overflow: 'hidden', cursor: 'pointer' }}
+                    onClick={() => setSelectedFullPost(post)}
+                  >
+                    <img src={post.imageUrl} alt="Trip Report" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  </div>
+                  
+                  <div style={{ padding: '1.2rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', marginBottom: '1rem' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                         <button 
-                          onClick={() => setActiveCommentPost(post)}
+                          onClick={() => handleLike(post)}
                           style={{ 
                             background: 'none', 
                             border: 'none', 
-                            color: 'white', 
+                            color: post.likes.includes(user?.uid) ? '#ff6600' : 'white', 
                             fontSize: '1.5rem', 
                             cursor: 'pointer',
                             padding: 0
                           }}
                         >
-                          💬
+                          {post.likes.includes(user?.uid) ? '🧡' : '🤍'}
                         </button>
+                        <span style={{ color: '#888', fontSize: '0.9rem' }}>{post.likes.length}</span>
                       </div>
-                    )}
 
-                    {post.tripData && (
-                      <button 
-                        onClick={() => handleLoadRoute(post)}
-                        style={{ 
-                          background: 'rgba(255,102,0,0.1)', 
-                          border: '1px solid #ff6600', 
-                          color: '#ff6600', 
-                          padding: '0.4rem 0.8rem', 
-                          borderRadius: '8px', 
-                          fontSize: '0.75rem', 
-                          fontWeight: 'bold', 
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.4rem'
-                        }}
-                      >
-                        📍 Load Route
-                      </button>
-                    )}
+                      {(post.commentsEnabled !== false) && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                          <button 
+                            onClick={() => setActiveCommentPost(post)}
+                            style={{ 
+                              background: 'none', 
+                              border: 'none', 
+                              color: 'white', 
+                              fontSize: '1.5rem', 
+                              cursor: 'pointer',
+                              padding: 0
+                            }}
+                          >
+                            💬
+                          </button>
+                        </div>
+                      )}
 
-                    {isAdmin && (
-                      <div style={{ display: 'flex', gap: '1rem', marginLeft: 'auto' }}>
-                         <button 
-                           onClick={() => { setAdminEditingPost(post); setAdminEditValue(post.caption); }}
-                           style={{ background: 'none', border: 'none', color: '#ffcc00', fontSize: '1rem', cursor: 'pointer' }}
-                           title="Edit Post"
-                         >
-                           ✏️
-                         </button>
-                         <button 
-                           onClick={() => handleDeletePost(post)}
-                           style={{ background: 'none', border: 'none', color: '#ff4444', fontSize: '1rem', cursor: 'pointer' }}
-                           title="Delete Post"
-                         >
-                           🗑️
-                         </button>
-                      </div>
-                    )}
+                      {post.tripData && (
+                        <button 
+                          onClick={() => handleLoadRoute(post)}
+                          style={{ 
+                            background: 'rgba(255,102,0,0.1)', 
+                            border: '1px solid #ff6600', 
+                            color: '#ff6600', 
+                            padding: '0.4rem 0.8rem', 
+                            borderRadius: '8px', 
+                            fontSize: '0.75rem', 
+                            fontWeight: 'bold', 
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.4rem'
+                          }}
+                        >
+                          📍 Load Route
+                        </button>
+                      )}
+
+                      {isAdmin && (
+                        <div style={{ display: 'flex', gap: '1rem', marginLeft: 'auto' }}>
+                           <button 
+                             onClick={() => { setAdminEditingPost(post); setAdminEditValue(post.caption); }}
+                             style={{ background: 'none', border: 'none', color: '#ffcc00', fontSize: '1rem', cursor: 'pointer' }}
+                             title="Edit Post"
+                           >
+                             ✏️
+                           </button>
+                           <button 
+                             onClick={() => handleDeletePost(post)}
+                             style={{ background: 'none', border: 'none', color: '#ff4444', fontSize: '1rem', cursor: 'pointer' }}
+                             title="Delete Post"
+                           >
+                             🗑️
+                           </button>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <p style={{ color: '#ccc', margin: 0, fontSize: '0.95rem', lineHeight: '1.4' }}>
+                      <span style={{ fontWeight: 'bold', color: 'white', marginRight: '0.5rem' }}>{post.authorUsername}</span>
+                      {post.caption}
+                    </p>
+                    
+                    <div style={{ color: '#444', fontSize: '0.7rem', marginTop: '1rem', textTransform: 'uppercase' }}>
+                      {post.createdAt?.toDate().toLocaleDateString()}
+                    </div>
                   </div>
-                  
-                  <p style={{ color: '#ccc', margin: 0, fontSize: '0.95rem', lineHeight: '1.4' }}>
-                    <span style={{ fontWeight: 'bold', color: 'white', marginRight: '0.5rem' }}>{post.authorUsername}</span>
-                    {post.caption}
-                  </p>
-                  
-                  <div style={{ color: '#444', fontSize: '0.7rem', marginTop: '1rem', textTransform: 'uppercase' }}>
-                    {post.createdAt?.toDate().toLocaleDateString()}
-                  </div>
-                </div>
-              </article>
+                </article>
+
+                {/* Show an Ad after every 3 posts for free users */}
+                {(index + 1) % 3 === 0 && (
+                  <AdBanner isPro={userData?.isPro || false} />
+                )}
+              </React.Fragment>
             ))}
           </div>
         )}
