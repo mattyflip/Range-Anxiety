@@ -228,13 +228,15 @@ const CommunityView: React.FC = () => {
                 <div style={{ background: '#121212', width: '50px', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '1rem 0', gap: '0.5rem' }}>
                    <button 
                      onClick={() => handleVote(thread.id, 1)} 
-                     style={{ background: 'none', border: 'none', color: thread.upvotedBy?.includes(user?.uid) ? '#ff6600' : '#666', cursor: 'pointer', fontSize: '1.2rem' }}
-                   >▲</button>
+                     style={{ background: 'none', border: 'none', color: thread.upvotedBy?.includes(user?.uid) ? '#4ade80' : '#444', cursor: 'pointer', fontSize: '1.2rem', filter: thread.upvotedBy?.includes(user?.uid) ? 'none' : 'grayscale(100%)' }}
+                     title="Upvote"
+                   >🔋</button>
                    <span style={{ color: 'white', fontWeight: 'bold', fontSize: '0.9rem' }}>{thread.score}</span>
                    <button 
                      onClick={() => handleVote(thread.id, -1)} 
-                     style={{ background: 'none', border: 'none', color: thread.downvotedBy?.includes(user?.uid) ? '#3b82f6' : '#666', cursor: 'pointer', fontSize: '1.2rem' }}
-                   >▼</button>
+                     style={{ background: 'none', border: 'none', color: thread.downvotedBy?.includes(user?.uid) ? '#f87171' : '#444', cursor: 'pointer', fontSize: '1.2rem', filter: thread.downvotedBy?.includes(user?.uid) ? 'none' : 'grayscale(100%)' }}
+                     title="Downvote"
+                   >🪫</button>
                 </div>
                 <Link to={`/forum/c/${communityId}/t/${thread.id}`} style={{ flex: 1, padding: '1.5rem', textDecoration: 'none' }}>
                   <div style={{ fontSize: '0.7rem', color: '#444', textTransform: 'uppercase', fontWeight: 'bold', marginBottom: '0.5rem' }}>

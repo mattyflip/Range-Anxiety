@@ -262,13 +262,15 @@ const ThreadView: React.FC = () => {
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', background: '#121212', padding: '1rem', borderRadius: '12px', alignSelf: 'flex-start' }}>
                <button 
                  onClick={() => handleVote(1)} 
-                 style={{ background: 'none', border: 'none', color: thread.upvotedBy?.includes(user?.uid) ? '#ff6600' : '#666', cursor: 'pointer', fontSize: '1.5rem' }}
-               >▲</button>
+                 style={{ background: 'none', border: 'none', color: thread.upvotedBy?.includes(user?.uid) ? '#4ade80' : '#444', cursor: 'pointer', fontSize: '1.5rem', filter: thread.upvotedBy?.includes(user?.uid) ? 'none' : 'grayscale(100%)' }}
+                 title="Upvote"
+               >🔋</button>
                <span style={{ color: 'white', fontWeight: 'bold', fontSize: '1.1rem' }}>{thread.score}</span>
                <button 
                  onClick={() => handleVote(-1)} 
-                 style={{ background: 'none', border: 'none', color: thread.downvotedBy?.includes(user?.uid) ? '#3b82f6' : '#666', cursor: 'pointer', fontSize: '1.5rem' }}
-               >▼</button>
+                 style={{ background: 'none', border: 'none', color: thread.downvotedBy?.includes(user?.uid) ? '#f87171' : '#444', cursor: 'pointer', fontSize: '1.5rem', filter: thread.downvotedBy?.includes(user?.uid) ? 'none' : 'grayscale(100%)' }}
+                 title="Downvote"
+               >🪫</button>
             </div>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: '0.7rem', color: '#444', textTransform: 'uppercase', fontWeight: 'bold', marginBottom: '1rem' }}>
