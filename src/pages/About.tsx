@@ -14,8 +14,24 @@ const About: React.FC = () => {
     <div className="container" style={{ minHeight: '100vh', background: '#121212', color: 'white' }}>
       <NavBar user={user} onShowInstall={() => {}} />
 
-      <main style={{ maxWidth: '800px', margin: '0 auto', padding: '4rem 1rem' }}>
+      <main style={{ maxWidth: '800px', margin: '0 auto', padding: '2rem 1rem' }}>
+        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+          <button 
+            onClick={() => window.location.href = '/'}
+            style={{ padding: '0.6rem 1.5rem', background: 'rgba(255,102,0,0.1)', color: '#ff6600', border: '1px solid #ff6600', borderRadius: '30px', fontWeight: 'bold', fontSize: '0.85rem', cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.05em' }}
+          >
+            ← Go to App
+          </button>
+        </div>
+
         <header style={{ textAlign: 'center', marginBottom: '4rem' }}>
+          <div style={{ width: '100%', maxWidth: '700px', margin: '0 auto 2rem auto', borderRadius: '24px', overflow: 'hidden', boxShadow: '0 20px 50px rgba(0,0,0,0.5)', border: '1px solid #333' }}>
+            <img 
+              src="/assets/watt-son.png" 
+              alt="Watt-son's Guide to Precise Range" 
+              style={{ width: '100%', display: 'block' }} 
+            />
+          </div>
           <h1 style={{ fontSize: '3.5rem', fontWeight: 900, color: '#ff6600', marginBottom: '0.5rem', letterSpacing: '-0.02em' }}>How It Works</h1>
           <p className="desktop-only" style={{ fontSize: '1.2rem', color: '#888', maxWidth: '600px', margin: '0 auto', lineHeight: '1.5' }}>
             The science behind conquering range anxiety. Learn how our physics-based model calculates your e-bike's battery life.
