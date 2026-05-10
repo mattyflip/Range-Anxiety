@@ -1,0 +1,50 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Helper: User is signed in
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Helper: User owns the folder
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    // --- Profile Pictures ---
+    match /profile_pics/{userId}/{allPaths=**} {
+      allow read: if true; // Publicly viewable profiles
+      allow write: if isOwner(userId);
+      allow delete: if isOwner(userId);
+    }
+
+    // --- Bike Garage Photos ---
+    match /bikes/{userId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if isOwner(userId);
+      allow delete: if isOwner(userId);
+    }
+
+    // --- Community Feed Posts ---
+    match /posts/{userId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if isOwner(userId);
+      allow delete: if isOwner(userId) || request.auth.token.email == 'mattyfliptv@gmail.com';
+    }
+
+    // --- Shared Trip Snapshots ---
+    match /trips/{userId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if isOwner(userId);
+      allow delete: if isOwner(userId) || request.auth.token.email == 'mattyfliptv@gmail.com';
+    }
+
+    // --- Ad Banner Uploads (Admin Only) ---
+    match /ads/{allPaths=**} {
+      allow read: if true;
+      allow write, delete: if request.auth.token.email == 'mattyfliptv@gmail.com';
+    }
+  }
+}

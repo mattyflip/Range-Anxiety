@@ -15,40 +15,89 @@ service cloud.firestore {
 
     // --- Users Collection ---
     match /users/{userId} {
-      allow read: if isSignedIn(); // Users can see profiles (for group rides)
-      allow write: if isOwner(userId); // Only the user can edit their own profile
+      // Allow reading basic info for social features, but restrict sensitive fields
+      // NOTE: Granular field-level security can be added here if needed
+      allow read: if isSignedIn(); 
+      allow write: if isOwner(userId);
+    }
+
+    // --- Community Feed ---
+    match /posts/{postId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if isSignedIn() && (request.auth.uid == resource.data.authorId || request.auth.token.email == 'mattyfliptv@gmail.com');
+      
+      // Post Comments
+      match /comments/{commentId} {
+        allow read: if isSignedIn();
+        allow create: if isSignedIn();
+        allow update, delete: if isSignedIn() && (request.auth.uid == resource.data.authorId || request.auth.token.email == 'mattyfliptv@gmail.com');
+      }
+    }
+
+    // --- Forum Hub ---
+    match /communities/{communityId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if isSignedIn() && (request.auth.uid == resource.data.creatorId || request.auth.token.email == 'mattyfliptv@gmail.com');
+
+      // Threads within a community
+      match /threads/{threadId} {
+        allow read: if isSignedIn();
+        allow create: if isSignedIn();
+        allow update, delete: if isSignedIn() && (request.auth.uid == resource.data.authorId || request.auth.token.email == 'mattyfliptv@gmail.com');
+
+        // Comments within a thread
+        match /comments/{commentId} {
+          allow read: if isSignedIn();
+          allow create: if isSignedIn();
+          allow update, delete: if isSignedIn() && (request.auth.uid == resource.data.authorId || request.auth.token.email == 'mattyfliptv@gmail.com');
+        }
+      }
+    }
+
+    // --- Social Interactions ---
+    match /followers/{followId} {
+      // ID format is usually "followerId_followingId"
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && request.auth.uid == request.resource.data.followerId;
+      allow delete: if isSignedIn() && request.auth.uid == resource.data.followerId;
+    }
+
+    match /user_reviews/{reviewId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.auth.uid == request.resource.data.authorId;
+      allow update, delete: if isSignedIn() && (request.auth.uid == resource.data.authorId || request.auth.token.email == 'mattyfliptv@gmail.com');
     }
 
     // --- Group Rides Collection ---
     match /group_rides/{rideId} {
-      // Anyone signed in can read (to find public rides)
       allow read: if isSignedIn();
-      
-      // Only signed in users can create a ride
       allow create: if isSignedIn();
+      allow update, delete: if isSignedIn() && (request.auth.uid == resource.data.creatorId || request.auth.token.email == 'mattyfliptv@gmail.com');
       
-      // Only the creator (Host) can update or delete the ride
-      allow update, delete: if isSignedIn() && request.auth.uid == resource.data.creatorId;
-      
-      // Nested Participants
       match /participants/{participantId} {
         allow read: if isSignedIn();
-        // A user can only write their own participant data
         allow write: if isSignedIn() && request.auth.uid == participantId;
-        // The host can remove any participant
         allow delete: if isSignedIn() && (request.auth.uid == participantId || request.auth.uid == get(/databases/$(database)/documents/group_rides/$(rideId)).data.creatorId);
       }
     }
 
-    // --- Marketing Emails & Submissions ---
+    // --- System Status & Marketing ---
+    match /system/status {
+      allow read: if true;
+      allow write: if request.auth.token.email == 'mattyfliptv@gmail.com';
+    }
+
     match /marketing_emails/{docId} {
-      allow create: if true; // Allow signup
-      allow read, update, delete: if false; // Admin only (managed via console)
+      allow create: if true;
+      allow read, update, delete: if false;
     }
     
     match /bike_submissions/{docId} {
       allow create: if isSignedIn();
-      allow read, update, delete: if false; // Admin only
+      allow read, update, delete: if false;
     }
   }
 }
+
