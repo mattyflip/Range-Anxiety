@@ -1897,6 +1897,22 @@ function MapHome() {
                 </div>
               </div>
 
+              {/* ENVIRONMENTAL METRICS BAR */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem', marginBottom: '0.8rem', zIndex: 2 }}>
+                <div style={{ background: 'rgba(255,255,255,0.03)', padding: '0.5rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)', textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                  <div style={{ fontSize: '0.45rem', color: '#666', textTransform: 'uppercase', fontWeight: 800 }}>Start Battery</div>
+                  <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'white' }}>{startBattery}% • {startVoltage}V</div>
+                </div>
+                <div style={{ background: 'rgba(255,255,255,0.03)', padding: '0.5rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)', textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                  <div style={{ fontSize: '0.45rem', color: '#666', textTransform: 'uppercase', fontWeight: 800 }}>Elevation</div>
+                  <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'white' }}>+{metrics.elevationGainFeet.toFixed(0)} / -{metrics.elevationLossFeet.toFixed(0)} <span style={{fontSize: '0.4rem'}}>ft</span></div>
+                </div>
+                <div style={{ background: 'rgba(255,255,255,0.03)', padding: '0.5rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)', textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                  <div style={{ fontSize: '0.45rem', color: '#666', textTransform: 'uppercase', fontWeight: 800 }}>Wind</div>
+                  <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'white' }}>{metrics.windConditions ? `${metrics.windConditions.speed.toFixed(1)}mph ${metrics.windConditions.headwindComponent > 0 ? '🌬️' : '💨'}` : 'N/A'}</div>
+                </div>
+              </div>
+
               {/* Route Summary Text */}
               <div style={{ fontSize: '1rem', color: 'white', textAlign: 'center', marginBottom: '0.8rem', zIndex: 2, fontWeight: 600 }}>
                 {trip.origin || "Current Location"} <span style={{ color: '#ff6600' }}>➔</span> {trip.destination}
@@ -2036,6 +2052,22 @@ function MapHome() {
                 <div style={{ background: 'rgba(30,30,30,0.8)', padding: '0.8rem', borderRadius: '15px', border: '1px solid rgba(255,255,255,0.05)', textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                   <div style={{ fontSize: '0.55rem', color: '#666', textTransform: 'uppercase', fontWeight: 800, marginBottom: '0.2rem' }}>Efficiency</div>
                   <div style={{ fontSize: '1.4rem', fontWeight: 900, color: 'white' }}>{(metrics.estimatedWh / metrics.distanceMiles).toFixed(0)}<span style={{ fontSize: '0.6rem' }}>Wh/mi</span></div>
+                </div>
+              </div>
+
+              {/* ENVIRONMENTAL METRICS BAR */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem', marginBottom: '0.8rem', zIndex: 2 }}>
+                <div style={{ background: 'rgba(255,255,255,0.03)', padding: '0.5rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)', textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                  <div style={{ fontSize: '0.45rem', color: '#666', textTransform: 'uppercase', fontWeight: 800 }}>Start Battery</div>
+                  <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'white' }}>{startBattery}% • {startVoltage}V</div>
+                </div>
+                <div style={{ background: 'rgba(255,255,255,0.03)', padding: '0.5rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)', textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                  <div style={{ fontSize: '0.45rem', color: '#666', textTransform: 'uppercase', fontWeight: 800 }}>Elevation</div>
+                  <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'white' }}>+{metrics.elevationGainFeet.toFixed(0)} / -{metrics.elevationLossFeet.toFixed(0)} <span style={{fontSize: '0.4rem'}}>ft</span></div>
+                </div>
+                <div style={{ background: 'rgba(255,255,255,0.03)', padding: '0.5rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)', textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                  <div style={{ fontSize: '0.45rem', color: '#666', textTransform: 'uppercase', fontWeight: 800 }}>Wind</div>
+                  <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'white' }}>{metrics.windConditions ? `${metrics.windConditions.speed.toFixed(1)}mph ${metrics.windConditions.headwindComponent > 0 ? '🌬️' : '💨'}` : 'N/A'}</div>
                 </div>
               </div>
 
