@@ -3,7 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { db, auth, storage } from '../firebase'
 import { doc, collection, query, where, onSnapshot, updateDoc, arrayRemove, getDoc, getDocs, addDoc, serverTimestamp, deleteDoc, arrayUnion } from 'firebase/firestore'
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
-import { signOut } from 'firebase/auth'
 import NavBar from '../components/NavBar'
 import InstallTutorial from '../components/InstallTutorial'
 import AuthModal from '../components/AuthModal'
@@ -118,7 +117,6 @@ const Profile: React.FC = () => {
       if (!snap.empty) {
         const data = snap.docs[0].data();
         setProfileData({ ...data, id: snap.docs[0].id });
-        setEditBio(data.bio || '');
         
         // Check if current user is following this profile
         if (user && data.followers) {
@@ -138,7 +136,6 @@ const Profile: React.FC = () => {
           if (!origSnap.empty) {
             const data = origSnap.docs[0].data();
             setProfileData({ ...data, id: origSnap.docs[0].id });
-            setEditBio(data.bio || '');
             
             if (user && data.followers) {
               setIsFollowing(data.followers.includes(user.uid));
@@ -154,7 +151,6 @@ const Profile: React.FC = () => {
               if (uSnap.exists()) {
                 const data = uSnap.data();
                 setProfileData({ ...data, id: uSnap.id });
-                setEditBio(data.bio || '');
                 
                 if (user && data.followers) {
                   setIsFollowing(data.followers.includes(user.uid));
