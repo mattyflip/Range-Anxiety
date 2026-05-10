@@ -48,7 +48,6 @@ const Profile: React.FC = () => {
 
   const isAdmin = user?.email?.toLowerCase() === 'mattyfliptv@gmail.com';
 
-  const [editBio, setEditBio] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
 
@@ -422,14 +421,6 @@ const Profile: React.FC = () => {
     });
   };
 
-  const handleUpdateBio = async () => {
-    if (!user || !profileData || user.uid !== profileData.id) return;
-    try {
-      await updateDoc(doc(db, "users", user.uid), { bio: editBio });
-      setIsEditing(false);
-    } catch (e) { console.error("Bio update failed", e); }
-  };
-
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>, type: 'profile' | 'bike', bike?: any) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -508,11 +499,6 @@ const Profile: React.FC = () => {
         bikes: arrayRemove(bike)
       });
     } catch (e) { console.error("Bike removal failed", e); }
-  };
-
-  const handleSignOut = () => {
-    signOut(auth);
-    navigate('/');
   };
 
   const handleLoadRoute = (post: Post) => {
