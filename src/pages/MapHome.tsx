@@ -1901,7 +1901,7 @@ function MapHome() {
                 {/* Wind */}
                 <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '15px', border: '1px solid rgba(255,255,255,0.05)', padding: '0.6rem', textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                   <div style={{ fontSize: '0.5rem', color: '#666', textTransform: 'uppercase', fontWeight: 800, marginBottom: '0.2rem' }}>Wind</div>
-                  <div style={{ fontSize: '1.8rem', fontWeight: 900, color: 'white', lineHeight: 1 }}>{metrics.windConditions ? Math.round(metrics.windConditions.speed) : '0'}<span style={{ fontSize: '0.6rem', marginLeft: '2px' }}>{metrics.windConditions?.headwindComponent > 0 ? '🌬️' : '💨'}</span></div>
+                  <div style={{ fontSize: '1.8rem', fontWeight: 900, color: 'white', lineHeight: 1 }}>{metrics.windConditions ? Math.round(metrics.windConditions.speed) : '0'}<span style={{ fontSize: '0.6rem', marginLeft: '2px' }}>{(metrics.windConditions?.headwindComponent || 0) > 0 ? '🌬️' : '💨'}</span></div>
                 </div>
 
               </div>
@@ -2052,7 +2052,7 @@ function MapHome() {
                 {/* Wind */}
                 <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '15px', border: '1px solid rgba(255,255,255,0.05)', padding: '0.6rem', textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                   <div style={{ fontSize: '0.5rem', color: '#666', textTransform: 'uppercase', fontWeight: 800, marginBottom: '0.2rem' }}>Wind</div>
-                  <div style={{ fontSize: '1.8rem', fontWeight: 900, color: 'white', lineHeight: 1 }}>{metrics.windConditions ? Math.round(metrics.windConditions.speed) : '0'}<span style={{ fontSize: '0.6rem', marginLeft: '2px' }}>{metrics.windConditions?.headwindComponent > 0 ? '🌬️' : '💨'}</span></div>
+                  <div style={{ fontSize: '1.8rem', fontWeight: 900, color: 'white', lineHeight: 1 }}>{metrics.windConditions ? Math.round(metrics.windConditions.speed) : '0'}<span style={{ fontSize: '0.6rem', marginLeft: '2px' }}>{(metrics.windConditions?.headwindComponent || 0) > 0 ? '🌬️' : '💨'}</span></div>
                 </div>
 
               </div>
