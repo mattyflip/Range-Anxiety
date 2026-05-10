@@ -14,6 +14,7 @@ import InstallTutorial from '../components/InstallTutorial'
 import NavBar from '../components/NavBar'
 import AuthModal from '../components/AuthModal'
 import WelcomeModal from '../components/WelcomeModal'
+import { STATE_COORDINATES } from '../utils/ebikeLaws'
 
 const LIBRARIES: ("places" | "geometry")[] = ["places", "geometry"];
 
@@ -492,6 +493,17 @@ function MapHome() {
       }
     }
   }, [authInitialized, user]);
+
+  // Default Map to Home State
+  useEffect(() => {
+    if (userData?.homeRegion && mapRef.current) {
+      const coords = STATE_COORDINATES[userData.homeRegion];
+      if (coords) {
+        mapRef.current.panTo(coords);
+        mapRef.current.setZoom(8); // Zoom out a bit to show the state area
+      }
+    }
+  }, [userData?.homeRegion]);
 
   const updateUsername = async (newVal: string) => {
     if (!newVal.trim()) return;
