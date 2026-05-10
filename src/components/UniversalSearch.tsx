@@ -105,6 +105,7 @@ const UniversalSearch: React.FC = () => {
           {results.users.length > 0 && (
             <div style={{ padding: '0.8rem' }}>
               <label style={{ fontSize: '0.6rem', color: '#666', textTransform: 'uppercase', marginBottom: '0.5rem', display: 'block' }}>Riders</label>
+              {results.users.map(u => (
                 <div 
                   key={u.id} 
                   onClick={() => { navigate(`/profile/${u.username.replace(/\s+/g, '_')}`); setShowResults(false); setSearchQuery(''); }}
