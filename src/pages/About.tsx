@@ -25,18 +25,19 @@ const About: React.FC = () => {
         </div>
 
         <header style={{ textAlign: 'center', marginBottom: '4rem' }}>
-          <div style={{ width: '100%', maxWidth: '700px', margin: '0 auto 2rem auto', borderRadius: '24px', overflow: 'hidden', boxShadow: '0 20px 50px rgba(0,0,0,0.5)', border: '1px solid #333' }}>
-            <img 
-              src="/assets/watt-son.png" 
-              alt="Watt-son's Guide to Precise Range" 
-              style={{ width: '100%', display: 'block' }} 
-            />
-          </div>
           <h1 style={{ fontSize: '3.5rem', fontWeight: 900, color: '#ff6600', marginBottom: '0.5rem', letterSpacing: '-0.02em' }}>How It Works</h1>
           <p className="desktop-only" style={{ fontSize: '1.2rem', color: '#888', maxWidth: '600px', margin: '0 auto', lineHeight: '1.5' }}>
             The science behind conquering range anxiety. Learn how our physics-based model calculates your e-bike's battery life.
           </p>
         </header>
+
+        <div style={{ width: '100%', maxWidth: '700px', margin: '0 auto 4rem auto', borderRadius: '24px', overflow: 'hidden', boxShadow: '0 20px 50px rgba(0,0,0,0.5)', border: '1px solid #333' }}>
+          <img 
+            src="/assets/watt-son.png" 
+            alt="Watt-son's Guide to Precise Range" 
+            style={{ width: '100%', display: 'block' }} 
+          />
+        </div>
 
         <section style={{ marginBottom: '4rem' }}>
           <h2 style={{ color: '#ff6600', fontSize: '1.8rem', marginBottom: '1.5rem', borderBottom: '1px solid #333', paddingBottom: '0.5rem' }}>Physics-Based Accuracy</h2>
