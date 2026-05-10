@@ -407,8 +407,16 @@ function MapHome() {
             setHostTierExpiresAt(data.hostTierExpiresAt?.toMillis() || null);
             setUsername(data.username || '');
             
-            // Auto-sync lowercase username for search functionality
-            if (data.username && !data.usernameLowercase) {
+            // Auto-sync/Self-heal: Prohibit spaces in usernames
+            if (data.username && data.username.includes(' ')) {
+              const fixedName = data.username.replace(/\s+/g, '_');
+              updateDoc(doc(db, "users", currentUser.uid), {
+                username: fixedName,
+                usernameLowercase: fixedName.toLowerCase()
+              }).catch(e => console.error("Username space fix failed", e));
+              setUsername(fixedName);
+            } else if (data.username && !data.usernameLowercase) {
+              // Auto-sync lowercase username for search functionality
               updateDoc(doc(db, "users", currentUser.uid), {
                 usernameLowercase: data.username.toLowerCase()
               }).catch(e => console.error("Lowercase sync failed", e));
@@ -439,6 +447,13 @@ function MapHome() {
 
   const updateUsername = async (newVal: string) => {
     if (!newVal.trim()) return;
+    
+    // Prohibit spaces
+    if (newVal.includes(' ')) {
+      alert("Usernames cannot contain spaces. Use underscores (_) instead!");
+      return;
+    }
+
     const lowerVal = newVal.toLowerCase();
     
     // 1. Check if username is already taken (case-insensitive)
