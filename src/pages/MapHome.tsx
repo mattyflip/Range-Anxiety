@@ -266,6 +266,7 @@ function MapHome() {
   const [showInstallTutorial, setShowInstallTutorial] = useState(false);
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   const [authInitialized, setAuthInitialized] = useState(false);
+  const [mapSnapshot, setMapSnapshot] = useState<string | null>(null);
 
   // Group Rides State
   const [activeRide, setActiveRide] = useState<GroupRide | null>(null);
@@ -534,6 +535,34 @@ function MapHome() {
       }
     }
   }, []);
+
+  // Generate Map Snapshot for Share Card
+  useEffect(() => {
+    if (!response || !response.routes[selectedRouteIndex]) return;
+
+    const polyline = response.routes[selectedRouteIndex].overview_polyline;
+    const points = (polyline as any).points || polyline;
+    
+    // Use our server-side proxy to avoid CORS issues with html-to-image
+    const proxyUrl = `/api/static-map?polyline=${encodeURIComponent(points)}`;
+
+    const fetchSnapshot = async () => {
+      try {
+        const resp = await fetch(proxyUrl);
+        if (!resp.ok) throw new Error("Proxy failed");
+        const blob = await resp.blob();
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setMapSnapshot(reader.result as string);
+        };
+        reader.readAsDataURL(blob);
+      } catch (e) {
+        console.error("Static Map fetch failed", e);
+      }
+    };
+
+    fetchSnapshot();
+  }, [response, selectedRouteIndex]);
 
   const updateUsername = async (newVal: string) => {
     if (!newVal.trim()) return;
@@ -1855,6 +1884,13 @@ function MapHome() {
                 </div>
               </div>
 
+              {/* Route Map Snapshot */}
+              {mapSnapshot && (
+                <div style={{ width: '100%', height: '200px', borderRadius: '20px', overflow: 'hidden', border: '1px solid #333', position: 'relative', zIndex: 2 }}>
+                  <img src={mapSnapshot} alt="Route Snapshot" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                </div>
+              )}
+
               {/* Central Battery Display - METALLIC FRAME */}
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', position: 'relative', margin: '1rem 0' }}>
                 {/* Metallic Bezel */}
@@ -2041,6 +2077,13 @@ function MapHome() {
                   </div>
                 </div>
               </div>
+
+              {/* Route Map Snapshot */}
+              {mapSnapshot && (
+                <div style={{ width: '100%', height: '200px', borderRadius: '20px', overflow: 'hidden', border: '1px solid #333', position: 'relative', zIndex: 2 }}>
+                  <img src={mapSnapshot} alt="Route Snapshot" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                </div>
+              )}
 
               {/* Central Battery Display - METALLIC FRAME */}
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', position: 'relative', margin: '1rem 0' }}>
