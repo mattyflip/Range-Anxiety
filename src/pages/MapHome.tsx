@@ -2093,44 +2093,46 @@ function MapHome() {
         </div>
       </div>
       {/* Floating UI Controls (Persistent) */}
-      <div className="persistent-controls" style={{ position: 'fixed', bottom: '2rem', right: '1rem', zIndex: 20002, display: 'flex', flexDirection: 'column', gap: '1rem', alignItems: 'center' }}>
+      <div className="persistent-controls" style={{ position: 'fixed', bottom: '3rem', right: '2rem', zIndex: 20002, display: 'flex', flexDirection: 'column', gap: '1.2rem', alignItems: 'center' }}>
           <button 
             className="mobile-toggle-btn-floating"
             onClick={() => setShowMobileMenu(!showMobileMenu)}
             style={{
-              padding: '0.8rem 1.2rem',
+              padding: '1rem 1.5rem',
               borderRadius: '30px',
               backgroundColor: '#ff6600',
               color: 'white',
               border: 'none',
-              boxShadow: '0 8px 25px rgba(255,102,0,0.4)',
+              boxShadow: '0 10px 30px rgba(255,102,0,0.5)',
               cursor: 'pointer',
-              fontWeight: 'bold',
-              fontSize: '0.8rem',
+              fontWeight: 800,
+              fontSize: '0.85rem',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              whiteSpace: 'nowrap'
+              whiteSpace: 'nowrap',
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em'
             }}
           >
-            {showMobileMenu ? 'Show Map' : (metrics ? '📊 Trip Stats' : 'Trip Settings')}
+            {showMobileMenu ? '✕ Close' : (metrics ? '📊 Trip Stats' : '⚙️ Trip Settings')}
           </button>
 
           <button 
             onClick={recenterMap}
             style={{
-              width: '50px',
-              height: '50px',
+              width: '55px',
+              height: '55px',
               borderRadius: '50%',
               backgroundColor: '#ff6600',
               color: 'white',
               border: 'none',
-              boxShadow: '0 8px 25px rgba(255,102,0,0.4)',
+              boxShadow: '0 10px 30px rgba(255,102,0,0.5)',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontSize: '1.5rem'
+              fontSize: '1.8rem'
             }}
             title="Recenter Map"
           >

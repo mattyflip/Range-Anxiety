@@ -26,16 +26,23 @@ const NavBar: React.FC<NavBarProps> = ({ user, onShowInstall }) => {
         </Link>
       </div>
 
-      <div style={{ display: 'flex', gap: '1.2rem', alignItems: 'center' }}>
-        <nav style={{ display: 'flex', gap: '1.2rem', alignItems: 'center' }}>
-          <Link to="/" style={{ color: '#888', textDecoration: 'none', fontSize: '0.85rem', fontWeight: 700, textTransform: 'uppercase' }}>Map</Link>
-          <Link to="/how-it-works" style={{ color: '#888', textDecoration: 'none', fontSize: '0.85rem', fontWeight: 700, textTransform: 'uppercase' }}>Info</Link>
-          <Link to="/feed" style={{ color: '#888', textDecoration: 'none', fontSize: '0.85rem', fontWeight: 700, textTransform: 'uppercase' }}>Feed</Link>
-          <Link to="/forum" style={{ color: '#888', textDecoration: 'none', fontSize: '0.85rem', fontWeight: 700, textTransform: 'uppercase' }}>Forum</Link>
-          <Link to={user ? `/profile/${user.displayName || user.uid}` : '/profile/me'} style={{ color: '#888', textDecoration: 'none', fontSize: '0.85rem', fontWeight: 700, textTransform: 'uppercase' }}>Profile</Link>
-        </nav>
-
-        <div className="nav-actions" style={{ display: 'flex', gap: '0.8rem', alignItems: 'center' }}>
+      <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', minWidth: 0 }}>
+        <nav style={{ 
+          display: 'flex', 
+          gap: '1rem', 
+          alignItems: 'center',
+          overflowX: 'auto',
+          paddingBottom: '4px',
+          msOverflowStyle: 'none',
+          scrollbarWidth: 'none'
+        }}>
+          <Link to="/" style={{ color: '#888', textDecoration: 'none', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>Map</Link>
+          <Link to="/how-it-works" style={{ color: '#888', textDecoration: 'none', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>Info</Link>
+          <Link to="/feed" style={{ color: '#888', textDecoration: 'none', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>Feed</Link>
+          <Link to="/forum" style={{ color: '#888', textDecoration: 'none', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>Forum</Link>
+          <Link to={user ? `/profile/${user.displayName || user.uid}` : '/profile/me'} style={{ color: '#888', textDecoration: 'none', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>Profile</Link>
+          
+          {/* Moved App Install button into the scrolling nav for mobile compatibility */}
           <button 
             onClick={onShowInstall}
             style={{ 
@@ -43,16 +50,17 @@ const NavBar: React.FC<NavBarProps> = ({ user, onShowInstall }) => {
               color: 'white', 
               border: 'none', 
               borderRadius: '20px', 
-              padding: '0.4rem 1rem', 
-              fontSize: '0.75rem', 
+              padding: '0.3rem 0.8rem', 
+              fontSize: '0.7rem', 
               fontWeight: 'bold',
               cursor: 'pointer',
+              whiteSpace: 'nowrap',
               boxShadow: '0 4px 10px rgba(255,102,0,0.3)'
             }}
           >
             App
           </button>
-        </div>
+        </nav>
       </div>
     </header>
   )
