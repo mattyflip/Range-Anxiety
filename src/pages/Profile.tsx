@@ -48,7 +48,6 @@ const Profile: React.FC = () => {
 
   const isAdmin = user?.email?.toLowerCase() === 'mattyfliptv@gmail.com';
 
-  const [isEditing, setIsEditing] = useState(false);
   const [editBio, setEditBio] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);

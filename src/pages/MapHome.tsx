@@ -258,9 +258,6 @@ function MapHome() {
   const [savedBikes, setSavedBikes] = useState<SavedBike[]>([]);
   const [newBikeName, setNewBikeName] = useState('');
 
-  const [usernameInput, setUsernameInput] = useState('');
-  const [showUsernameEdit, setShowUsernameEdit] = useState(false);
-
   const [showToSPage, setShowToSPage] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [showInstallTutorial, setShowInstallTutorial] = useState(false);
@@ -587,43 +584,6 @@ function MapHome() {
 
     fetchSnapshot();
   }, [response, selectedRouteIndex]);
-
-  const updateUsername = async (newVal: string) => {
-    if (!newVal.trim()) return;
-    
-    // Prohibit spaces
-    if (newVal.includes(' ')) {
-      alert("Usernames cannot contain spaces. Use underscores (_) instead!");
-      return;
-    }
-
-    const lowerVal = newVal.toLowerCase();
-    
-    // 1. Check if username is already taken (case-insensitive)
-    try {
-      const q = query(collection(db, "users"), where("usernameLowercase", "==", lowerVal));
-      const snap = await getDocs(q);
-      
-      // If a document exists and it's not the current user, it's taken
-      const isTaken = snap.docs.some(doc => doc.id !== user?.uid);
-      if (isTaken) {
-        alert("This username is already taken. Please choose another one!");
-        return;
-      }
-
-      setUsername(newVal);
-      if (user) {
-        await setDoc(doc(db, "users", user.uid), { 
-          username: newVal,
-          usernameLowercase: lowerVal
-        }, { merge: true });
-        alert("Username updated successfully!");
-      }
-    } catch (e) { 
-      console.error("Username check/update failed", e); 
-      alert("Failed to update username. Please try again.");
-    }
-  };
 
   const handleUpgrade = async (tier: 'pro' | 'host' = 'pro') => {
     console.log(`Initiating upgrade to ${tier}...`);
