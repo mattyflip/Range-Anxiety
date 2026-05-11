@@ -62,6 +62,7 @@ interface RouteMetrics {
   estimatedWh: number;
   batteryPercentUsed: number;
   recommendedSpeedMph: number;
+  deathPoint?: google.maps.LatLngLiteral;
   windConditions?: {
     speed: number;
     direction: number;
@@ -1086,6 +1087,31 @@ function MapHome() {
 
       const batteryPercentRemaining = ((startWh - estimatedWh) / totalWhUsable) * 100;
 
+      let deathPoint: google.maps.LatLngLiteral | undefined = undefined;
+      if (batteryPercentRemaining <= 0) {
+        // Approximate point of depletion along the path
+        const avgWhPerMile = estimatedWh / distMiles;
+        let cumulativeWh = 0;
+        let prevPoint = path[0];
+        
+        for (let i = 1; i < path.length; i++) {
+          const p = path[i];
+          // Use Geometry library (already loaded in LIBRARIES)
+          const segmentDistMeters = google.maps.geometry.spherical.computeDistanceBetween(
+            new google.maps.LatLng(prevPoint.lat, prevPoint.lng),
+            new google.maps.LatLng(p.lat, p.lng)
+          );
+          const segmentDistMiles = segmentDistMeters / 1609.34;
+          cumulativeWh += segmentDistMiles * avgWhPerMile;
+          
+          if (cumulativeWh >= startWh) {
+            deathPoint = p;
+            break;
+          }
+          prevPoint = p;
+        }
+      }
+
       setMetrics({
         distanceMiles: distMiles,
         durationMin: distMiles / (targetSpeedMphActual || 15) * 60,
@@ -1094,6 +1120,7 @@ function MapHome() {
         estimatedWh,
         batteryPercentUsed: Math.max(0, batteryPercentRemaining),
         recommendedSpeedMph: mode === 'eco' || pasLevel <= 2 ? 18 : 25,
+        deathPoint,
         windConditions: { speed: windSpeed, direction: windDir, headwindComponent: headwindMph }
       });
       ReactGA.event({ category: "Engagement", action: "Calculation Success", label: `${distMiles.toFixed(1)} miles` });
@@ -1504,6 +1531,13 @@ function MapHome() {
             <div ref={metricsCardRef} className="card metrics-card" style={{ marginTop: '1rem', borderLeft: '4px solid #ff6600', background: 'rgba(40,40,40,0.9)' }}>
               <h3 style={{ fontSize: '0.9rem', color: '#ff6600' }}>ESTIMATED METRICS</h3>
 
+              {metrics.batteryPercentUsed <= 0 && (
+                <div style={{ background: 'rgba(217,48,37,0.2)', border: '1px solid #d93025', color: 'white', padding: '1rem', borderRadius: '12px', marginBottom: '1.5rem', textAlign: 'center' }}>
+                  <div style={{ fontSize: '1.2rem', marginBottom: '0.3rem' }}>⚠️ RANGE WARNING</div>
+                  <p style={{ fontSize: '0.75rem', margin: 0 }}>You won't make the full trip! Your battery will likely die at the <strong>☠️ Depletion Point</strong> marked on the map.</p>
+                </div>
+              )}
+
               {response && response.routes.length > 1 && (
                 <div style={{ marginBottom: '1rem' }}>
                   <label style={{ fontSize: '0.65rem', color: '#888' }}>SELECT ROUTE</label>
@@ -1882,6 +1916,22 @@ function MapHome() {
                     <button onClick={() => { addPOIAsWaypoint(selectedPoi); setSelectedPoi(null); }} style={{ width: '100%', marginTop: '0.5rem', padding: '0.2rem', backgroundColor: '#ff6600', color: 'white', border: 'none', cursor: 'pointer' }}>Add Stop</button>
                   </div>
                 </InfoWindow>
+              )}
+              {metrics?.deathPoint && (
+                <Marker 
+                  position={metrics.deathPoint}
+                  icon={{
+                    url: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png',
+                    scaledSize: new google.maps.Size(40, 40)
+                  }}
+                  label={{
+                    text: '☠️ DEPLETION',
+                    color: '#ff4444',
+                    fontWeight: 'bold',
+                    fontSize: '14px',
+                    className: 'death-label'
+                  }}
+                />
               )}
             </GoogleMap>
           ) : (
