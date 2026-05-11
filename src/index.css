@@ -288,6 +288,7 @@ main {
     transition: transform 0.3s ease-in-out;
     background: #1e1e1e;
     z-index: 1000;
+    padding-bottom: 12rem !important; /* Huge padding to clear the persistent floating buttons */
   }
 
   .sidebar.mobile-visible {
