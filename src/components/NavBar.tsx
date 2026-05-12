@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { db } from '../firebase'
+import { db, auth } from '../firebase'
+import { signOut } from 'firebase/auth'
 import { collection, query, orderBy, limit, onSnapshot, updateDoc, doc, writeBatch } from 'firebase/firestore'
 
 interface NavBarProps {
@@ -53,10 +54,10 @@ const NavBar: React.FC<NavBarProps> = ({ user, onShowInstall, onShowAuth }) => {
 
     // Navigate based on type
     if (notif.type === 'like' || notif.type === 'comment') {
-      navigate('/feed'); // Ideally navigate to specific post
+      navigate('/feed'); 
     } else if (notif.type === 'upvote') {
-      navigate('/forum'); // Ideally navigate to specific thread
-    } else if (notif.type === 'review') {
+      navigate('/forum'); 
+    } else if (notif.type === 'review' || notif.type === 'moderation') {
       navigate(`/profile/me`);
     }
   };
@@ -69,6 +70,15 @@ const NavBar: React.FC<NavBarProps> = ({ user, onShowInstall, onShowAuth }) => {
       }
     });
     await batch.commit();
+  };
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      navigate('/');
+    } catch (e) {
+      console.error("Logout failed", e);
+    }
   };
 
   return (
@@ -105,7 +115,7 @@ const NavBar: React.FC<NavBarProps> = ({ user, onShowInstall, onShowAuth }) => {
           <Link to="/how-it-works" style={{ color: '#888', textDecoration: 'none', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>Info</Link>
           <Link to="/feed" style={{ color: '#888', textDecoration: 'none', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>Feed</Link>
           <Link to="/forum" style={{ color: '#888', textDecoration: 'none', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>Forum</Link>
-          {user && <Link to={`/profile/${user.displayName || user.uid}`} style={{ color: '#888', textDecoration: 'none', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>Profile</Link>}
+          {user && <Link to={`/profile/me`} style={{ color: '#888', textDecoration: 'none', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>Profile</Link>}
           
           {user && (
             <div style={{ position: 'relative' }}>
@@ -192,6 +202,25 @@ const NavBar: React.FC<NavBarProps> = ({ user, onShowInstall, onShowAuth }) => {
                 </div>
               )}
             </div>
+          )}
+
+          {user && (
+            <button 
+              onClick={handleLogout}
+              style={{ 
+                background: 'none', 
+                border: '1px solid #444', 
+                color: '#888', 
+                borderRadius: '20px', 
+                padding: '0.3rem 0.8rem', 
+                fontSize: '0.65rem', 
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              Log Out
+            </button>
           )}
 
           {!user && (
