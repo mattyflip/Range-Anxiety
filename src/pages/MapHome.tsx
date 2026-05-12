@@ -381,7 +381,119 @@ function MapHome() {
   const [pendingBikeAutoSelect, setPendingBikeAutoSelect] = useState(false);
   const [settingsDirty, setSettingsDirty] = useState(true);
 
-  // Group Rides State
+  // Navigation State
+  const [isNavigating, setIsNavigating] = useState(false);
+  const [currentLegIndex, setCurrentLegIndex] = useState(0);
+  const [currentStepIndex, setCurrentStepIndex] = useState(0);
+  const [distToNextStep, setNextStepDist] = useState<string | null>(null);
+  const [hasAnnouncedNextStep, setHasAnnouncedNextStep] = useState(false);
+
+  const speak = (text: string) => {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = 1.0;
+      utterance.pitch = 1.0;
+      window.speechSynthesis.speak(utterance);
+    }
+  };
+
+  const startNavigation = () => {
+    if (!response) return;
+    setIsNavigating(true);
+    setCurrentLegIndex(0);
+    setCurrentStepIndex(0);
+    setHasAnnouncedNextStep(false);
+    setShowMobileMenu(false);
+    
+    const firstStep = response.routes[selectedRouteIndex].legs[0].steps[0];
+    const instruction = firstStep.instructions.replace(/<[^>]*>?/gm, '');
+    speak(`Starting trip. ${instruction}`);
+    
+    if (mapRef.current) {
+      mapRef.current.setZoom(18);
+      mapRef.current.setTilt(45);
+    }
+  };
+
+  const stopNavigation = () => {
+    setIsNavigating(false);
+    if (mapRef.current) {
+      mapRef.current.setTilt(0);
+    }
+  };
+
+  // Tracking for Turn-by-Turn Navigation
+  useEffect(() => {
+    if (!isNavigating || !response) return;
+
+    let watchId: number;
+    if (navigator.geolocation) {
+      watchId = navigator.geolocation.watchPosition((pos) => {
+        const userLoc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        const heading = pos.coords.heading; // 0-360 degrees
+        
+        const route = response.routes[selectedRouteIndex];
+        const leg = route.legs[currentLegIndex];
+        const step = leg.steps[currentStepIndex];
+
+        if (mapRef.current) {
+           mapRef.current.panTo(userLoc);
+           if (heading !== null && heading !== undefined) {
+             mapRef.current.setHeading(heading);
+           }
+        }
+
+        const endLoc = { lat: step.end_location.lat(), lng: step.end_location.lng() };
+        const distToTurnMeters = google.maps.geometry.spherical.computeDistanceBetween(
+          new google.maps.LatLng(userLoc.lat, userLoc.lng),
+          new google.maps.LatLng(endLoc.lat, endLoc.lng)
+        );
+
+        const distFeet = distToTurnMeters * 3.28084;
+        if (unitSystem === 'imperial') {
+          if (distFeet > 528) setNextStepDist(`${(distFeet / 5280).toFixed(1)} mi`);
+          else setNextStepDist(`${Math.round(distFeet)} ft`);
+        } else {
+          if (distToTurnMeters > 1000) setNextStepDist(`${(distToTurnMeters / 1000).toFixed(1)} km`);
+          else setNextStepDist(`${Math.round(distToTurnMeters)} m`);
+        }
+
+        // Voice Guidance Logic: Announce when getting close to the turn
+        if (distFeet < 300 && !hasAnnouncedNextStep) {
+          const instruction = step.instructions.replace(/<[^>]*>?/gm, '');
+          speak(`In 300 feet, ${instruction}`);
+          setHasAnnouncedNextStep(true);
+        }
+
+        // Step Advancement: Move to next instruction when within 60 feet
+        if (distFeet < 60) {
+          if (currentStepIndex < leg.steps.length - 1) {
+            setCurrentStepIndex(currentStepIndex + 1);
+            setHasAnnouncedNextStep(false);
+            const nextStep = leg.steps[currentStepIndex + 1];
+            speak(nextStep.instructions.replace(/<[^>]*>?/gm, ''));
+          } else if (currentLegIndex < route.legs.length - 1) {
+            setCurrentLegIndex(currentLegIndex + 1);
+            setCurrentStepIndex(0);
+            setHasAnnouncedNextStep(false);
+          } else {
+            speak("You have arrived at your destination.");
+            stopNavigation();
+          }
+        }
+      }, (err) => console.error("Nav tracking error", err), { 
+        enableHighAccuracy: true,
+        maximumAge: 0,
+        timeout: 10000
+      });
+    }
+
+    return () => {
+      if (watchId !== undefined) navigator.geolocation.clearWatch(watchId);
+    };
+  }, [isNavigating, response, currentLegIndex, currentStepIndex, hasAnnouncedNextStep, selectedRouteIndex, unitSystem]);
+
   const [activeRide, setActiveRide] = useState<GroupRide | null>(null);
   const [publicRides, setPublicRides] = useState<GroupRide[]>([]);
   const [selectedPublicRide, setSelectedPublicRide] = useState<GroupRide | null>(null);
@@ -1643,6 +1755,27 @@ function MapHome() {
                   ReactGA.event({ category: "Engagement", action: "Open Share Preview" });
                   setShowSharePreview(true);
               }} style={{ width: '100%', marginTop: '0.5rem', padding: '0.6rem', backgroundColor: '#444', color: 'white', border: 'none', borderRadius: '4px', fontSize: '0.8rem', cursor: 'pointer' }}>Save Image (PRO)</button>
+
+              <button 
+                onClick={startNavigation}
+                style={{ 
+                  width: '100%', 
+                  marginTop: '1.5rem', 
+                  padding: '1rem', 
+                  backgroundColor: '#ff6600', 
+                  color: 'white', 
+                  border: 'none', 
+                  borderRadius: '12px', 
+                  fontWeight: 900, 
+                  fontSize: '1.1rem', 
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 20px rgba(255,102,0,0.4)',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.1em'
+                }}
+              >
+                🏁 Start Trip
+              </button>
             </div>
           )}
 
@@ -1808,6 +1941,63 @@ function MapHome() {
         </aside>
 
         <main>
+          {isNavigating && response && (
+            <div style={{ 
+              position: 'fixed', 
+              top: '5.5rem', 
+              left: '50%', 
+              transform: 'translateX(-50%)', 
+              width: '90%', 
+              maxWidth: '500px', 
+              zIndex: 3000, 
+              background: '#1a1a1a', 
+              border: '2px solid #ff6600', 
+              borderRadius: '20px', 
+              padding: '1.2rem', 
+              boxShadow: '0 10px 40px rgba(0,0,0,0.8)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.8rem'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                  <div style={{ background: '#333', padding: '0.6rem', borderRadius: '12px', fontSize: '1.5rem' }}>
+                    {response.routes[selectedRouteIndex].legs[currentLegIndex].steps[currentStepIndex].instructions.toLowerCase().includes('left') ? '⬅️' : 
+                     response.routes[selectedRouteIndex].legs[currentLegIndex].steps[currentStepIndex].instructions.toLowerCase().includes('right') ? '➡️' : '⬆️'}
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.7rem', color: '#ff6600', fontWeight: 900, textTransform: 'uppercase' }}>In {distToNextStep || '---'}</div>
+                    <div 
+                      style={{ color: 'white', fontSize: '1.1rem', fontWeight: 'bold', lineHeight: '1.2' }}
+                      dangerouslySetInnerHTML={{ __html: response.routes[selectedRouteIndex].legs[currentLegIndex].steps[currentStepIndex].instructions }}
+                    />
+                  </div>
+                </div>
+                <button 
+                  onClick={stopNavigation}
+                  style={{ background: '#444', color: 'white', border: 'none', borderRadius: '50%', width: '40px', height: '40px', cursor: 'pointer', fontWeight: 'bold' }}
+                >✕</button>
+              </div>
+
+              {metrics && (
+                <div style={{ display: 'flex', gap: '1rem', borderTop: '1px solid #333', paddingTop: '0.8rem' }}>
+                   <div style={{ flex: 1, textAlign: 'center' }}>
+                      <div style={{ fontSize: '0.6rem', color: '#888' }}>BATTERY</div>
+                      <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: metrics.batteryPercentUsed < 15 ? '#ff4444' : '#34a853' }}>{metrics.batteryPercentUsed.toFixed(0)}%</div>
+                   </div>
+                   <div style={{ flex: 1, textAlign: 'center' }}>
+                      <div style={{ fontSize: '0.6rem', color: '#888' }}>SPEED</div>
+                      <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: 'white' }}>{targetSpeedMph}<span style={{ fontSize: '0.6rem' }}>mph</span></div>
+                   </div>
+                   <div style={{ flex: 1, textAlign: 'center' }}>
+                      <div style={{ fontSize: '0.6rem', color: '#888' }}>REMAINING</div>
+                      <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: 'white' }}>{Math.round(metrics.durationMin)}<span style={{ fontSize: '0.6rem' }}>min</span></div>
+                   </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {isLoaded ? (
             <GoogleMap
               mapContainerStyle={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0 }}
