@@ -181,6 +181,7 @@ const Profile: React.FC = () => {
       await updateDoc(doc(db, "users", profileData.id), { averageRating: newAvg, ratingCount: newCount });
 
       setNewReviewComment(''); setNewRating(5); setShowReviewModal(false);
+      alert("Review submitted!");
     } catch (e) {
       console.error("Review submission failed", e);
     } finally {
@@ -193,7 +194,7 @@ const Profile: React.FC = () => {
     return onSnapshot(q, (snap) => {
       const comments: any[] = [];
       snap.forEach(docSnap => comments.push({ id: docSnap.id, ...docSnap.data() }));
-      const sorted = comments.sort((a, b) => (a.createdAt?.toMillis() || 0) - (b.createdAt?.toMillis() || 0));
+      const sorted = comments.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
       setReviewComments(prev => ({ ...prev, [reviewId]: sorted }));
     });
   };

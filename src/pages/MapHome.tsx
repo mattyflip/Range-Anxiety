@@ -1008,7 +1008,13 @@ function MapHome() {
       let lossFeet = 0;
       try { 
         // Use encoded polyline for high-resolution elevation sampling (100+ points)
-        const encodedPath = google.maps.geometry.encoding.encodePath(route.overview_path);
+        let samplePath = route.overview_path;
+        // If path is too dense, sample it down to ~300 points to keep encoded string short
+        if (samplePath.length > 300) {
+          const skip = Math.ceil(samplePath.length / 300);
+          samplePath = samplePath.filter((_, i) => i % skip === 0 || i === samplePath.length - 1);
+        }
+        const encodedPath = google.maps.geometry.encoding.encodePath(samplePath);
         const elevResp = await axios.post('/api/elevation', { encodedPath, samples: 100 }); 
         
         if (elevResp.data && typeof elevResp.data.gain === 'number') {
