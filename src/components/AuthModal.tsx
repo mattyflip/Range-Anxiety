@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { auth, db } from '../firebase'
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth'
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore'
+import { doc, setDoc, serverTimestamp, getDocs, collection, query, where } from 'firebase/firestore'
 import TermsOfService from './TermsOfService'
 import { US_STATES, OTHER_REGIONS, calculateAge, getEbikeSafetyInfo } from '../utils/ebikeLaws'
 
@@ -15,6 +15,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess }) => {
   const [authEmail, setAuthEmail] = useState('');
   const [authPass, setAuthPass] = useState('');
   const [fullName, setFullName] = useState('');
+  const [username, setUsername] = useState('');
   const [birthday, setBirthday] = useState('');
   const [homeRegion, setHomeRegion] = useState('New Jersey');
   const [city, setCity] = useState('');
@@ -26,8 +27,16 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess }) => {
     setError(null);
     try {
       if (isRegistering) {
-        if (!fullName.trim() || !birthday || !homeRegion) {
-          setError("Name, Birthday, and Home State/Region are required.");
+        if (!fullName.trim() || !username.trim() || !birthday || !homeRegion) {
+          setError("Name, Username, Birthday, and Home State/Region are required.");
+          return;
+        }
+
+        // Check if username is taken
+        const usernameQuery = query(collection(db, "users"), where("usernameLowercase", "==", username.toLowerCase().trim()));
+        const usernameSnap = await getDocs(usernameQuery);
+        if (!usernameSnap.empty) {
+          setError("This username is already taken. Please choose another.");
           return;
         }
 
@@ -55,6 +64,8 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess }) => {
           await setDoc(doc(db, "users", userCredential.user.uid), { 
             email: authEmail, 
             fullName,
+            username: username.trim(),
+            usernameLowercase: username.toLowerCase().trim(),
             birthday,
             homeRegion,
             city,
@@ -87,6 +98,10 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess }) => {
             <div className="form-group" style={{ marginBottom: '1rem' }}>
               <label style={{ display: 'block', color: '#888', fontSize: '0.7rem', marginBottom: '0.3rem' }}>Full Name</label>
               <input type="text" value={fullName} onChange={e => setFullName(e.target.value)} style={{ width: '100%', padding: '0.6rem', background: '#222', border: '1px solid #444', borderRadius: '4px', color: 'white' }} />
+            </div>
+            <div className="form-group" style={{ marginBottom: '1rem' }}>
+              <label style={{ display: 'block', color: '#888', fontSize: '0.7rem', marginBottom: '0.3rem' }}>Username</label>
+              <input type="text" value={username} onChange={e => setUsername(e.target.value.replace(/\s+/g, '_'))} placeholder="No spaces allowed" style={{ width: '100%', padding: '0.6rem', background: '#222', border: '1px solid #444', borderRadius: '4px', color: 'white' }} />
             </div>
             <div className="form-group" style={{ marginBottom: '1rem' }}>
               <label style={{ display: 'block', color: '#888', fontSize: '0.7rem', marginBottom: '0.3rem' }}>Birthday</label>

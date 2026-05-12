@@ -44,6 +44,14 @@ const Profile: React.FC = () => {
 
   const [isFollowing, setIsFollowing] = useState(false);
 
+  // Edit Profile states
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editUsername, setEditUsername] = useState('');
+  const [editBio, setEditBio] = useState('');
+  const [editCity, setEditCity] = useState('');
+  const [editHomeRegion, setEditHomeRegion] = useState('');
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+
   // Review states
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [newRating, setNewRating] = useState(5);
@@ -87,6 +95,10 @@ const Profile: React.FC = () => {
       if (!snap.empty) {
         const data = snap.docs[0].data();
         setProfileData({ ...data, id: snap.docs[0].id });
+        setEditUsername(data.username || '');
+        setEditBio(data.bio || '');
+        setEditCity(data.city || '');
+        setEditHomeRegion(data.homeRegion || '');
         if (user && data.followers) setIsFollowing(data.followers.includes(user.uid));
         if (postsUnsub) postsUnsub();
         postsUnsub = fetchUserPosts(snap.docs[0].id);
@@ -97,6 +109,10 @@ const Profile: React.FC = () => {
           if (!origSnap.empty) {
             const data = origSnap.docs[0].data();
             setProfileData({ ...data, id: origSnap.docs[0].id });
+            setEditUsername(data.username || '');
+            setEditBio(data.bio || '');
+            setEditCity(data.city || '');
+            setEditHomeRegion(data.homeRegion || '');
             if (user && data.followers) setIsFollowing(data.followers.includes(user.uid));
             if (postsUnsub) postsUnsub();
             postsUnsub = fetchUserPosts(origSnap.docs[0].id);
@@ -107,6 +123,10 @@ const Profile: React.FC = () => {
               if (uSnap.exists()) {
                 const data = uSnap.data();
                 setProfileData({ ...data, id: uSnap.id });
+                setEditUsername(data.username || '');
+                setEditBio(data.bio || '');
+                setEditCity(data.city || '');
+                setEditHomeRegion(data.homeRegion || '');
                 if (user && data.followers) setIsFollowing(data.followers.includes(user.uid));
                 if (postsUnsub) postsUnsub();
                 postsUnsub = fetchUserPosts(uSnap.id);
@@ -142,6 +162,40 @@ const Profile: React.FC = () => {
       }
     } catch (e) {
       console.error("Follow toggle failed", e);
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    if (!user || !profileData || isSavingProfile) return;
+    setIsSavingProfile(true);
+    try {
+      const normalizedUsername = editUsername.trim().replace(/\s+/g, '_');
+      
+      // If username changed, check if taken
+      if (normalizedUsername.toLowerCase() !== profileData.usernameLowercase) {
+         const q = query(collection(db, "users"), where("usernameLowercase", "==", normalizedUsername.toLowerCase()));
+         const snap = await getDocs(q);
+         if (!snap.empty) {
+            alert("This username is already taken.");
+            setIsSavingProfile(false);
+            return;
+         }
+      }
+
+      await updateDoc(doc(db, "users", profileData.id), {
+        username: normalizedUsername,
+        usernameLowercase: normalizedUsername.toLowerCase(),
+        bio: editBio,
+        city: editCity,
+        homeRegion: editHomeRegion
+      });
+
+      setShowEditModal(false);
+      alert("Profile updated!");
+    } catch (e) {
+      console.error("Profile save failed", e);
+    } finally {
+      setIsSavingProfile(false);
     }
   };
 
@@ -277,6 +331,9 @@ const Profile: React.FC = () => {
                 )}
               </div>
               <h1 style={{ color: 'white', margin: 0 }}>{profileData.username || 'Anonymous Rider'}</h1>
+              {isOwner && (
+                <button onClick={() => setShowEditModal(true)} style={{ background: 'none', border: '1px solid #444', color: '#888', borderRadius: '4px', padding: '0.3rem 0.8rem', fontSize: '0.7rem', marginTop: '0.5rem', cursor: 'pointer' }}>Edit Profile</button>
+              )}
               {profileData.isPro && (
                 <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', background: 'linear-gradient(45deg, #ffd700, #ffae00)', padding: '2px 10px', borderRadius: '20px', marginTop: '0.8rem', boxShadow: '0 0 10px rgba(255, 215, 0, 0.3)' }}>
                   <span style={{ fontSize: '0.9rem' }}>🏍️</span>
@@ -389,6 +446,34 @@ const Profile: React.FC = () => {
 
       {showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} />}
       {showInstallTutorial && <InstallTutorial onClose={() => setShowInstallTutorial(false)} />}
+
+      {showEditModal && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.9)', zIndex: 5000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', overflowY: 'auto' }}>
+          <div style={{ background: '#1a1a1a', width: '100%', maxWidth: '450px', padding: '2rem', borderRadius: '24px', border: '1px solid #333' }}>
+            <h2 style={{ color: 'white', marginTop: 0 }}>Edit Profile</h2>
+            
+            <div className="form-group" style={{ marginBottom: '1rem' }}>
+              <label style={{ display: 'block', color: '#888', fontSize: '0.7rem', marginBottom: '0.3rem' }}>Username</label>
+              <input type="text" value={editUsername} onChange={e => setEditUsername(e.target.value)} style={{ width: '100%', padding: '0.6rem', background: '#222', border: '1px solid #444', borderRadius: '4px', color: 'white' }} />
+            </div>
+
+            <div className="form-group" style={{ marginBottom: '1rem' }}>
+              <label style={{ display: 'block', color: '#888', fontSize: '0.7rem', marginBottom: '0.3rem' }}>Bio</label>
+              <textarea value={editBio} onChange={e => setEditBio(e.target.value)} style={{ width: '100%', height: '80px', padding: '0.6rem', background: '#222', border: '1px solid #444', borderRadius: '4px', color: 'white', fontFamily: 'inherit' }} />
+            </div>
+
+            <div className="form-group" style={{ marginBottom: '1rem' }}>
+              <label style={{ display: 'block', color: '#888', fontSize: '0.7rem', marginBottom: '0.3rem' }}>City</label>
+              <input type="text" value={editCity} onChange={e => setEditCity(e.target.value)} style={{ width: '100%', padding: '0.6rem', background: '#222', border: '1px solid #444', borderRadius: '4px', color: 'white' }} />
+            </div>
+
+            <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
+              <button onClick={() => setShowEditModal(false)} style={{ flex: 1, padding: '1rem', background: '#333', color: 'white', border: 'none', borderRadius: '12px' }}>Cancel</button>
+              <button onClick={handleSaveProfile} disabled={isSavingProfile} style={{ flex: 2, padding: '1rem', background: '#ff6600', color: 'white', border: 'none', borderRadius: '12px', fontWeight: 'bold' }}>{isSavingProfile ? 'Saving...' : 'Save Changes'}</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
