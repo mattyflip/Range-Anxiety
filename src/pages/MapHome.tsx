@@ -37,6 +37,7 @@ interface RouteMetrics {
   elevationLossFeet: number;
   estimatedWh: number;
   batteryPercentUsed: number;
+  recommendedSpeedMph: number;
   deathPoint?: google.maps.LatLngLiteral;
   endingVoltage?: number;
   windConditions?: {
