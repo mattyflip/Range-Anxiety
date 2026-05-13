@@ -395,13 +395,14 @@ function MapHome() {
 
   // Navigation State
   const [isNavigating, setIsNavigating] = useState(false);
+  const [voiceEnabled, setVoiceEnabled] = useState(true);
   const [currentLegIndex, setCurrentLegIndex] = useState(0);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [distToNextStep, setNextStepDist] = useState<string | null>(null);
   const [hasAnnouncedNextStep, setHasAnnouncedNextStep] = useState(false);
 
   const speak = (text: string) => {
-    if ('speechSynthesis' in window) {
+    if (voiceEnabled && 'speechSynthesis' in window) {
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.rate = 1.0;
@@ -1614,6 +1615,14 @@ function MapHome() {
             </div>
           </div>
 
+          <div className="form-group">
+            <label style={{ color: 'var(--accent-color)', fontSize: '0.65rem' }}>Voice Navigation</label>
+            <div className="mode-toggle">
+              <button className={voiceEnabled ? 'active' : ''} onClick={() => setVoiceEnabled(true)}>Enabled 🔊</button>
+              <button className={!voiceEnabled ? 'active' : ''} onClick={() => setVoiceEnabled(false)}>Muted 🔇</button>
+            </div>
+          </div>
+
           <section className="form-group" style={{ position: 'relative' }}>
             <label>Search Bike Model</label>
             <input type="text" placeholder="e.g. Onyx, Sur-Ron..." value={bikeSearchQuery} onFocus={() => setShowBikeResults(true)} onChange={(e) => { setBikeSearchQuery(e.target.value); setShowBikeResults(true); }} />
@@ -2056,7 +2065,7 @@ function MapHome() {
               gap: '0.8rem'
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flex: 1 }}>
                   <div style={{ background: '#333', padding: '0.6rem', borderRadius: '12px', fontSize: '1.5rem' }}>
                     {response.routes[selectedRouteIndex].legs[currentLegIndex].steps[currentStepIndex].instructions.toLowerCase().includes('left') ? '⬅️' : 
                      response.routes[selectedRouteIndex].legs[currentLegIndex].steps[currentStepIndex].instructions.toLowerCase().includes('right') ? '➡️' : '⬆️'}
@@ -2069,10 +2078,19 @@ function MapHome() {
                     />
                   </div>
                 </div>
-                <button 
-                  onClick={stopNavigation}
-                  style={{ background: '#444', color: 'white', border: 'none', borderRadius: '50%', width: '40px', height: '40px', cursor: 'pointer', fontWeight: 'bold' }}
-                >✕</button>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button 
+                    onClick={() => setVoiceEnabled(!voiceEnabled)}
+                    style={{ background: '#333', color: 'white', border: 'none', borderRadius: '50%', width: '40px', height: '40px', cursor: 'pointer', fontSize: '1.2rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    title={voiceEnabled ? "Mute Voice" : "Unmute Voice"}
+                  >
+                    {voiceEnabled ? '🔊' : '🔇'}
+                  </button>
+                  <button 
+                    onClick={stopNavigation}
+                    style={{ background: '#444', color: 'white', border: 'none', borderRadius: '50%', width: '40px', height: '40px', cursor: 'pointer', fontWeight: 'bold' }}
+                  >✕</button>
+                </div>
               </div>
 
               {metrics && (
