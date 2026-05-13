@@ -1,11 +1,11 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { GoogleMap, useJsApiLoader, DirectionsService, DirectionsRenderer, Marker, InfoWindow } from '@react-google-maps/api'
+import { GoogleMap, useJsApiLoader, DirectionsService, DirectionsRenderer, Marker, InfoWindow, Polyline } from '@react-google-maps/api'
 import axios from 'axios'
 import { toPng } from 'html-to-image'
 import { auth, db, storage } from '../firebase'
 import { onAuthStateChanged } from 'firebase/auth'
 import type { User } from 'firebase/auth'
-import { doc, getDoc, collection, addDoc, serverTimestamp, updateDoc, deleteDoc } from 'firebase/firestore'
+import { doc, getDoc, collection, addDoc, serverTimestamp, updateDoc, deleteDoc, query, where, onSnapshot, setDoc, getDocs, arrayUnion } from 'firebase/firestore'
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
 import AdBanner from '../components/AdBanner'
 import TermsOfService from '../components/TermsOfService'
@@ -16,6 +16,28 @@ import WelcomeModal from '../components/WelcomeModal'
 import { STATE_COORDINATES } from '../utils/ebikeLaws'
 
 const LIBRARIES: ("places" | "geometry")[] = ["places", "geometry"];
+
+interface GroupRide {
+  id: string;
+  name: string;
+  isPublic: boolean;
+  pin: string;
+  creatorId: string;
+  origin: string;
+  startLat: number;
+  startLng: number;
+  status: string;
+  leaderId?: string;
+  leaderTrail?: google.maps.LatLngLiteral[];
+}
+
+interface Participant {
+  userId: string;
+  name: string;
+  lat: number;
+  lng: number;
+  lastUpdatedAt: number;
+}
 
 interface BikeSpecs {
   voltage: number | '';
@@ -124,8 +146,22 @@ function MapHome() {
   const [mapSnapshot, setMapSnapshot] = useState<string | null>(null);
   const [settingsDirty, setSettingsDirty] = useState(true);
   const [userLocation, setUserLocation] = useState<google.maps.LatLngLiteral | null>(null);
-  const [isHostingRide, setIsHostingRide] = useState(false);
-  const [hostedRideId, setHostedRideId] = useState<string | null>(null);
+
+  // Group Ride State
+  const [activeRide, setActiveRide] = useState<GroupRide | null>(null);
+  const [publicRides, setPublicRides] = useState<GroupRide[]>([]);
+  const [rideParticipants, setRideParticipants] = useState<Participant[]>([]);
+  const [groupRideName, setGroupRideName] = useState('');
+  const [isPublicRide, setIsPublicRide] = useState(true);
+  const [joinPin, setJoinPin] = useState('');
+
+  // Navigation State
+  const [isNavigating, setIsNavigating] = useState(false);
+  const [voiceEnabled, setVoiceEnabled] = useState(true);
+  const [currentLegIndex, setCurrentLegIndex] = useState(0);
+  const [currentStepIndex, setCurrentStepIndex] = useState(0);
+  const [distToNextStep, setNextStepDist] = useState<string | null>(null);
+  const [hasAnnouncedNextStep, setHasAnnouncedNextStep] = useState(false);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (u) => {
@@ -167,6 +203,107 @@ function MapHome() {
       const reader = new FileReader(); reader.onloadend = () => setMapSnapshot(reader.result as string); reader.readAsDataURL(blob);
     }).catch(console.error);
   }, [response, selectedRouteIndex]);
+
+  // Sync Public Rides (20mi radius)
+  useEffect(() => {
+    if (!user) return;
+    const q = query(collection(db, "group_rides"), where("isPublic", "==", true), where("status", "==", "active"));
+    const unsub = onSnapshot(q, (snap) => {
+      const rides: GroupRide[] = [];
+      snap.forEach(d => rides.push({ id: d.id, ...d.data() } as GroupRide));
+      setPublicRides(rides);
+    });
+    return () => unsub();
+  }, [user]);
+
+  // Sync Participants
+  useEffect(() => {
+    if (!activeRide) return;
+    const q = collection(db, `group_rides/${activeRide.id}/participants`);
+    const unsub = onSnapshot(q, (snap) => {
+      const parts: Participant[] = [];
+      snap.forEach(d => parts.push(d.data() as Participant));
+      setRideParticipants(parts);
+    });
+    return () => unsub();
+  }, [activeRide?.id]);
+
+  // Location Upload during Ride
+  useEffect(() => {
+    if (!activeRide || !user) return;
+    const interval = setInterval(() => {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(async (pos) => {
+          const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+          setUserLocation(loc);
+          await setDoc(doc(db, `group_rides/${activeRide.id}/participants`, user.uid), {
+            userId: user.uid, name: userData?.username || 'Rider', lat: loc.lat, lng: loc.lng, lastUpdatedAt: Date.now()
+          }, { merge: true });
+          if (activeRide.leaderId === user.uid) {
+            await updateDoc(doc(db, "group_rides", activeRide.id), { leaderTrail: arrayUnion(loc) });
+          }
+        });
+      }
+    }, 15000);
+    return () => clearInterval(interval);
+  }, [activeRide?.id, user, userData?.username]);
+
+  // Navigation Logic
+  const speak = (text: string) => {
+    if (voiceEnabled && 'speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      window.speechSynthesis.speak(utterance);
+    }
+  };
+
+  const startNavigation = () => {
+    if (!response) return;
+    setIsNavigating(true); setCurrentLegIndex(0); setCurrentStepIndex(0); setHasAnnouncedNextStep(false); setShowMobileMenu(false);
+    const firstStep = response.routes[selectedRouteIndex].legs[0].steps[0];
+    speak(`Starting trip. ${firstStep.instructions.replace(/<[^>]*>?/gm, '')}`);
+    if (mapRef.current) { mapRef.current.setZoom(18); mapRef.current.setTilt(45); }
+  };
+
+  const stopNavigation = () => {
+    setIsNavigating(false);
+    if (mapRef.current) { mapRef.current.setTilt(0); }
+  };
+
+  useEffect(() => {
+    if (!isNavigating || !response) return;
+    const watchId = navigator.geolocation.watchPosition((pos) => {
+      const userLoc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      const route = response.routes[selectedRouteIndex];
+      const leg = route.legs[currentLegIndex];
+      const step = leg.steps[currentStepIndex];
+      
+      if (mapRef.current) { mapRef.current.panTo(userLoc); }
+      
+      const endLoc = { lat: step.end_location.lat(), lng: step.end_location.lng() };
+      const distMeters = google.maps.geometry.spherical.computeDistanceBetween(new google.maps.LatLng(userLoc.lat, userLoc.lng), new google.maps.LatLng(endLoc.lat, endLoc.lng));
+      const distFeet = distMeters * 3.28084;
+
+      setNextStepDist(distFeet > 528 ? `${(distFeet/5280).toFixed(1)} mi` : `${Math.round(distFeet)} ft`);
+
+      if (distFeet < 300 && !hasAnnouncedNextStep) {
+        speak(`In 300 feet, ${step.instructions.replace(/<[^>]*>?/gm, '')}`);
+        setHasAnnouncedNextStep(true);
+      }
+
+      if (distFeet < 60) {
+        if (currentStepIndex < leg.steps.length - 1) {
+          setCurrentStepIndex(currentStepIndex + 1); setHasAnnouncedNextStep(false);
+          speak(leg.steps[currentStepIndex+1].instructions.replace(/<[^>]*>?/gm, ''));
+        } else if (currentLegIndex < route.legs.length - 1) {
+          setCurrentLegIndex(currentLegIndex + 1); setCurrentStepIndex(0); setHasAnnouncedNextStep(false);
+        } else {
+          speak("You have arrived at your destination."); stopNavigation();
+        }
+      }
+    }, null, { enableHighAccuracy: true });
+    return () => navigator.geolocation.clearWatch(watchId);
+  }, [isNavigating, response, currentLegIndex, currentStepIndex, hasAnnouncedNextStep, selectedRouteIndex]);
 
   const markDirty = () => { if (!settingsDirty) setSettingsDirty(true); };
   
@@ -259,6 +396,33 @@ function MapHome() {
     });
   };
 
+  const createRide = async () => {
+    if (!user) { setShowAuthModal(true); return; }
+    if (!groupRideName) { alert("Name required."); return; }
+    const pin = Math.floor(1000 + Math.random() * 9000).toString();
+    const rideData = { name: groupRideName, isPublic: isPublicRide, pin, creatorId: user.uid, status: 'active', startLat: center.lat, startLng: center.lng };
+    const ref = await addDoc(collection(db, "group_rides"), rideData);
+    setActiveRide({ id: ref.id, ...rideData } as any);
+    await setDoc(doc(db, `group_rides/${ref.id}/participants`, user.uid), { userId: user.uid, name: userData?.username || 'Host', lat: center.lat, lng: center.lng, lastUpdatedAt: Date.now() });
+  };
+
+  const joinRide = async () => {
+    if (!user) { setShowAuthModal(true); return; }
+    const q = query(collection(db, "group_rides"), where("pin", "==", joinPin), where("status", "==", "active"));
+    const snap = await getDocs(q);
+    if (!snap.empty) {
+      const ride = snap.docs[0];
+      await setDoc(doc(db, `group_rides/${ride.id}/participants`, user.uid), { userId: user.uid, name: userData?.username || 'Rider', lat: center.lat, lng: center.lng, lastUpdatedAt: Date.now() });
+      setActiveRide({ id: ride.id, ...ride.data() } as any);
+    } else { alert("Ride not found."); }
+  };
+
+  const endRide = async () => {
+    if (!activeRide) return;
+    await updateDoc(doc(db, "group_rides", activeRide.id), { status: 'offline' });
+    setActiveRide(null); setRideParticipants([]);
+  };
+
   const saveCurrentBike = async () => {
     if (!user) { setShowAuthModal(true); return; }
     if (!newBikeName) return;
@@ -281,33 +445,6 @@ function MapHome() {
         markDirty();
       });
     }
-  };
-
-  const toggleRideHosting = async () => {
-    if (!user) { setShowAuthModal(true); return; }
-    if (isHostingRide && hostedRideId) {
-      setIsLoading(true);
-      try {
-        await deleteDoc(doc(db, "group_rides", hostedRideId));
-        setIsHostingRide(false); setHostedRideId(null);
-      } catch (e) { console.error(e); }
-      setIsLoading(false);
-      return;
-    }
-    setIsLoading(true);
-    try {
-      const rideRef = await addDoc(collection(db, "group_rides"), {
-        creatorId: user.uid,
-        hostName: userData?.username || 'Rider',
-        location: userLocation || center,
-        startTime: serverTimestamp(),
-        isActive: true
-      });
-      setHostedRideId(rideRef.id);
-      setIsHostingRide(true);
-      alert("Hosting Group Ride!");
-    } catch (e) { console.error(e); }
-    setIsLoading(false);
   };
 
   const downloadShareCard = async () => {
@@ -355,13 +492,11 @@ function MapHome() {
             <button className={unitSystem === 'imperial' ? 'active' : ''} onClick={() => setUnitSystem('imperial')}>Imperial</button>
             <button className={unitSystem === 'metric' ? 'active' : ''} onClick={() => setUnitSystem('metric')}>Metric</button>
           </div></div>
-          
-          <button 
-            onClick={toggleRideHosting} 
-            style={{ width: '100%', padding: '1rem', background: isHostingRide ? '#333' : '#ff6600', color: 'white', border: 'none', borderRadius: '12px', fontWeight: 900, marginBottom: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.6rem' }}
-          >
-            <span style={{ fontSize: '1.2rem' }}>{isHostingRide ? '🛑' : '🏍️'}</span> {isHostingRide ? 'Stop Hosting' : 'Host Group Ride'}
-          </button>
+
+          <div className="form-group"><label>Voice Navigation</label><div className="mode-toggle">
+            <button className={voiceEnabled ? 'active' : ''} onClick={() => setVoiceEnabled(true)}>Enabled 🔊</button>
+            <button className={!voiceEnabled ? 'active' : ''} onClick={() => setVoiceEnabled(false)}>Muted 🔇</button>
+          </div></div>
 
           <section className="form-group" style={{ position: 'relative' }}>
             <label>Bike Library</label>
@@ -376,6 +511,29 @@ function MapHome() {
               <button onClick={saveCurrentBike} style={{ padding: '0.4rem 0.8rem', background: '#ff6600', color: 'white', border: 'none', borderRadius: '4px' }}>Save</button>
             </div>
           </section>
+
+          <section className="form-group" style={{ borderTop: '1px solid #333', paddingTop: '1rem' }}>
+            <label style={{ color: '#ff6600' }}>Group Ride</label>
+            {!activeRide ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <input type="text" placeholder="Ride Name" value={groupRideName} onChange={e => setGroupRideName(e.target.value)} />
+                  <button onClick={createRide} style={{ padding: '0.4rem 1rem', background: '#ff6600', border: 'none', borderRadius: '4px', color: 'white', fontWeight: 'bold' }}>Host</button>
+                </div>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <input type="text" placeholder="PIN" value={joinPin} onChange={e => setJoinPin(e.target.value)} />
+                  <button onClick={joinRide} style={{ padding: '0.4rem 1rem', background: '#444', border: 'none', borderRadius: '4px', color: 'white' }}>Join</button>
+                </div>
+              </div>
+            ) : (
+              <div style={{ background: 'rgba(52,168,83,0.1)', padding: '1rem', borderRadius: '12px', border: '1px solid #34a853' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}><strong>{activeRide.name}</strong> <span>PIN: {activeRide.pin}</span></div>
+                <div style={{ margin: '0.5rem 0', fontSize: '0.8rem' }}>{rideParticipants.length} Participants</div>
+                <button onClick={endRide} style={{ width: '100%', padding: '0.5rem', background: '#d93025', border: 'none', borderRadius: '4px', color: 'white', fontWeight: 'bold' }}>End Ride</button>
+              </div>
+            )}
+          </section>
+
           <section className="form-group">
             <label>Route</label>
             <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -484,7 +642,7 @@ function MapHome() {
               
               <button onClick={() => setShowSharePreview(true)} style={{ width: '100%', padding: '1rem', background: '#333', color: 'white', border: 'none', borderRadius: '12px', fontWeight: 900, marginBottom: '1.5rem' }}>Save Image (PRO)</button>
 
-              <button style={{ width: '100%', padding: '1.2rem', background: 'linear-gradient(to bottom, #ff8800, #ff6600)', color: 'white', border: 'none', borderRadius: '16px', fontWeight: 900, fontSize: '1.2rem', boxShadow: '0 4px 15px rgba(255,102,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+              <button onClick={startNavigation} style={{ width: '100%', padding: '1.2rem', background: 'linear-gradient(to bottom, #ff8800, #ff6600)', color: 'white', border: 'none', borderRadius: '16px', fontWeight: 900, fontSize: '1.2rem', boxShadow: '0 4px 15px rgba(255,102,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
                 🏁 START TRIP
               </button>
             </div>
@@ -492,6 +650,34 @@ function MapHome() {
           <AdBanner isPro={isPro} />
         </aside>
         <main style={{ flex: 1, position: 'relative' }}>
+          {isNavigating && response && (
+            <div style={{ position: 'fixed', top: '5.5rem', left: '50%', transform: 'translateX(-50%)', width: '90%', maxWidth: '500px', zIndex: 10000, background: '#1a1a1a', border: '2px solid #ff6600', borderRadius: '20px', padding: '1.2rem', boxShadow: '0 10px 40px rgba(0,0,0,0.8)', display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flex: 1 }}>
+                  <div style={{ background: '#333', padding: '0.6rem', borderRadius: '12px', fontSize: '1.5rem' }}>
+                    {response.routes[selectedRouteIndex].legs[currentLegIndex].steps[currentStepIndex].instructions.toLowerCase().includes('left') ? '⬅️' : 
+                     response.routes[selectedRouteIndex].legs[currentLegIndex].steps[currentStepIndex].instructions.toLowerCase().includes('right') ? '➡️' : '⬆️'}
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.7rem', color: '#ff6600', fontWeight: 900, textTransform: 'uppercase' }}>In {distToNextStep || '---'}</div>
+                    <div style={{ color: 'white', fontSize: '1.1rem', fontWeight: 'bold', lineHeight: '1.2' }} dangerouslySetInnerHTML={{ __html: response.routes[selectedRouteIndex].legs[currentLegIndex].steps[currentStepIndex].instructions }} />
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button onClick={() => setVoiceEnabled(!voiceEnabled)} style={{ background: '#333', color: 'white', border: 'none', borderRadius: '50%', width: '40px', height: '40px', cursor: 'pointer', fontSize: '1.2rem' }}>{voiceEnabled ? '🔊' : '🔇'}</button>
+                  <button onClick={stopNavigation} style={{ background: '#444', color: 'white', border: 'none', borderRadius: '50%', width: '40px', height: '40px', cursor: 'pointer', fontWeight: 'bold' }}>✕</button>
+                </div>
+              </div>
+              {metrics && (
+                <div style={{ display: 'flex', gap: '1rem', borderTop: '1px solid #333', paddingTop: '0.8rem' }}>
+                   <div style={{ flex: 1, textAlign: 'center' }}><div style={{ fontSize: '0.6rem', color: '#888' }}>BATTERY</div><div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#34a853' }}>{metrics.batteryPercentUsed.toFixed(0)}%</div></div>
+                   <div style={{ flex: 1, textAlign: 'center' }}><div style={{ fontSize: '0.6rem', color: '#888' }}>SPEED</div><div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: 'white' }}>{targetSpeedMph}mph</div></div>
+                   <div style={{ flex: 1, textAlign: 'center' }}><div style={{ fontSize: '0.6rem', color: '#888' }}>REMAINING</div><div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: 'white' }}>{Math.round(metrics.durationMin)}min</div></div>
+                </div>
+              )}
+            </div>
+          )}
+
           <div style={{ position: 'absolute', top: '1rem', right: '1rem', zIndex: 10, display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
             <button onClick={() => searchPOIs('charging')} style={{ padding: '1rem 1.5rem', background: 'rgba(20,20,20,0.95)', color: 'white', border: '1px solid #333', borderRadius: '16px', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '0.6rem', boxShadow: '0 8px 30px rgba(0,0,0,0.6)', backdropFilter: 'blur(10px)' }}><span style={{ color: '#ff6600', fontSize: '1.2rem' }}>⚡</span> Chargers</button>
             <button onClick={() => searchPOIs('cafe')} style={{ padding: '1rem 1.5rem', background: 'rgba(20,20,20,0.95)', color: 'white', border: '1px solid #333', borderRadius: '16px', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '0.6rem', boxShadow: '0 8px 30px rgba(0,0,0,0.6)', backdropFilter: 'blur(10px)' }}><span style={{ color: '#ffcc00', fontSize: '1.2rem' }}>☕</span> Cafes</button>
@@ -506,6 +692,16 @@ function MapHome() {
               {pois.map(p => (
                 <Marker key={p.id} position={p.position} onClick={() => setSelectedPoi(p)} label={p.type === 'charging' ? { text: '⚡', color: 'white', fontWeight: 'bold' } : undefined} icon={{ url: p.type === 'charging' ? 'https://maps.google.com/mapfiles/ms/icons/green-dot.png' : 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png' }} />
               ))}
+              
+              {/* Ride Participants */}
+              {rideParticipants.map(p => (
+                <Marker key={p.userId} position={{ lat: p.lat, lng: p.lng }} label={{ text: p.name, color: 'white', fontSize: '12px', fontWeight: 'bold' }} icon={{ path: google.maps.SymbolPath.CIRCLE, fillColor: activeRide?.creatorId === p.userId ? '#34a853' : '#ff6600', fillOpacity: 1, strokeColor: 'white', strokeWeight: 2, scale: 8 }} />
+              ))}
+
+              {activeRide?.leaderTrail && activeRide.leaderTrail.length > 1 && (
+                <Polyline path={activeRide.leaderTrail} options={{ strokeColor: '#ff6600', strokeOpacity: 0.9, strokeWeight: 6 }} />
+              )}
+
               {userLocation && (
                 <Marker 
                   position={userLocation} 
