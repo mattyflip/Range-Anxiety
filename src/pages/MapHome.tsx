@@ -1086,6 +1086,29 @@ function MapHome() {
     mapRef.current = map;
   }, []);
 
+  const onMapClick = useCallback((e: google.maps.MapMouseEvent | google.maps.IconMouseEvent) => {
+    if ('placeId' in e && e.placeId) {
+      e.stop(); // Prevent default Google popup
+      if (!mapRef.current) return;
+      const service = new google.maps.places.PlacesService(mapRef.current);
+      service.getDetails({ placeId: e.placeId }, (place, status) => {
+        if (status === google.maps.places.PlacesServiceStatus.OK && place && place.geometry && place.geometry.location) {
+          const poi: POI = {
+            id: place.place_id || Math.random().toString(),
+            name: place.name || 'Selected Place',
+            address: place.formatted_address || '',
+            position: { lat: place.geometry.location.lat(), lng: place.geometry.location.lng() },
+            type: 'store'
+          };
+          setSelectedPoi(poi);
+          if (mapRef.current) {
+            mapRef.current.panTo(poi.position);
+          }
+        }
+      });
+    }
+  }, []);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setTrip(prev => ({ ...prev, [name]: value }));
@@ -2078,6 +2101,7 @@ function MapHome() {
               zoom={10}
               onLoad={onMapLoad}
               onIdle={onMapIdle}
+              onClick={onMapClick}
             >
                 <div className="map-controls">
                     <button onClick={() => searchPOIs('cafe')}>☕ Cafes</button>
