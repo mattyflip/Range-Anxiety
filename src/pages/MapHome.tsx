@@ -348,7 +348,10 @@ function MapHome() {
           }}
           style={{ background: '#ff6600', color: 'white', border: 'none', padding: '0.8rem 1.5rem', borderRadius: '25px', fontWeight: 'bold' }}
         >
-          {showMobileMenu ? (settingsDirty ? '🚀 Find Route' : '🗺️ Map') : (metrics ? '📊 Stats' : '🏁 Start Here')}
+          {showMobileMenu 
+            ? (settingsDirty ? (metrics ? '🔄 Update Trip' : '🚀 Find Route') : '🗺️ Map') 
+            : (metrics && !settingsDirty ? '📊 Stats' : '🏁 Start Here')
+          }
         </button>
         <button onClick={recenterMap} style={{ width: '45px', height: '45px', borderRadius: '50%', background: '#333', color: 'white', border: 'none', cursor: 'pointer' }}>🎯</button>
       </div>
