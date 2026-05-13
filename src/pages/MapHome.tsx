@@ -531,14 +531,6 @@ function MapHome() {
             {!activeRide ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  <input type="text" placeholder="Ride Name" value={groupRideName} onChange={e => setGroupRideName(e.target.value)} />
-                  <button onClick={createRide} style={{ padding: '0.4rem 1rem', background: '#ff6600', border: 'none', borderRadius: '4px', color: 'white', fontWeight: 'bold' }}>Host</button>
-                </div>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.7rem' }}>
-                  <input type="checkbox" checked={isPublicRide} onChange={e => setIsPublicRide(e.target.checked)} style={{ width: 'auto' }} />
-                  Public Visibility
-                </label>
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
                   <input type="text" placeholder="PIN" value={joinPin} onChange={e => setJoinPin(e.target.value)} />
                   <button onClick={() => joinRide()} style={{ padding: '0.4rem 1rem', background: '#444', border: 'none', borderRadius: '4px', color: 'white' }}>Join</button>
                 </div>
