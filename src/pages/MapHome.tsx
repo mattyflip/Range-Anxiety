@@ -1292,7 +1292,7 @@ function MapHome() {
   const useCurrentLocation = () => { if (navigator.geolocation) { navigator.geolocation.getCurrentPosition((pos) => { setTrip(prev => ({ ...prev, origin: `${pos.coords.latitude},${pos.coords.longitude}` })); }); } };
 
   const searchPOIs = async (category: string) => {
-    if (!response || !isLoaded) return;
+    if (!isLoaded || !mapRef.current) return;
 
     if (category === 'charging' && !isPro && !isHostTier) {
       alert("Charging station discovery is a PRO feature. Upgrade to unlock!");
@@ -1303,9 +1303,16 @@ function MapHome() {
     setPoiCategory(category);
     
     if (category === 'charging') {
-      const path = response.routes[0].overview_path.map(p => ({ lat: p.lat(), lng: p.lng() }));
       try {
-        const resp = await axios.post('/api/charging', { path, category });
+        let resp;
+        if (response) {
+          const path = response.routes[0].overview_path.map(p => ({ lat: p.lat(), lng: p.lng() }));
+          resp = await axios.post('/api/charging', { path, category });
+        } else {
+          const c = mapRef.current.getCenter();
+          if (!c) return;
+          resp = await axios.post('/api/charging', { lat: c.lat(), lng: c.lng(), category });
+        }
         if (resp.data.pois) setPois(resp.data.pois);
       } catch (e) { console.error("POI search failed", e); }
     } else {
@@ -2072,7 +2079,6 @@ function MapHome() {
               onLoad={onMapLoad}
               onIdle={onMapIdle}
             >
-              {response && (
                 <div className="map-controls">
                     <button onClick={() => searchPOIs('cafe')}>☕ Cafes</button>
                     <button onClick={() => searchPOIs('bike shop')}>🚲 Shops</button>
@@ -2109,7 +2115,6 @@ function MapHome() {
                     </button>
                     <button onClick={searchByMapCenter}>🔍 Search Area</button>
                 </div>
-              )}
 
               {trip.origin && trip.destination && isLoading && !response && (
                 <DirectionsService
