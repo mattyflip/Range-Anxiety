@@ -401,20 +401,34 @@ function MapHome() {
     if (!groupRideName) { alert("Name required."); return; }
     const pin = Math.floor(1000 + Math.random() * 9000).toString();
     const rideData = { name: groupRideName, isPublic: isPublicRide, pin, creatorId: user.uid, status: 'active', startLat: center.lat, startLng: center.lng };
-    const ref = await addDoc(collection(db, "group_rides"), rideData);
-    setActiveRide({ id: ref.id, ...rideData } as any);
-    await setDoc(doc(db, `group_rides/${ref.id}/participants`, user.uid), { userId: user.uid, name: userData?.username || 'Host', lat: center.lat, lng: center.lng, lastUpdatedAt: Date.now() });
+    const rideRef = await addDoc(collection(db, "group_rides"), rideData);
+    setActiveRide({ id: rideRef.id, ...rideData } as any);
+    await setDoc(doc(db, `group_rides/${rideRef.id}/participants`, user.uid), { userId: user.uid, name: userData?.username || 'Host', lat: center.lat, lng: center.lng, lastUpdatedAt: Date.now() });
   };
 
-  const joinRide = async () => {
+  const joinRide = async (rideId?: string) => {
     if (!user) { setShowAuthModal(true); return; }
-    const q = query(collection(db, "group_rides"), where("pin", "==", joinPin), where("status", "==", "active"));
-    const snap = await getDocs(q);
-    if (!snap.empty) {
-      const ride = snap.docs[0];
-      await setDoc(doc(db, `group_rides/${ride.id}/participants`, user.uid), { userId: user.uid, name: userData?.username || 'Rider', lat: center.lat, lng: center.lng, lastUpdatedAt: Date.now() });
-      setActiveRide({ id: ride.id, ...ride.data() } as any);
+    let targetRide;
+    if (rideId) {
+      const snap = await getDoc(doc(db, "group_rides", rideId));
+      if (snap.exists()) targetRide = { id: snap.id, ...snap.data() };
+    } else {
+      const q = query(collection(db, "group_rides"), where("pin", "==", joinPin), where("status", "==", "active"));
+      const snap = await getDocs(q);
+      if (!snap.empty) targetRide = { id: snap.docs[0].id, ...snap.docs[0].data() };
+    }
+
+    if (targetRide) {
+      await setDoc(doc(db, `group_rides/${targetRide.id}/participants`, user.uid), { userId: user.uid, name: userData?.username || 'Rider', lat: center.lat, lng: center.lng, lastUpdatedAt: Date.now() });
+      setActiveRide(targetRide as any);
+      setJoinPin('');
     } else { alert("Ride not found."); }
+  };
+
+  const leaveRide = async () => {
+    if (!activeRide || !user) return;
+    await deleteDoc(doc(db, `group_rides/${activeRide.id}/participants`, user.uid));
+    setActiveRide(null); setRideParticipants([]);
   };
 
   const endRide = async () => {
@@ -520,16 +534,34 @@ function MapHome() {
                   <input type="text" placeholder="Ride Name" value={groupRideName} onChange={e => setGroupRideName(e.target.value)} />
                   <button onClick={createRide} style={{ padding: '0.4rem 1rem', background: '#ff6600', border: 'none', borderRadius: '4px', color: 'white', fontWeight: 'bold' }}>Host</button>
                 </div>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.7rem' }}>
+                  <input type="checkbox" checked={isPublicRide} onChange={e => setIsPublicRide(e.target.checked)} style={{ width: 'auto' }} />
+                  Public Visibility
+                </label>
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
                   <input type="text" placeholder="PIN" value={joinPin} onChange={e => setJoinPin(e.target.value)} />
-                  <button onClick={joinRide} style={{ padding: '0.4rem 1rem', background: '#444', border: 'none', borderRadius: '4px', color: 'white' }}>Join</button>
+                  <button onClick={() => joinRide()} style={{ padding: '0.4rem 1rem', background: '#444', border: 'none', borderRadius: '4px', color: 'white' }}>Join</button>
                 </div>
+                {publicRides.length > 0 && (
+                  <div style={{ marginTop: '0.5rem' }}>
+                    <label style={{ fontSize: '0.6rem', color: '#888' }}>NEARBY RIDES</label>
+                    {publicRides.map(r => (
+                      <div key={r.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#222', padding: '0.5rem', borderRadius: '8px', marginTop: '0.4rem' }}>
+                        <span style={{ fontSize: '0.75rem' }}>{r.name}</span>
+                        <button onClick={() => joinRide(r.id)} style={{ padding: '0.2rem 0.5rem', background: '#34a853', color: 'white', border: 'none', borderRadius: '4px', fontSize: '0.6rem' }}>Join</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             ) : (
               <div style={{ background: 'rgba(52,168,83,0.1)', padding: '1rem', borderRadius: '12px', border: '1px solid #34a853' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}><strong>{activeRide.name}</strong> <span>PIN: {activeRide.pin}</span></div>
                 <div style={{ margin: '0.5rem 0', fontSize: '0.8rem' }}>{rideParticipants.length} Participants</div>
-                <button onClick={endRide} style={{ width: '100%', padding: '0.5rem', background: '#d93025', border: 'none', borderRadius: '4px', color: 'white', fontWeight: 'bold' }}>End Ride</button>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button onClick={leaveRide} style={{ flex: 1, padding: '0.5rem', background: '#444', border: 'none', borderRadius: '4px', color: 'white' }}>Leave</button>
+                  {user?.uid === activeRide.creatorId && <button onClick={endRide} style={{ flex: 1, padding: '0.5rem', background: '#d93025', border: 'none', borderRadius: '4px', color: 'white', fontWeight: 'bold' }}>End</button>}
+                </div>
               </div>
             )}
           </section>
