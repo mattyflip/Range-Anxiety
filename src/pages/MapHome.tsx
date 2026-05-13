@@ -77,6 +77,14 @@ interface SavedBike {
   image?: string;
 }
 
+interface TrailPolyline {
+  id: string;
+  name: string;
+  type: string;
+  difficulty?: string;
+  points: google.maps.LatLngLiteral[];
+}
+
 const STANDARD_BIKES: SavedBike[] = [
   // --- High Performance E-Motos & Motorcycles ---
   { name: "Surron Light Bee X (2025)", specs: { voltage: 60, capacityAh: 40, motorWatts: 8000, bikeWeightLbs: 125 } },
@@ -380,6 +388,10 @@ function MapHome() {
   const [mapSnapshot, setMapSnapshot] = useState<string | null>(null);
   const [pendingBikeAutoSelect, setPendingBikeAutoSelect] = useState(false);
   const [settingsDirty, setSettingsDirty] = useState(true);
+
+  // Trails State
+  const [showTrails, setShowTrails] = useState(false);
+  const [trailPolylines, setTrailPolylines] = useState<TrailPolyline[]>([]);
 
   // Navigation State
   const [isNavigating, setIsNavigating] = useState(false);
@@ -1340,6 +1352,60 @@ function MapHome() {
     }
   };
 
+  const fetchOHVTrails = async () => {
+    if (!mapRef.current) return;
+    const zoom = mapRef.current.getZoom() || 0;
+    if (zoom < 12) return;
+
+    const bounds = mapRef.current.getBounds();
+    if (!bounds) return;
+
+    const sw = bounds.getSouthWest();
+    const ne = bounds.getNorthEast();
+    const bbox = `${sw.lat()},${sw.lng()},${ne.lat()},${ne.lng()}`;
+
+    const query = `
+      [out:json][timeout:25];
+      (
+        way["highway"~"track|path"]["motor_vehicle"~"yes|designated"](${bbox});
+        way["highway"~"track|path"]["atv"~"yes|designated"](${bbox});
+        way["highway"~"track|path"]["motorcycle"~"yes|designated"](${bbox});
+        way["route"="ohv"](${bbox});
+      );
+      out body;
+      >;
+      out skel qt;
+    `;
+
+    try {
+      const resp = await axios.get(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`);
+      const elements = resp.data.elements;
+      const nodes: { [key: number]: google.maps.LatLngLiteral } = {};
+      const ways: any[] = [];
+
+      elements.forEach((el: any) => {
+        if (el.type === 'node') nodes[el.id] = { lat: el.lat, lng: el.lon };
+        else if (el.type === 'way') ways.push(el);
+      });
+
+      const trailLines: TrailPolyline[] = ways.map((w: any) => ({
+        id: `osm-${w.id}`,
+        name: w.tags?.name || 'Unnamed Trail',
+        type: w.tags?.highway || 'trail',
+        difficulty: w.tags?.difficulty,
+        points: w.nodes.map((nodeId: number) => nodes[nodeId]).filter(Boolean)
+      }));
+
+      setTrailPolylines(trailLines);
+    } catch (e) {
+      console.error("Failed to fetch trails", e);
+    }
+  };
+
+  const onMapIdle = useCallback(() => {
+    if (showTrails) fetchOHVTrails();
+  }, [showTrails]);
+
   const handlePoiClick = (poi: POI) => {
     setSelectedPoi(poi);
     if (mapRef.current) {
@@ -2004,6 +2070,7 @@ function MapHome() {
               center={center}
               zoom={10}
               onLoad={onMapLoad}
+              onIdle={onMapIdle}
             >
               {response && (
                 <div className="map-controls">
@@ -2018,6 +2085,27 @@ function MapHome() {
                       }}
                     >
                       ⚡ Charging {(!isPro && !isHostTier) && '🔒'}
+                    </button>
+                    <button 
+                      onClick={() => {
+                        if (!isPro && !isHostTier) {
+                          alert("OHV Trails are a PRO feature. Upgrade to unlock!");
+                          handleUpgrade('pro');
+                          return;
+                        }
+                        const next = !showTrails;
+                        setShowTrails(next);
+                        if (next) fetchOHVTrails();
+                        else setTrailPolylines([]);
+                      }}
+                      style={{
+                        background: showTrails ? '#34a853' : ((!isPro && !isHostTier) ? 'rgba(0,0,0,0.5)' : undefined),
+                        opacity: (!isPro && !isHostTier) ? 0.7 : 1,
+                        border: (!isPro && !isHostTier) ? '1px dashed #666' : undefined,
+                        color: showTrails ? 'white' : undefined
+                      }}
+                    >
+                      🌲 Trails {(!isPro && !isHostTier) && '🔒'}
                     </button>
                     <button onClick={searchByMapCenter}>🔍 Search Area</button>
                 </div>
@@ -2040,6 +2128,19 @@ function MapHome() {
                 />
               )}
               {response && <DirectionsRenderer options={{ directions: response, routeIndex: selectedRouteIndex }} />}
+              
+              {showTrails && trailPolylines.map(trail => (
+                <Polyline
+                  key={trail.id}
+                  path={trail.points}
+                  options={{
+                    strokeColor: '#34a853',
+                    strokeOpacity: 0.8,
+                    strokeWeight: 4,
+                  }}
+                  onClick={() => alert(`Trail: ${trail.name}\nType: ${trail.type}\nDifficulty: ${trail.difficulty || 'Unknown'}`)}
+                />
+              ))}
               
               {activeRide?.leaderTrail && activeRide.leaderTrail.length > 1 && (
                 <Polyline 
