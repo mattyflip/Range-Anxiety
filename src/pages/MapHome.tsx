@@ -1110,6 +1110,42 @@ function MapHome() {
     }
   }, []);
 
+  const moveStop = (index: number, direction: 'up' | 'down') => {
+    setTrip(prev => {
+      const all = [prev.origin, ...prev.waypoints, prev.destination].filter(wp => wp.trim() !== "");
+      const newIndex = direction === 'up' ? index - 1 : index + 1;
+      if (newIndex < 0 || newIndex >= all.length) return prev;
+      
+      const temp = all[index];
+      all[index] = all[newIndex];
+      all[newIndex] = temp;
+      
+      return {
+        ...prev,
+        origin: all[0] || "",
+        waypoints: all.slice(1, all.length - 1),
+        destination: all.length > 1 ? all[all.length - 1] : ""
+      };
+    });
+    setSettingsDirty(true);
+    setResponse(null);
+  };
+
+  const removeStop = (index: number) => {
+    setTrip(prev => {
+      const all = [prev.origin, ...prev.waypoints, prev.destination].filter(wp => wp.trim() !== "");
+      all.splice(index, 1);
+      return {
+        ...prev,
+        origin: all[0] || "",
+        waypoints: all.slice(1, all.length - 1),
+        destination: all.length > 1 ? all[all.length - 1] : ""
+      };
+    });
+    setSettingsDirty(true);
+    setResponse(null);
+  };
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setTrip(prev => ({ ...prev, [name]: value }));
@@ -1446,7 +1482,15 @@ function MapHome() {
   };
 
   const addPOIAsWaypoint = (poi: POI) => { 
-    setTrip(prev => ({ ...prev, waypoints: [...prev.waypoints, poi.address] })); 
+    setTrip(prev => {
+      if (!prev.origin) {
+        return { ...prev, origin: poi.address };
+      } else if (!prev.destination) {
+        return { ...prev, destination: poi.address };
+      } else {
+        return { ...prev, waypoints: [...prev.waypoints, poi.address] };
+      }
+    });
     setResponse(null); 
     setMetrics(null); 
     setIsLoading(true); // Trigger recalculation immediately
@@ -1637,24 +1681,62 @@ function MapHome() {
             </div>
           </section>
 
-          <section className="form-group">
-            <label>Origin</label>
-            <div style={{ display: 'flex', gap: '0.5rem' }}><input type="text" name="origin" value={trip.origin} onChange={handleInputChange} /><button onClick={useCurrentLocation} style={{ padding: '0 0.8rem', cursor: 'pointer', fontSize: '1.2rem', background: 'none', border: 'none' }} title="Use Current Location">📍</button></div>
-          </section>
-          
-          <div style={{ textAlign: 'center', margin: '-0.5rem 0 0.5rem 0' }}>
-              <button 
-                onClick={() => setTrip(p => ({ ...p, origin: p.destination, destination: p.origin }))} 
-                style={{ background: 'none', border: 'none', color: 'var(--accent-color)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%' }}
-                title="Swap Origin and Destination"
-              >
-                <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
-                  <path d="M16 17.01V10h-2v7.01h-3L15 21l4-3.99h-3zM9 3L5 6.99h3V14h2V6.99h3L9 3z"/>
-                </svg>
-              </button>
-          </div>
+          <section className="form-group" style={{ marginBottom: '1.5rem' }}>
+            <label style={{ color: 'var(--accent-color)', fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Route Stops</label>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginTop: '0.8rem' }}>
+              {[trip.origin, ...trip.waypoints, trip.destination].filter(wp => wp.trim() !== "").map((stop, idx, allStops) => (
+                <div key={`${stop}-${idx}`} style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '12px', padding: '0.8rem', border: '1px solid #333', boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.05)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <div style={{ 
+                        width: '8px', 
+                        height: '8px', 
+                        borderRadius: '50%', 
+                        background: idx === 0 ? '#34a853' : (idx === allStops.length - 1 ? '#d93025' : '#ff6600') 
+                      }} />
+                      <span style={{ fontSize: '0.6rem', color: '#888', fontWeight: 900, textTransform: 'uppercase' }}>
+                        {idx === 0 ? 'Start' : (idx === allStops.length - 1 ? 'Finish' : `Stop ${idx}`)}
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.8rem', alignItems: 'center' }}>
+                       <button onClick={() => moveStop(idx, 'up')} disabled={idx === 0} style={{ background: 'none', border: 'none', color: idx === 0 ? '#222' : '#888', cursor: 'pointer', fontSize: '1rem', padding: '2px' }}>▲</button>
+                       <button onClick={() => moveStop(idx, 'down')} disabled={idx === allStops.length - 1} style={{ background: 'none', border: 'none', color: idx === allStops.length - 1 ? '#222' : '#888', cursor: 'pointer', fontSize: '1rem', padding: '2px' }}>▼</button>
+                       <button onClick={() => removeStop(idx)} style={{ background: 'none', border: 'none', color: '#444', cursor: 'pointer', fontSize: '1.1rem', marginLeft: '4px' }}>✕</button>
+                    </div>
+                  </div>
+                  <div style={{ fontSize: '0.85rem', color: 'white', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: '2rem' }}>{stop}</div>
+                </div>
+              ))}
 
-          <section className="form-group"><label>Destination</label><input type="text" name="destination" value={trip.destination} onChange={handleInputChange} /></section>
+              {/* Manual Entry Inputs */}
+              {!trip.origin && (
+                <div className="form-group" style={{ margin: 0 }}>
+                  <label style={{ fontSize: '0.6rem' }}>Set Starting Point</label>
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <input type="text" name="origin" placeholder="Type an address..." value={trip.origin} onChange={handleInputChange} style={{ flex: 1 }} />
+                    <button onClick={useCurrentLocation} style={{ padding: '0 0.8rem', background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer' }} title="Use GPS">📍</button>
+                  </div>
+                </div>
+              )}
+
+              {trip.origin && !trip.destination && (
+                <div className="form-group" style={{ margin: 0 }}>
+                  <label style={{ fontSize: '0.6rem' }}>Set Destination</label>
+                  <input type="text" name="destination" placeholder="Where to?" value={trip.destination} onChange={handleInputChange} />
+                </div>
+              )}
+
+              {trip.origin && trip.destination && (
+                <button 
+                  onClick={() => setTrip(p => ({ ...p, origin: p.destination, destination: p.origin }))} 
+                  style={{ background: 'none', border: 'none', color: '#666', cursor: 'pointer', fontSize: '0.65rem', textDecoration: 'underline', marginTop: '0.2rem' }}
+                >
+                  Swap Start/Finish
+                </button>
+              )}
+            </div>
+          </section>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>        
             <section className="form-group"><label>Voltage (V)</label><input type="number" value={specs.voltage} onChange={(e) => handleSpecChange('voltage', e.target.value)} /></section>
