@@ -417,11 +417,11 @@ function MapHome() {
         stops.push({ lat: route.legs[0].start_location.lat(), lng: route.legs[0].start_location.lng(), label: 'Start' });
         trip.waypoints.filter(w => w.trim()).forEach((_wp, i) => {
           if (route.legs[i + 1]) {
-            stops.push({ lat: route.legs[i + 1].start_location.lat(), lng: route.legs[i + 1].start_location.lng(), label: `Stop ${i + 3}` });
+            stops.push({ lat: route.legs[i + 1].start_location.lat(), lng: route.legs[i + 1].start_location.lng(), label: `Stop ${i + 2}` });
           }
         });
         const lastLeg = route.legs[route.legs.length - 1];
-        stops.push({ lat: lastLeg.end_location.lat(), lng: lastLeg.end_location.lng(), label: 'End' });
+        stops.push({ lat: lastLeg.end_location.lat(), lng: lastLeg.end_location.lng(), label: 'Stop 1' });
         
         updateDoc(doc(db, "group_rides", activeRide.id), {
           routePath: path,
@@ -715,15 +715,15 @@ function MapHome() {
               <input type="text" placeholder="Start" value={trip.origin} onChange={e => { setTrip(p => ({ ...p, origin: e.target.value })); markDirty(); }} style={{ flex: 1 }} />
               <button onClick={useCurrentLocation} style={{ background: 'none', border: 'none', fontSize: '1.2rem' }}>📍</button>
             </div>
-            <input type="text" placeholder="End" value={trip.destination} onChange={e => { setTrip(p => ({ ...p, destination: e.target.value })); markDirty(); }} style={{ marginTop: '0.5rem' }} />
+            <input type="text" placeholder="Stop 1" value={trip.destination} onChange={e => { setTrip(p => ({ ...p, destination: e.target.value })); markDirty(); }} style={{ marginTop: '0.5rem' }} />
             {trip.destination.trim() && (
-              <input type="text" placeholder="Stop 3 (optional)" value={waypoint3} onChange={e => { setWaypoint3(e.target.value); markDirty(); }} style={{ marginTop: '0.5rem' }} />
+              <input type="text" placeholder="Stop 2 (optional)" value={waypoint3} onChange={e => { setWaypoint3(e.target.value); markDirty(); }} style={{ marginTop: '0.5rem' }} />
             )}
             {waypoint3.trim() && (
-              <input type="text" placeholder="Stop 4 (optional)" value={waypoint4} onChange={e => { setWaypoint4(e.target.value); markDirty(); }} style={{ marginTop: '0.5rem' }} />
+              <input type="text" placeholder="Stop 3 (optional)" value={waypoint4} onChange={e => { setWaypoint4(e.target.value); markDirty(); }} style={{ marginTop: '0.5rem' }} />
             )}
             {waypoint4.trim() && (
-              <input type="text" placeholder="Stop 5 (optional)" value={waypoint5} onChange={e => { setWaypoint5(e.target.value); markDirty(); }} style={{ marginTop: '0.5rem' }} />
+              <input type="text" placeholder="Stop 4 (optional)" value={waypoint5} onChange={e => { setWaypoint5(e.target.value); markDirty(); }} style={{ marginTop: '0.5rem' }} />
             )}
             <div className="mode-toggle" style={{ marginTop: '0.5rem' }}>
               <button className={!isRoundTrip ? 'active' : ''} onClick={() => { setIsRoundTrip(false); markDirty(); }}>One Way</button>
@@ -871,7 +871,7 @@ function MapHome() {
               {trip.origin && trip.destination && isLoading && !response && (() => {
                 const wps = trip.waypoints?.filter(w => w.trim()).map(w => ({ location: w, stopover: true } as google.maps.DirectionsWaypoint)) || [];
                 const travelMode = wps.length > 0 ? google.maps.TravelMode.DRIVING : google.maps.TravelMode.BICYCLING;
-                return <DirectionsService options={{ origin: trip.origin, destination: trip.destination, waypoints: wps.length > 0 ? wps : undefined, travelMode }} callback={directionsCallback} />
+                return <DirectionsService options={{ origin: trip.origin, destination: trip.destination, waypoints: wps.length > 0 ? wps : undefined, travelMode, provideRouteAlternatives: true }} callback={directionsCallback} />
               })()}
               {response && <DirectionsRenderer options={{ directions: response }} />}
               {metrics?.deathPoint && <Marker position={metrics.deathPoint} label="☠️" />}
