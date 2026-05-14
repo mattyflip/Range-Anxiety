@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import { db, auth, storage } from '../firebase'
-import { doc, collection, query, where, onSnapshot, updateDoc, arrayRemove, getDoc, getDocs, addDoc, serverTimestamp, arrayUnion, deleteDoc } from 'firebase/firestore'
+import { doc, arrayRemove, collection, setDoc, query, where, onSnapshot, updateDoc, getDoc, getCountFromServer, getDocs, addDoc, serverTimestamp, deleteDoc } from 'firebase/firestore'
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
 import NavBar from '../components/NavBar'
 import InstallTutorial from '../components/InstallTutorial'
@@ -50,6 +50,8 @@ const Profile: React.FC = () => {
   const [userReviews, setUserReviews] = useState<Review[]>([]);
 
   const [isFollowing, setIsFollowing] = useState(false);
+  const [followerCount, setFollowerCount] = useState(0);
+  const [followingCount, setFollowingCount] = useState(0);
 
   // Edit Profile states
   const [showEditModal, setShowEditModal] = useState(false);
@@ -112,7 +114,11 @@ const Profile: React.FC = () => {
         setEditHomeRegion(data.homeRegion || '');
         setEditBirthday(data.birthday || '');
         setEditIsPro(data.isPro || false);
-        if (user && data.followers) setIsFollowing(data.followers.includes(user.uid));
+        if (user) {
+          getDoc(doc(db, "users", snap.docs[0].id, "followers", user.uid)).then(d => setIsFollowing(d.exists()));
+        }
+        getCountFromServer(collection(db, "users", snap.docs[0].id, "followers")).then(c => setFollowerCount(c.data().count));
+        getCountFromServer(collection(db, "users", snap.docs[0].id, "following")).then(c => setFollowingCount(c.data().count));
         if (postsUnsub) postsUnsub();
         postsUnsub = fetchUserPosts(snap.docs[0].id);
         fetchUserReviews(snap.docs[0].id);
@@ -129,7 +135,11 @@ const Profile: React.FC = () => {
             setEditHomeRegion(data.homeRegion || '');
             setEditBirthday(data.birthday || '');
             setEditIsPro(data.isPro || false);
-            if (user && data.followers) setIsFollowing(data.followers.includes(user.uid));
+            if (user) {
+          getDoc(doc(db, "users", origSnap.docs[0].id, "followers", user.uid)).then(d => setIsFollowing(d.exists()));
+        }
+        getCountFromServer(collection(db, "users", origSnap.docs[0].id, "followers")).then(c => setFollowerCount(c.data().count));
+        getCountFromServer(collection(db, "users", origSnap.docs[0].id, "following")).then(c => setFollowingCount(c.data().count));
             if (postsUnsub) postsUnsub();
             postsUnsub = fetchUserPosts(origSnap.docs[0].id);
             fetchUserReviews(origSnap.docs[0].id);
@@ -146,7 +156,11 @@ const Profile: React.FC = () => {
                 setEditHomeRegion(data.homeRegion || '');
                 setEditBirthday(data.birthday || '');
                 setEditIsPro(data.isPro || false);
-                if (user && data.followers) setIsFollowing(data.followers.includes(user.uid));
+                if (user) {
+          getDoc(doc(db, "users", uSnap.id, "followers", user.uid)).then(d => setIsFollowing(d.exists()));
+        }
+        getCountFromServer(collection(db, "users", uSnap.id, "followers")).then(c => setFollowerCount(c.data().count));
+        getCountFromServer(collection(db, "users", uSnap.id, "following")).then(c => setFollowingCount(c.data().count));
                 if (postsUnsub) postsUnsub();
                 postsUnsub = fetchUserPosts(uSnap.id);
                 fetchUserReviews(uSnap.id);
@@ -171,12 +185,12 @@ const Profile: React.FC = () => {
 
     try {
       if (isFollowing) {
-        await updateDoc(doc(db, "users", targetUserId), { followers: arrayRemove(currentUserId) });
-        await updateDoc(doc(db, "users", currentUserId), { following: arrayRemove(targetUserId) });
+        await deleteDoc(doc(db, "users", targetUserId, "followers", currentUserId));
+        await deleteDoc(doc(db, "users", currentUserId, "following", targetUserId));
         setIsFollowing(false);
       } else {
-        await updateDoc(doc(db, "users", targetUserId), { followers: arrayUnion(currentUserId) });
-        await updateDoc(doc(db, "users", currentUserId), { following: arrayUnion(targetUserId) });
+        await setDoc(doc(db, "users", targetUserId, "followers", currentUserId), { timestamp: serverTimestamp() });
+        await setDoc(doc(db, "users", currentUserId, "following", targetUserId), { timestamp: serverTimestamp() });
         setIsFollowing(true);
       }
     } catch (e) {
@@ -416,8 +430,8 @@ const Profile: React.FC = () => {
               )}
               <p style={{ color: '#888', marginTop: '0.5rem' }}>{profileData.bio || 'No bio yet.'}</p>
               <div style={{ display: 'flex', justifyContent: 'center', gap: '2rem', marginTop: '1.5rem' }}>
-                <div><div style={{ color: 'white', fontWeight: 'bold', fontSize: '1.2rem' }}>{profileData.followers?.length || 0}</div><div style={{ color: '#666', fontSize: '0.7rem', textTransform: 'uppercase' }}>Followers</div></div>
-                <div><div style={{ color: 'white', fontWeight: 'bold', fontSize: '1.2rem' }}>{profileData.following?.length || 0}</div><div style={{ color: '#666', fontSize: '0.7rem', textTransform: 'uppercase' }}>Following</div></div>
+                <div><div style={{ color: 'white', fontWeight: 'bold', fontSize: '1.2rem' }}>{followerCount}</div><div style={{ color: '#666', fontSize: '0.7rem', textTransform: 'uppercase' }}>Followers</div></div>
+                <div><div style={{ color: 'white', fontWeight: 'bold', fontSize: '1.2rem' }}>{followingCount}</div><div style={{ color: '#666', fontSize: '0.7rem', textTransform: 'uppercase' }}>Following</div></div>
               </div>
               {user && !isOwner && (
                 <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', marginTop: '2rem' }}>

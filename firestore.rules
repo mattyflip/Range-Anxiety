@@ -3,34 +3,34 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Helper function to check if user is signed in
-    function isSignedIn() {
-      return request.auth != null;
-    }
+    function isSignedIn() { return request.auth != null; }
+    function isAdmin() { return request.auth.token.email.lower() == 'mattyfliptv@gmail.com'; }
+    function isOwner(userId) { return request.auth.uid == userId; }
 
-    // Helper to check if the user is the admin
-    function isAdmin() {
-      return request.auth.token.email.lower() == 'mattyfliptv@gmail.com';
-    }
-
-    // Helper to check if the user owns the document
-    function isOwner(userId) {
-      return request.auth.uid == userId;
-    }
-
-    // --- Users Collection ---
     match /users/{userId} {
       allow read: if isSignedIn(); 
       allow write: if isOwner(userId) || isAdmin();
+      
+      match /followers/{followerId} {
+        allow read: if isSignedIn();
+        allow write: if isSignedIn() && request.auth.uid == followerId;
+      }
+      match /following/{followedId} {
+        allow read: if isSignedIn();
+        allow write: if isSignedIn() && request.auth.uid == userId;
+      }
     }
 
-    // --- Community Feed ---
     match /posts/{postId} {
       allow read: if isSignedIn();
       allow create: if isSignedIn() && request.resource.data.authorId == request.auth.uid;
       allow update, delete: if isSignedIn() && (request.auth.uid == resource.data.authorId || isAdmin());
       
-      // Post Comments
+      match /likes/{userId} {
+        allow read: if isSignedIn();
+        allow write: if isSignedIn() && request.auth.uid == userId;
+      }
+      
       match /comments/{commentId} {
         allow read: if isSignedIn();
         allow create: if isSignedIn() && request.resource.data.authorId == request.auth.uid;
@@ -38,19 +38,21 @@ service cloud.firestore {
       }
     }
 
-    // --- Forum Hub ---
     match /communities/{communityId} {
       allow read: if isSignedIn();
       allow create: if isSignedIn() && request.resource.data.creatorId == request.auth.uid;
       allow update, delete: if isSignedIn() && (request.auth.uid == resource.data.creatorId || isAdmin());
 
-      // Threads within a community
       match /threads/{threadId} {
         allow read: if isSignedIn();
         allow create: if isSignedIn() && request.resource.data.authorId == request.auth.uid;
         allow update, delete: if isSignedIn() && (request.auth.uid == resource.data.authorId || isAdmin());
 
-        // Comments within a thread
+        match /upvotes/{userId} {
+          allow read: if isSignedIn();
+          allow write: if isSignedIn() && request.auth.uid == userId;
+        }
+
         match /comments/{commentId} {
           allow read: if isSignedIn();
           allow create: if isSignedIn() && request.resource.data.authorId == request.auth.uid;
@@ -59,13 +61,11 @@ service cloud.firestore {
       }
     }
 
-    // --- Social Interactions ---
     match /rider_reviews/{reviewId} {
       allow read: if isSignedIn();
       allow create: if isSignedIn() && request.resource.data.reviewerId == request.auth.uid;
       allow update, delete: if isSignedIn() && (resource.data.reviewerId == request.auth.uid || isAdmin());
       
-      // Comments on reviews
       match /comments/{commentId} {
         allow read: if isSignedIn();
         allow create: if isSignedIn() && request.resource.data.authorId == request.auth.uid;
@@ -73,7 +73,6 @@ service cloud.firestore {
       }
     }
 
-    // --- Group Rides Collection ---
     match /group_rides/{rideId} {
       allow read: if isSignedIn();
       allow create: if isSignedIn() && request.resource.data.creatorId == request.auth.uid;
@@ -87,12 +86,11 @@ service cloud.firestore {
 
       match /requests/{requestId} {
         allow read: if isSignedIn();
-        allow create: if isSignedIn();
+        allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
         allow delete: if isSignedIn() && (request.auth.uid == requestId || isAdmin() || request.auth.uid == get(/databases/$(database)/documents/group_rides/$(rideId)).data.creatorId);
       }
     }
 
-    // --- System Status & Marketing ---
     match /system/status {
       allow read: if true;
       allow write: if isAdmin();
@@ -105,7 +103,7 @@ service cloud.firestore {
     }
     
     match /bike_submissions/{docId} {
-      allow create: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
       allow read: if isAdmin();
       allow update, delete: if isAdmin();
     }

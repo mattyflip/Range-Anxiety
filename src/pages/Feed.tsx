@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { useNavigate, useLocation, Link } from 'react-router-dom'
 import { db, auth, storage } from '../firebase'
-import { collection, query, orderBy, onSnapshot, doc, getDoc, updateDoc, arrayUnion, arrayRemove, addDoc, serverTimestamp, deleteDoc } from 'firebase/firestore'
+import { collection, query, orderBy, onSnapshot, doc, getDoc, updateDoc, addDoc, serverTimestamp, deleteDoc } from 'firebase/firestore'
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
 import NavBar from '../components/NavBar'
 import InstallTutorial from '../components/InstallTutorial'
 import AuthModal from '../components/AuthModal'
 import UniversalSearch from '../components/UniversalSearch'
+import LikeWidget from '../components/LikeWidget'
 import Cropper from 'react-easy-crop'
 import { getCroppedImg } from '../utils/imageUtils'
 import CommentModal from '../components/CommentModal'
@@ -110,32 +111,7 @@ const Feed: React.FC = () => {
     return () => unsubscribe();
   }, []);
 
-  const handleLike = async (post: Post) => {
-    if (!user) {
-      setShowAuthModal(true);
-      return;
-    }
-    const postRef = doc(db, "posts", post.id);
-    const isLiked = post.likes.includes(user.uid);
-    try {
-      await updateDoc(postRef, {
-        likes: isLiked ? arrayRemove(user.uid) : arrayUnion(user.uid)
-      });
-
-      // Notify if it's a new like
-      if (!isLiked && post.authorId !== user.uid) {
-        await createNotification(
-          post.authorId,
-          user.uid,
-          userData?.username || "Rider",
-          'like',
-          post.id
-        );
-      }
-    } catch (e) {
-      console.error("Like error:", e);
-    }
-  };
+  
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -311,12 +287,7 @@ const Feed: React.FC = () => {
 
                 <div style={{ padding: '1.2rem' }}>
                   <div style={{ display: 'flex', gap: '1.2rem', marginBottom: '1rem' }}>
-                    <button 
-                      onClick={() => handleLike(post)}
-                      style={{ background: 'none', border: 'none', color: post.likes.includes(user?.uid) ? '#ff4444' : 'white', fontSize: '1.5rem', cursor: 'pointer', padding: 0 }}
-                    >
-                      {post.likes.includes(user?.uid) ? '🧡' : '🤍'}
-                    </button>
+                    <LikeWidget post={post} user={user} onAuthNeeded={() => setShowAuthModal(true)} />
                     {post.commentsEnabled !== false && (
                       <button onClick={() => setActiveCommentPost(post)} style={{ background: 'none', border: 'none', color: 'white', fontSize: '1.5rem', cursor: 'pointer', padding: 0 }}>💬</button>
                     )}
@@ -329,7 +300,7 @@ const Feed: React.FC = () => {
                       </button>
                     )}
                   </div>
-                  <div style={{ color: 'white', fontWeight: 'bold', fontSize: '0.85rem', marginBottom: '0.5rem' }}>{post.likes.length} Likes</div>
+                  
                   <p style={{ color: '#ccc', fontSize: '0.95rem', lineHeight: '1.5', margin: 0 }}>
                     <span style={{ fontWeight: 'bold', color: 'white', marginRight: '0.5rem' }}>{post.authorUsername}</span>
                     {post.caption}
@@ -424,7 +395,7 @@ const Feed: React.FC = () => {
                   {selectedFullPost.caption}
                 </p>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginTop: '1rem' }}>
-                   <span style={{ color: '#ff6600', fontWeight: 'bold' }}>🧡 {selectedFullPost.likes.length} Likes</span>
+                   <span style={{ color: '#ff6600', fontWeight: 'bold' }}><LikeWidget post={selectedFullPost} user={user} onAuthNeeded={() => setShowAuthModal(true)} /></span>
                    {selectedFullPost.tripData && (
                      <button 
                        onClick={() => handleLoadRoute(selectedFullPost)}
