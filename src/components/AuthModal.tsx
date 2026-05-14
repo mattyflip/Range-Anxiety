@@ -55,12 +55,8 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess }) => {
         }
 
         const userCredential = await createUserWithEmailAndPassword(auth, authEmail, authPass);
+        
         try {
-          await setDoc(doc(db, "marketing_emails", userCredential.user.uid), {
-            email: authEmail,
-            subscribedAt: serverTimestamp(),
-            source: "account_creation"
-          });
           await setDoc(doc(db, "users", userCredential.user.uid), { 
             email: authEmail, 
             fullName,
@@ -74,7 +70,20 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess }) => {
             createdAt: serverTimestamp(),
             uid: userCredential.user.uid
           });
-        } catch (e) { console.error("User log failed:", e); }
+        } catch (e: any) { 
+          console.error("User profile creation failed:", e);
+          throw new Error("Failed to create user profile: " + e.message);
+        }
+
+        try {
+          await setDoc(doc(db, "marketing_emails", userCredential.user.uid), {
+            email: authEmail,
+            subscribedAt: serverTimestamp(),
+            source: "account_creation"
+          });
+        } catch (e) { 
+          console.error("Marketing email log failed (non-critical):", e); 
+        }
       } else {
         await signInWithEmailAndPassword(auth, authEmail, authPass);
       }
