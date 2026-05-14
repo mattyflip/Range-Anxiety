@@ -780,21 +780,23 @@ function MapHome() {
               <div style={{ color: '#666', fontSize: '0.7rem', marginBottom: '1rem' }}>SELECT ROUTE</div>
               
               <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem' }}>
-                {[0, 1, 2].map(idx => (
-                  (response?.routes[idx] || idx === 0) && (
+                {response!.routes.map((_r, idx) => {
+                  const routeColors = ['#ff6600', '#34a853', '#9c27b0'];
+                  return (
                     <button 
                       key={idx} 
-                      onClick={() => { setSelectedRouteIndex(idx); if (response) calculateMetrics(response, idx); }}
+                      onClick={() => { setSelectedRouteIndex(idx); calculateMetrics(response!, idx); }}
                       style={{ 
-                        flex: 1, padding: '0.6rem', borderRadius: '8px', border: 'none',
-                        background: selectedRouteIndex === idx ? '#ff6600' : '#333',
-                        color: 'white', fontWeight: 'bold', fontSize: '0.8rem'
+                        flex: 1, padding: '0.6rem', borderRadius: '8px', border: selectedRouteIndex === idx ? `2px solid ${routeColors[idx]}` : '1px solid #444',
+                        background: selectedRouteIndex === idx ? routeColors[idx] : '#222',
+                        color: 'white', fontWeight: 'bold', fontSize: '0.8rem',
+                        cursor: 'pointer',
                       }}
                     >
                       Route {idx + 1}
                     </button>
-                  )
-                ))}
+                  );
+                })}
               </div>
 
               <div style={{ fontSize: '1.8rem', fontWeight: 900, color: 'white' }}>Battery Left: {metrics.batteryPercentUsed.toFixed(1)}%</div>
@@ -873,7 +875,36 @@ function MapHome() {
                 const travelMode = wps.length > 0 ? google.maps.TravelMode.DRIVING : google.maps.TravelMode.BICYCLING;
                 return <DirectionsService options={{ origin: trip.origin, destination: trip.destination, waypoints: wps.length > 0 ? wps : undefined, travelMode, provideRouteAlternatives: true }} callback={directionsCallback} />
               })()}
-              {response && <DirectionsRenderer options={{ directions: response }} />}
+              {response && (
+                <>
+                  <DirectionsRenderer options={{ directions: response, routeIndex: selectedRouteIndex }} />
+                  {/* Alternative route polylines (clickable) */}
+                  {(() => {
+                    const res = response!;
+                    return res.routes.map((r, i) => {
+                      if (i === selectedRouteIndex) return null;
+                      const routeColors = ['#34a853', '#9c27b0'];
+                      return (
+                        <Polyline
+                          key={`alt-route-${i}`}
+                          path={r.overview_path.map(p => ({ lat: p.lat(), lng: p.lng() }))}
+                          options={{
+                            strokeColor: routeColors[i - (i > selectedRouteIndex ? 1 : 0)],
+                            strokeOpacity: 0.7,
+                            strokeWeight: 4,
+                            clickable: true,
+                            zIndex: 1,
+                          }}
+                          onClick={() => {
+                            setSelectedRouteIndex(i);
+                            calculateMetrics(res, i);
+                          }}
+                        />
+                      );
+                    });
+                  })()}
+                </>
+              )}
               {metrics?.deathPoint && <Marker position={metrics.deathPoint} label="☠️" />}
               {pois.map(p => (
                 <Marker key={p.id} position={p.position} onClick={() => setSelectedPoi(p)} label={p.type === 'charging' ? { text: '⚡', color: 'white', fontWeight: 'bold' } : undefined} icon={{ url: p.type === 'charging' ? 'https://maps.google.com/mapfiles/ms/icons/green-dot.png' : 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png' }} />
