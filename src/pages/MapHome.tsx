@@ -185,9 +185,20 @@ function MapHome() {
             if (data.hostTierExpiresAt?.toDate) setHostTierExpiresAt(data.hostTierExpiresAt.toDate());
             if (data.bikes) setSavedBikes(data.bikes);
           }
+          // Restore active ride from localStorage if user was in one
+          const savedRideId = localStorage.getItem('active_ride_id');
+          if (savedRideId && !activeRide) {
+            const rideSnap = await getDoc(doc(db, "group_rides", savedRideId));
+            if (rideSnap.exists() && rideSnap.data().status === 'active') {
+              setActiveRide({ id: rideSnap.id, ...rideSnap.data() } as any);
+            } else {
+              localStorage.removeItem('active_ride_id');
+            }
+          }
         } catch (e) { console.error(e); }
       } else {
         setUserData(null); setIsPro(false); setIsHostTier(false); setHostTierExpiresAt(null);
+        localStorage.removeItem('active_ride_id');
         const local = localStorage.getItem('ebike-saved-bikes');
         if (local) setSavedBikes(JSON.parse(local));
       }
@@ -253,11 +264,25 @@ function MapHome() {
           if (activeRide.leaderId === user.uid) {
             await updateDoc(doc(db, "group_rides", activeRide.id), { leaderTrail: arrayUnion(loc) });
           }
+          // Auto-end check: if host and all participants near destination, end ride
+          if (user.uid === activeRide.creatorId && rideRouteStops.length > 0 && rideParticipants.length > 0) {
+            const dest = rideRouteStops[rideRouteStops.length - 1];
+            const destLoc = new google.maps.LatLng(dest.lat, dest.lng);
+            const allNear = rideParticipants.every(p => {
+              const pLoc = new google.maps.LatLng(p.lat, p.lng);
+              return google.maps.geometry.spherical.computeDistanceBetween(pLoc, destLoc) < 200;
+            });
+            if (allNear && rideParticipants.length > 0) {
+              await updateDoc(doc(db, "group_rides", activeRide.id), { status: 'offline' });
+              localStorage.removeItem('active_ride_id');
+              setActiveRide(null); setRideParticipants([]); setRideRoutePath([]); setRideRouteStops([]);
+            }
+          }
         });
       }
     }, 15000);
     return () => clearInterval(interval);
-  }, [activeRide?.id, user, userData?.username]);
+  }, [activeRide?.id, user, userData?.username, rideRouteStops, rideParticipants]);
 
   // Load host's route from Firestore (all participants see it)
   useEffect(() => {
@@ -495,10 +520,20 @@ function MapHome() {
     if (!user) { setShowAuthModal(true); return; }
     if (!canHostRide()) { setPaywallTier('host'); setShowGroupRidePaywall(true); return; }
     if (!groupRideName) { alert("Name required."); return; }
+    // Prevent duplicate hosting
+    if (localStorage.getItem('active_ride_id')) {
+      const existingSnap = await getDoc(doc(db, "group_rides", localStorage.getItem('active_ride_id')!));
+      if (existingSnap.exists() && existingSnap.data().status === 'active') {
+        alert("You already have an active group ride. End it before starting a new one.");
+        return;
+      }
+      localStorage.removeItem('active_ride_id');
+    }
     const pin = Math.floor(1000 + Math.random() * 9000).toString();
     const rideData = { name: groupRideName, isPublic: isPublicRide, pin, creatorId: user.uid, leaderId: user.uid, status: 'active', startLat: center.lat, startLng: center.lng };
     const rideRef = await addDoc(collection(db, "group_rides"), rideData);
     setActiveRide({ id: rideRef.id, ...rideData } as any);
+    localStorage.setItem('active_ride_id', rideRef.id);
     await setDoc(doc(db, `group_rides/${rideRef.id}/participants`, user.uid), { userId: user.uid, name: userData?.username || 'Host', lat: center.lat, lng: center.lng, lastUpdatedAt: Date.now() });
   };
 
@@ -518,6 +553,7 @@ function MapHome() {
     if (targetRide) {
       await setDoc(doc(db, `group_rides/${targetRide.id}/participants`, user.uid), { userId: user.uid, name: userData?.username || 'Rider', lat: center.lat, lng: center.lng, lastUpdatedAt: Date.now() });
       setActiveRide(targetRide as any);
+      localStorage.setItem('active_ride_id', targetRide.id);
       setJoinPin('');
     } else { alert("Ride not found."); }
   };
@@ -525,12 +561,14 @@ function MapHome() {
   const leaveRide = async () => {
     if (!activeRide || !user) return;
     await deleteDoc(doc(db, `group_rides/${activeRide.id}/participants`, user.uid));
+    localStorage.removeItem('active_ride_id');
     setActiveRide(null); setRideParticipants([]);
   };
 
   const endRide = async () => {
     if (!activeRide) return;
     await updateDoc(doc(db, "group_rides", activeRide.id), { status: 'offline' });
+    localStorage.removeItem('active_ride_id');
     setActiveRide(null); setRideParticipants([]);
   };
 
