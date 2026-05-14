@@ -447,7 +447,7 @@ function MapHome() {
     if (!canHostRide()) { setPaywallTier('host'); setShowGroupRidePaywall(true); return; }
     if (!groupRideName) { alert("Name required."); return; }
     const pin = Math.floor(1000 + Math.random() * 9000).toString();
-    const rideData = { name: groupRideName, isPublic: isPublicRide, pin, creatorId: user.uid, status: 'active', startLat: center.lat, startLng: center.lng };
+    const rideData = { name: groupRideName, isPublic: isPublicRide, pin, creatorId: user.uid, leaderId: user.uid, status: 'active', startLat: center.lat, startLng: center.lng };
     const rideRef = await addDoc(collection(db, "group_rides"), rideData);
     setActiveRide({ id: rideRef.id, ...rideData } as any);
     await setDoc(doc(db, `group_rides/${rideRef.id}/participants`, user.uid), { userId: user.uid, name: userData?.username || 'Host', lat: center.lat, lng: center.lng, lastUpdatedAt: Date.now() });
@@ -483,6 +483,12 @@ function MapHome() {
     if (!activeRide) return;
     await updateDoc(doc(db, "group_rides", activeRide.id), { status: 'offline' });
     setActiveRide(null); setRideParticipants([]);
+  };
+
+  const setRideLeader = async (participantId: string) => {
+    if (!activeRide || !user || user.uid !== activeRide.creatorId) return;
+    await updateDoc(doc(db, "group_rides", activeRide.id), { leaderId: participantId });
+    setActiveRide(prev => prev ? { ...prev, leaderId: participantId } : null);
   };
 
   const saveCurrentBike = async () => {
@@ -616,6 +622,36 @@ function MapHome() {
               <div style={{ background: 'rgba(52,168,83,0.1)', padding: '1rem', borderRadius: '12px', border: '1px solid #34a853' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}><strong>{activeRide.name}</strong> <span>PIN: {activeRide.pin}</span></div>
                 <div style={{ margin: '0.5rem 0', fontSize: '0.8rem' }}>{rideParticipants.length} Participants</div>
+                {user?.uid === activeRide.creatorId && rideParticipants.length > 1 && (
+                  <div style={{ marginBottom: '0.5rem' }}>
+                    <label style={{ fontSize: '0.6rem', color: '#888' }}>LEADER</label>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem' }}>
+                      {rideParticipants.map(p => (
+                        <button
+                          key={p.userId}
+                          onClick={() => setRideLeader(p.userId)}
+                          style={{
+                            padding: '0.25rem 0.6rem',
+                            background: activeRide.leaderId === p.userId ? '#ff6600' : '#333',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '12px',
+                            fontSize: '0.65rem',
+                            cursor: 'pointer',
+                            fontWeight: activeRide.leaderId === p.userId ? 'bold' : 'normal'
+                          }}
+                        >
+                          {activeRide.leaderId === p.userId ? '⭐ ' : ''}{p.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {activeRide.leaderId && activeRide.leaderId !== user?.uid && (
+                  <div style={{ fontSize: '0.65rem', color: '#ff9900', marginBottom: '0.5rem' }}>
+                    👑 {rideParticipants.find(p => p.userId === activeRide.leaderId)?.name || 'Rider'} is leading
+                  </div>
+                )}
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
                   <button onClick={leaveRide} style={{ flex: 1, padding: '0.5rem', background: '#444', border: 'none', borderRadius: '4px', color: 'white' }}>Leave</button>
                   {user?.uid === activeRide.creatorId && <button onClick={endRide} style={{ flex: 1, padding: '0.5rem', background: '#d93025', border: 'none', borderRadius: '4px', color: 'white', fontWeight: 'bold' }}>End</button>}
@@ -785,7 +821,7 @@ function MapHome() {
               
               {/* Ride Participants */}
               {rideParticipants.map(p => (
-                <Marker key={p.userId} position={{ lat: p.lat, lng: p.lng }} label={{ text: p.name, color: 'white', fontSize: '12px', fontWeight: 'bold' }} icon={{ path: google.maps.SymbolPath.CIRCLE, fillColor: activeRide?.creatorId === p.userId ? '#34a853' : '#ff6600', fillOpacity: 1, strokeColor: 'white', strokeWeight: 2, scale: 8 }} />
+                <Marker key={p.userId} position={{ lat: p.lat, lng: p.lng }} label={{ text: p.name, color: 'white', fontSize: '12px', fontWeight: 'bold' }} icon={{ path: google.maps.SymbolPath.CIRCLE, fillColor: activeRide?.leaderId === p.userId ? '#34a853' : '#ff6600', fillOpacity: 1, strokeColor: 'white', strokeWeight: 2, scale: 8 }} />
               ))}
 
               {activeRide?.leaderTrail && activeRide.leaderTrail.length > 1 && (
