@@ -133,6 +133,8 @@ function MapHome() {
   const [user, setUser] = useState<User | null>(null);
   const [userData, setUserData] = useState<any>(null);
   const [isPro, setIsPro] = useState(false);
+  const [isHostTier, setIsHostTier] = useState(false);
+  const [hostTierExpiresAt, setHostTierExpiresAt] = useState<Date | null>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [bikeSearchQuery, setBikeSearchQuery] = useState("");
   const [showBikeResults, setShowBikeResults] = useState(false);
@@ -154,6 +156,7 @@ function MapHome() {
   const [groupRideName, setGroupRideName] = useState('');
   const [isPublicRide, setIsPublicRide] = useState(true);
   const [joinPin, setJoinPin] = useState('');
+  const [showGroupRidePaywall, setShowGroupRidePaywall] = useState(false);
 
   // Navigation State
   const [isNavigating, setIsNavigating] = useState(false);
@@ -172,11 +175,13 @@ function MapHome() {
           if (userDoc.exists()) {
             const data = userDoc.data(); setUserData(data);
             setIsPro(data.isPro || false);
+            setIsHostTier(data.isHostTier || false);
+            if (data.hostTierExpiresAt?.toDate) setHostTierExpiresAt(data.hostTierExpiresAt.toDate());
             if (data.bikes) setSavedBikes(data.bikes);
           }
         } catch (e) { console.error(e); }
       } else {
-        setUserData(null); setIsPro(false);
+        setUserData(null); setIsPro(false); setIsHostTier(false); setHostTierExpiresAt(null);
         const local = localStorage.getItem('ebike-saved-bikes');
         if (local) setSavedBikes(JSON.parse(local));
       }
@@ -396,8 +401,30 @@ function MapHome() {
     });
   };
 
+  const checkoutHostTier = async () => {
+    if (!user) { setShowAuthModal(true); return; }
+    try {
+      const token = await user.getIdToken();
+      const res = await fetch('/api/create-checkout-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ userId: user.uid, email: user.email, tier: 'host' })
+      });
+      const data = await res.json();
+      if (data.url) window.location.href = data.url;
+      else alert('Checkout failed. Please try again.');
+    } catch (e) { console.error(e); alert('Checkout failed.'); }
+  };
+
+  const hasGroupRideAccess = () => {
+    if (!isHostTier) return false;
+    if (!hostTierExpiresAt) return false;
+    return hostTierExpiresAt.getTime() > Date.now();
+  };
+
   const createRide = async () => {
     if (!user) { setShowAuthModal(true); return; }
+    if (!hasGroupRideAccess()) { setShowGroupRidePaywall(true); return; }
     if (!groupRideName) { alert("Name required."); return; }
     const pin = Math.floor(1000 + Math.random() * 9000).toString();
     const rideData = { name: groupRideName, isPublic: isPublicRide, pin, creatorId: user.uid, status: 'active', startLat: center.lat, startLng: center.lng };
@@ -408,6 +435,7 @@ function MapHome() {
 
   const joinRide = async (rideId?: string) => {
     if (!user) { setShowAuthModal(true); return; }
+    if (!hasGroupRideAccess()) { setShowGroupRidePaywall(true); return; }
     let targetRide;
     if (rideId) {
       const snap = await getDoc(doc(db, "group_rides", rideId));
@@ -527,7 +555,12 @@ function MapHome() {
           </section>
 
           <section className="form-group" style={{ borderTop: '1px solid #333', paddingTop: '1rem' }}>
-            <label style={{ color: '#ff6600' }}>Group Ride</label>
+            <label style={{ color: '#ff6600' }}>Group Ride {!hasGroupRideAccess() ? <span style={{ color: '#888', fontSize: '0.6rem', marginLeft: '0.5rem' }}>🔒 HOST TIER</span> : <span style={{ color: '#34a853', fontSize: '0.6rem', marginLeft: '0.5rem' }}>✓ ACTIVE</span>}</label>
+            {hasGroupRideAccess() && hostTierExpiresAt && (
+              <div style={{ fontSize: '0.6rem', color: '#666', marginTop: '0.2rem' }}>
+                Access expires {hostTierExpiresAt.toLocaleDateString()}
+              </div>
+            )}
             {!activeRide ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -804,6 +837,30 @@ function MapHome() {
       {showWelcomeModal && <WelcomeModal onClose={() => setShowWelcomeModal(false)} />}
       {showInstallTutorial && <InstallTutorial onClose={() => setShowInstallTutorial(false)} />}
       {showToSPage && <TermsOfService onClose={() => setShowToSPage(false)} />}
+      {showGroupRidePaywall && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.95)', zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(10px)' }}>
+          <div style={{ background: '#1a1a1a', border: '1px solid #ff6600', borderRadius: '24px', padding: '2.5rem', maxWidth: '400px', width: '90%', textAlign: 'center' }}>
+            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🏍️</div>
+            <h2 style={{ color: '#ff6600', fontSize: '1.4rem', marginBottom: '0.5rem' }}>Group Ride Access</h2>
+            <p style={{ color: '#aaa', fontSize: '0.85rem', lineHeight: '1.5', marginBottom: '1.5rem' }}>
+              Host and join live group rides with real-time rider tracking on the map.
+            </p>
+            <div style={{ background: '#222', padding: '1rem', borderRadius: '12px', marginBottom: '1.5rem' }}>
+              <div style={{ fontSize: '2rem', fontWeight: 900, color: 'white' }}>$9.99</div>
+              <div style={{ color: '#888', fontSize: '0.7rem' }}>30 days of access</div>
+              <div style={{ color: '#888', fontSize: '0.7rem', marginTop: '0.3rem' }}>• Live rider map tracking</div>
+              <div style={{ color: '#888', fontSize: '0.7rem' }}>• Host & join group rides</div>
+              <div style={{ color: '#888', fontSize: '0.7rem' }}>• All PRO features included</div>
+            </div>
+            <button onClick={checkoutHostTier} style={{ width: '100%', padding: '1rem', background: 'linear-gradient(45deg, #ff6600, #ff9900)', color: 'white', border: 'none', borderRadius: '12px', fontWeight: 900, fontSize: '1.1rem', cursor: 'pointer', marginBottom: '0.8rem' }}>
+              Unlock for $9.99
+            </button>
+            <button onClick={() => setShowGroupRidePaywall(false)} style={{ width: '100%', padding: '0.8rem', background: 'none', color: '#888', border: 'none', borderRadius: '12px', cursor: 'pointer', fontSize: '0.8rem' }}>
+              Maybe Later
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

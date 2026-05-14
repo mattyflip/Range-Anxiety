@@ -97,8 +97,9 @@ service cloud.firestore {
     }
 
     match /marketing_emails/{docId} {
-      allow write: if true;
+      allow create: if true;
       allow read: if isAdmin();
+      allow update, delete: if isAdmin();
     }
     
     match /bike_submissions/{docId} {
