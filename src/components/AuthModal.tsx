@@ -32,13 +32,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess }) => {
           return;
         }
 
-        // Check if username is taken
-        const usernameQuery = query(collection(db, "users"), where("usernameLowercase", "==", username.toLowerCase().trim()));
-        const usernameSnap = await getDocs(usernameQuery);
-        if (!usernameSnap.empty) {
-          setError("This username is already taken. Please choose another.");
-          return;
-        }
+
 
         const age = calculateAge(birthday);
         const safetyInfo = getEbikeSafetyInfo(homeRegion, age);
@@ -56,12 +50,26 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess }) => {
 
         const userCredential = await createUserWithEmailAndPassword(auth, authEmail, authPass);
         
+        // Now that the user is authenticated, we can securely check if the username is taken
+        const usernameQuery = query(collection(db, "users"), where("usernameLowercase", "==", username.toLowerCase().trim()));
+        const usernameSnap = await getDocs(usernameQuery);
+        
+        let finalUsername = username.trim();
+        let finalUsernameLowercase = finalUsername.toLowerCase();
+        
+        if (!usernameSnap.empty) {
+          const suffix = Math.floor(1000 + Math.random() * 9000).toString();
+          finalUsername = finalUsername + suffix;
+          finalUsernameLowercase = finalUsername.toLowerCase();
+          alert(`Your requested username was taken. You have been assigned: ${finalUsername}. You can change this in settings later.`);
+        }
+        
         try {
           await setDoc(doc(db, "users", userCredential.user.uid), { 
             email: authEmail, 
             fullName,
-            username: username.trim(),
-            usernameLowercase: username.toLowerCase().trim(),
+            username: finalUsername,
+            usernameLowercase: finalUsernameLowercase,
             birthday,
             homeRegion,
             city,
