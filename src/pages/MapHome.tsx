@@ -112,6 +112,9 @@ function MapHome() {
   const [tirePressurePsi, setTirePressurePsi] = useState<number | ''>(''); 
   
   const [trip, setTrip] = useState<TripDetails>({ origin: '', destination: '', waypoints: [] });
+  const [waypoint3, setWaypoint3] = useState('');
+  const [waypoint4, setWaypoint4] = useState('');
+  const [waypoint5, setWaypoint5] = useState('');
   const [mode, setMode] = useState<'eco' | 'normal' | 'sport'>('normal');
   const [pasLevel, setPasLevel] = useState<number>(3);
   const [controlType, setControlType] = useState<'switch' | 'pas'>('pas');
@@ -341,6 +344,9 @@ function MapHome() {
 
   const handleCalculate = () => { 
     if (!trip.origin || !trip.destination) return;
+    // Build waypoints from individual fields
+    const wps = [waypoint3, waypoint4, waypoint5].filter(w => w.trim());
+    setTrip(p => ({ ...p, waypoints: wps }));
     setIsLoading(true); setResponse(null); setMetrics(null); setPois([]); setSettingsDirty(false); 
   };
 
@@ -348,14 +354,15 @@ function MapHome() {
     try {
       const route = result.routes[routeIndex];
       let distMeters = 0; route.legs.forEach(leg => distMeters += (leg.distance?.value || 0));
-      const distMiles = distMeters / 1609.34;
+      const multiplier = isRoundTrip ? 2 : 1;
+      const distMiles = (distMeters / 1609.34) * multiplier;
       const path = route.overview_path.map(p => ({ lat: p.lat(), lng: p.lng() }));
       
       let gainFeet = 0, lossFeet = 0;
       try {
         const encodedPath = google.maps.geometry.encoding.encodePath(route.overview_path);
         const elevResp = await axios.post('/api/elevation', { encodedPath, samples: 100 });
-        if (elevResp.data?.gain) { gainFeet = elevResp.data.gain; lossFeet = elevResp.data.loss || 0; }
+        if (elevResp.data?.gain) { gainFeet = elevResp.data.gain * multiplier; lossFeet = (elevResp.data.loss || 0) * multiplier; }
       } catch (e) { console.error(e); }
 
       let windSpeed = 0, headwindMph = 0;
@@ -667,6 +674,15 @@ function MapHome() {
               <button onClick={useCurrentLocation} style={{ background: 'none', border: 'none', fontSize: '1.2rem' }}>📍</button>
             </div>
             <input type="text" placeholder="End" value={trip.destination} onChange={e => { setTrip(p => ({ ...p, destination: e.target.value })); markDirty(); }} style={{ marginTop: '0.5rem' }} />
+            {trip.destination.trim() && (
+              <input type="text" placeholder="Stop 3 (optional)" value={waypoint3} onChange={e => { setWaypoint3(e.target.value); markDirty(); }} style={{ marginTop: '0.5rem' }} />
+            )}
+            {waypoint3.trim() && (
+              <input type="text" placeholder="Stop 4 (optional)" value={waypoint4} onChange={e => { setWaypoint4(e.target.value); markDirty(); }} style={{ marginTop: '0.5rem' }} />
+            )}
+            {waypoint4.trim() && (
+              <input type="text" placeholder="Stop 5 (optional)" value={waypoint5} onChange={e => { setWaypoint5(e.target.value); markDirty(); }} style={{ marginTop: '0.5rem' }} />
+            )}
             <div className="mode-toggle" style={{ marginTop: '0.5rem' }}>
               <button className={!isRoundTrip ? 'active' : ''} onClick={() => { setIsRoundTrip(false); markDirty(); }}>One Way</button>
               <button className={isRoundTrip ? 'active' : ''} onClick={() => { setIsRoundTrip(true); markDirty(); }}>Round Trip</button>
@@ -810,9 +826,11 @@ function MapHome() {
           </div>
           {isLoaded ? (
             <GoogleMap mapContainerStyle={{ width: '100%', height: '100%' }} center={center} zoom={10} onLoad={onMapLoad}>
-              {trip.origin && trip.destination && isLoading && !response && (
-                <DirectionsService options={{ origin: trip.origin, destination: isRoundTrip ? trip.origin : trip.destination, travelMode: google.maps.TravelMode.BICYCLING }} callback={directionsCallback} />
-              )}
+              {trip.origin && trip.destination && isLoading && !response && (() => {
+                const wps = trip.waypoints?.filter(w => w.trim()).map(w => ({ location: w, stopover: true } as google.maps.DirectionsWaypoint)) || [];
+                const travelMode = wps.length > 0 ? google.maps.TravelMode.DRIVING : google.maps.TravelMode.BICYCLING;
+                return <DirectionsService options={{ origin: trip.origin, destination: trip.destination, waypoints: wps.length > 0 ? wps : undefined, travelMode }} callback={directionsCallback} />
+              })()}
               {response && <DirectionsRenderer options={{ directions: response }} />}
               {metrics?.deathPoint && <Marker position={metrics.deathPoint} label="☠️" />}
               {pois.map(p => (
