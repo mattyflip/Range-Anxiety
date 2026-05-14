@@ -158,6 +158,7 @@ function MapHome() {
   const [activeRide, setActiveRide] = useState<GroupRide | null>(null);
   const [publicRides, setPublicRides] = useState<GroupRide[]>([]);
   const [rideParticipants, setRideParticipants] = useState<Participant[]>([]);
+  const [rideRoutePath, setRideRoutePath] = useState<google.maps.LatLngLiteral[]>([]);
   const [groupRideName, setGroupRideName] = useState('');
   const [isPublicRide, setIsPublicRide] = useState(true);
   const [joinPin, setJoinPin] = useState('');
@@ -256,6 +257,21 @@ function MapHome() {
     }, 15000);
     return () => clearInterval(interval);
   }, [activeRide?.id, user, userData?.username]);
+
+  // Load host's route from Firestore (all participants see it)
+  useEffect(() => {
+    if (!activeRide) { setRideRoutePath([]); return; }
+    const unsub = onSnapshot(doc(db, "group_rides", activeRide.id), (snap) => {
+      if (snap.exists()) {
+        const data = snap.data();
+        if (data.routePath?.length) setRideRoutePath(data.routePath);
+        else setRideRoutePath([]);
+      } else {
+        setRideRoutePath([]);
+      }
+    }, console.error);
+    return () => unsub();
+  }, [activeRide?.id]);
 
   // Navigation Logic
   const speak = (text: string) => {
@@ -389,6 +405,16 @@ function MapHome() {
       let deathPoint; if (remaining <= 0) deathPoint = path[Math.floor(path.length * 0.8)];
 
       setMetrics({ distanceMiles: distMiles, durationMin: distMiles / (Number(targetSpeedMph) || 15) * 60, elevationGainFeet: gainFeet, elevationLossFeet: lossFeet, estimatedWh, batteryPercentUsed: Math.max(0, remaining), recommendedSpeedMph: 20, deathPoint, endingVoltage, windConditions: { speed: windSpeed, direction: 0, headwindComponent: headwindMph } });
+      
+      // If host is in an active ride, save route to Firestore so participants can see it
+      if (activeRide && user?.uid === activeRide.creatorId) {
+        updateDoc(doc(db, "group_rides", activeRide.id), {
+          routePath: path,
+          routeOrigin: trip.origin,
+          routeDestination: trip.destination,
+        }).catch(console.error);
+      }
+      
       setIsLoading(false);
     } catch (e) { console.error(e); setIsLoading(false); }
   };
@@ -841,6 +867,11 @@ function MapHome() {
               {rideParticipants.map(p => (
                 <Marker key={p.userId} position={{ lat: p.lat, lng: p.lng }} label={{ text: p.name, color: 'white', fontSize: '12px', fontWeight: 'bold', className: 'rider-label' }} icon={{ path: google.maps.SymbolPath.CIRCLE, fillColor: activeRide?.leaderId === p.userId ? '#34a853' : '#ff6600', fillOpacity: 1, strokeColor: 'white', strokeWeight: 2, scale: 8 }} />
               ))}
+
+              {/* Host's planned route (visible to all participants) */}
+              {rideRoutePath.length > 1 && (
+                <Polyline path={rideRoutePath} options={{ strokeColor: '#4285F4', strokeOpacity: 0.8, strokeWeight: 5 }} />
+              )}
 
               {activeRide?.leaderTrail && activeRide.leaderTrail.length > 1 && (
                 <Polyline path={activeRide.leaderTrail} options={{ strokeColor: '#ff6600', strokeOpacity: 0.9, strokeWeight: 6 }} />
