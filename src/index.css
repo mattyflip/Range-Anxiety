@@ -322,3 +322,12 @@ main {
   box-shadow: 0 4px 15px rgba(0,0,0,0.8) !important;
   margin-bottom: 35px !important;
 }
+
+/* Rider name labels on group ride map markers */
+.rider-label {
+  text-shadow:
+    -1px -1px 0 #000,
+     1px -1px 0 #000,
+    -1px  1px 0 #000,
+     1px  1px 0 #000;
+}

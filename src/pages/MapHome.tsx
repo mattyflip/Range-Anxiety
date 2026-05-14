@@ -821,7 +821,7 @@ function MapHome() {
               
               {/* Ride Participants */}
               {rideParticipants.map(p => (
-                <Marker key={p.userId} position={{ lat: p.lat, lng: p.lng }} label={{ text: p.name, color: 'white', fontSize: '12px', fontWeight: 'bold' }} icon={{ path: google.maps.SymbolPath.CIRCLE, fillColor: activeRide?.leaderId === p.userId ? '#34a853' : '#ff6600', fillOpacity: 1, strokeColor: 'white', strokeWeight: 2, scale: 8 }} />
+                <Marker key={p.userId} position={{ lat: p.lat, lng: p.lng }} label={{ text: p.name, color: 'white', fontSize: '12px', fontWeight: 'bold', className: 'rider-label' }} icon={{ path: google.maps.SymbolPath.CIRCLE, fillColor: activeRide?.leaderId === p.userId ? '#34a853' : '#ff6600', fillOpacity: 1, strokeColor: 'white', strokeWeight: 2, scale: 8 }} />
               ))}
 
               {activeRide?.leaderTrail && activeRide.leaderTrail.length > 1 && (
