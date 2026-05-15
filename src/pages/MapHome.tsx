@@ -557,7 +557,11 @@ function MapHome() {
   };
 
   const createRide = async () => {
-    if (!user) { setShowAuthModal(true); return; }
+    if (!user) { 
+      setShowAuthModal(true); 
+      // After login, the user will need to click 'Host' again to trigger the paywall
+      return; 
+    }
     if (!canHostRide()) { setPaywallTier('host'); setShowGroupRidePaywall(true); return; }
     if (!groupRideName) { alert("Name required."); return; }
     // Prevent duplicate hosting
@@ -578,7 +582,10 @@ function MapHome() {
   };
 
   const joinRide = async (rideId?: string) => {
-    if (!user) { setShowAuthModal(true); return; }
+    if (!user) { 
+      setShowAuthModal(true); 
+      return; 
+    }
     if (!canJoinRide()) { setPaywallTier('pro'); setShowGroupRidePaywall(true); return; }
     let targetRide;
     if (rideId) {
