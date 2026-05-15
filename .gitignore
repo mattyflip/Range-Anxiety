@@ -26,3 +26,5 @@ server/
 *.sw?
    1 .env
    2 server/
+.vercel
+.env*.local

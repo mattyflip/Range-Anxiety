@@ -493,9 +493,16 @@ function MapHome() {
         body: JSON.stringify({ userId: user.uid, email: user.email, tier: 'pro' })
       });
       const data = await res.json();
-      if (data.url) window.location.href = data.url;
-      else alert('Checkout failed. Please try again.');
-    } catch (e) { console.error(e); alert('Checkout failed.'); }
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        console.error('Checkout error:', data);
+        alert(`Checkout failed: ${data.error || 'Please try again.'}`);
+      }
+    } catch (e: any) {
+      console.error(e);
+      alert(`Checkout failed: ${e.message || 'Unknown error'}`);
+    }
   };
 
   const checkoutHostTier = async () => {
@@ -508,9 +515,16 @@ function MapHome() {
         body: JSON.stringify({ userId: user.uid, email: user.email, tier: 'host' })
       });
       const data = await res.json();
-      if (data.url) window.location.href = data.url;
-      else alert('Checkout failed. Please try again.');
-    } catch (e) { console.error(e); alert('Checkout failed.'); }
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        console.error('Checkout error:', data);
+        alert(`Checkout failed: ${data.error || 'Please try again.'}`);
+      }
+    } catch (e: any) {
+      console.error(e);
+      alert(`Checkout failed: ${e.message || 'Unknown error'}`);
+    }
   };
 
   // We calculate timestamp offset on load once assuming stable clock over session logic, avoiding dynamic changing `Date.now` purity breaking in render.

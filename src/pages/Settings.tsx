@@ -116,13 +116,72 @@ const Settings: React.FC = () => {
     }
   };
 
+  // Subscription states
+  const [isPro, setIsPro] = useState(false);
+  const [isHostTier, setIsHostTier] = useState(false);
+  const [hostTierExpiresAt, setHostTierExpiresAt] = useState<Date | null>(null);
+
+  useEffect(() => {
+    if (userData) {
+      setIsPro(userData.isPro || false);
+      setIsHostTier(userData.isHostTier || false);
+      if (userData.hostTierExpiresAt?.toDate) {
+        setHostTierExpiresAt(userData.hostTierExpiresAt.toDate());
+      }
+    }
+  }, [userData]);
+
+  const checkoutProTier = async () => {
+    if (!user) return;
+    try {
+      const token = await user.getIdToken();
+      const res = await fetch('/api/create-checkout-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ userId: user.uid, email: user.email, tier: 'pro' })
+      });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        console.error('Checkout error:', data);
+        alert(`Checkout failed: ${data.error || 'Please try again.'}`);
+      }
+    } catch (e: any) {
+      console.error(e);
+      alert(`Checkout failed: ${e.message || 'Unknown error'}`);
+    }
+  };
+
+  const checkoutHostTier = async () => {
+    if (!user) return;
+    try {
+      const token = await user.getIdToken();
+      const res = await fetch('/api/create-checkout-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ userId: user.uid, email: user.email, tier: 'host' })
+      });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        console.error('Checkout error:', data);
+        alert(`Checkout failed: ${data.error || 'Please try again.'}`);
+      }
+    } catch (e: any) {
+      console.error(e);
+      alert(`Checkout failed: ${e.message || 'Unknown error'}`);
+    }
+  };
+
   if (loading) return <div style={{ color: 'white', padding: '2rem', textAlign: 'center' }}>Loading settings...</div>;
 
   return (
     <div className="container" style={{ minHeight: '100vh', background: '#121212' }}>
-      <NavBar 
-        user={user} 
-        onShowInstall={() => {}} 
+      <NavBar
+        user={user}
+        onShowInstall={() => {}}
         onShowAuth={() => {}} // User is always logged in on settings page
       />
 
@@ -131,7 +190,54 @@ const Settings: React.FC = () => {
 
         {error && <div style={{ background: 'rgba(217,48,37,0.1)', color: '#d93025', padding: '1rem', borderRadius: '8px', marginBottom: '1.5rem' }}>{error}</div>}
 
-        {/* Profile Settings */}
+        {/* Subscription Section */}
+        <section className="card" style={{ background: '#1a1a1a', padding: '2rem', borderRadius: '24px', border: '1px solid #ff6600', marginBottom: '2rem', boxShadow: '0 0 20px rgba(255,102,0,0.1)' }}>
+          <h2 style={{ color: '#ff6600', fontSize: '1.2rem', marginBottom: '1rem' }}>Subscription Status</h2>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
+            <div style={{ fontSize: '2.5rem' }}>{isHostTier ? '🏍️' : isPro ? '⭐' : '🚲'}</div>
+            <div>
+              <div style={{ color: 'white', fontWeight: 'bold', fontSize: '1.1rem' }}>
+                {isHostTier ? 'HOST TIER' : isPro ? 'PRO ACCOUNT' : 'FREE ACCOUNT'}
+              </div>
+              <div style={{ color: '#888', fontSize: '0.8rem' }}>
+                {isHostTier 
+                  ? `Host access active until ${hostTierExpiresAt?.toLocaleDateString()}` 
+                  : isPro 
+                    ? 'All features unlocked' 
+                    : 'Upgrade to unlock all features'}
+              </div>
+            </div>
+          </div>
+
+          {!isHostTier && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {!isPro && (
+                <button
+                  onClick={checkoutProTier}
+                  style={{ width: '100%', padding: '1rem', background: 'linear-gradient(45deg, #ff6600, #ff9900)', color: 'white', border: 'none', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer' }}
+                >
+                  Upgrade to PRO — $4.99 (Lifetime)
+                </button>
+              )}
+              <button
+                onClick={checkoutHostTier}
+                style={{ width: '100%', padding: '1rem', background: '#333', color: '#ff6600', border: '1px solid #ff6600', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer' }}
+              >
+                {isPro ? 'Upgrade to HOST — $9.99/mo' : 'Upgrade to HOST — $9.99/mo'}
+              </button>
+              <p style={{ color: '#666', fontSize: '0.7rem', textAlign: 'center', marginTop: '0.5rem' }}>
+                PRO includes charger search and no ads. HOST includes group ride hosting and live tracking.
+              </p>
+            </div>
+          )}
+
+          {isHostTier && (
+            <div style={{ color: '#34a853', fontSize: '0.9rem', textAlign: 'center', background: 'rgba(52,168,83,0.1)', padding: '1rem', borderRadius: '12px' }}>
+              ✓ You have the highest tier of access. Thank you for supporting Range Anxiety!
+            </div>
+          )}
+        </section>        {/* Profile Settings */}
         <section className="card" style={{ background: '#1a1a1a', padding: '2rem', borderRadius: '24px', border: '1px solid #333', marginBottom: '2rem' }}>
           <h2 style={{ color: '#ff6600', fontSize: '1.2rem', marginBottom: '1.5rem' }}>Profile Information</h2>
           
