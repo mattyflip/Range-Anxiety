@@ -190,6 +190,7 @@ const Feed: React.FC = () => {
         imageUrl,
         caption: newCaption,
         likes: [],
+        commentCount: 0,
         commentsEnabled: allowComments,
         createdAt: serverTimestamp()
       });

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { db } from '../firebase'
-import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, getDoc, doc } from 'firebase/firestore'
+import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, getDoc, doc, updateDoc, increment } from 'firebase/firestore'
 import { createNotification } from '../utils/notifications'
 
 interface Comment {
@@ -68,6 +68,11 @@ const CommentModal: React.FC<CommentModalProps> = ({ postId, postAuthorId, onClo
           newComment
         );
       }
+
+      // Update comment count on post
+      await updateDoc(doc(db, "posts", postId), {
+        commentCount: increment(1)
+      });
 
       setNewComment('');
     } catch (e) {
