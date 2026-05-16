@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { db, auth } from '../firebase'
-import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, getDoc, doc } from 'firebase/firestore'
+import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, getDoc, doc, updateDoc } from 'firebase/firestore'
 import { useNavigate, Link } from 'react-router-dom'
 import NavBar from '../components/NavBar'
 import InstallTutorial from '../components/InstallTutorial'
@@ -30,6 +30,13 @@ const ForumHub: React.FC = () => {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showInstallTutorial, setShowInstallTutorial] = useState(false);
   const navigate = useNavigate();
+
+  const isAdmin = user?.email?.toLowerCase() === 'mattyfliptv@gmail.com';
+
+  // Admin states
+  const [adminEditingComm, setAdminEditingComm] = useState<Community | null>(null);
+  const [adminCommName, setAdminCommName] = useState('');
+  const [adminCommDesc, setAdminCommDesc] = useState('');
 
   useEffect(() => {
     const unsub = auth.onAuthStateChanged(async u => {
@@ -76,6 +83,18 @@ const ForumHub: React.FC = () => {
     } catch (e) {
       console.error("Create community failed", e);
     }
+  };
+
+  const handleSaveAdminEdit = async () => {
+    if (!isAdmin || !adminEditingComm) return;
+    try {
+      await updateDoc(doc(db, "communities", adminEditingComm.id), {
+        name: adminCommName.toLowerCase().replace(/\s+/g, '-'),
+        description: adminCommDesc
+      });
+      setAdminEditingComm(null);
+      alert("Community updated.");
+    } catch (e) { console.error("Update failed", e); }
   };
 
   return (
@@ -137,22 +156,30 @@ const ForumHub: React.FC = () => {
               <>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.5rem' }}>
                   {communities.map(comm => (
-                    <Link 
-                      to={`/forum/c/${comm.id}`} 
-                      key={comm.id}
-                      style={{ textDecoration: 'none', background: '#1a1a1a', padding: '2rem', borderRadius: '24px', border: '1px solid #333', transition: 'transform 0.2s, border-color 0.2s' }}
-                      onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#ff6600'; e.currentTarget.style.transform = 'translateY(-5px)'; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#333'; e.currentTarget.style.transform = 'translateY(0)'; }}
-                    >
-                      <div style={{ color: '#ff6600', fontWeight: 'bold', fontSize: '1.2rem', marginBottom: '0.8rem' }}>c/{comm.name}</div>
-                      <p style={{ color: '#888', fontSize: '0.9rem', marginBottom: '1.5rem', lineHeight: '1.4', height: '3.2rem', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-                        {comm.description || "No description provided."}
-                      </p>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ color: '#444', fontSize: '0.75rem', fontWeight: 'bold' }}>{comm.memberCount} Members</span>
-                        <span style={{ color: '#ff6600', fontSize: '0.8rem', fontWeight: 'bold' }}>Enter →</span>
-                      </div>
-                    </Link>
+                    <div key={comm.id} style={{ position: 'relative' }}>
+                      <Link 
+                        to={`/forum/c/${comm.id}`} 
+                        style={{ display: 'block', textDecoration: 'none', background: '#1a1a1a', padding: '2rem', borderRadius: '24px', border: '1px solid #333', transition: 'transform 0.2s, border-color 0.2s' }}
+                        onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#ff6600'; e.currentTarget.style.transform = 'translateY(-5px)'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#333'; e.currentTarget.style.transform = 'translateY(0)'; }}
+                      >
+                        <div style={{ color: '#ff6600', fontWeight: 'bold', fontSize: '1.2rem', marginBottom: '0.8rem' }}>c/{comm.name}</div>
+                        <p style={{ color: '#888', fontSize: '0.9rem', marginBottom: '1.5rem', lineHeight: '1.4', height: '3.2rem', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                          {comm.description || "No description provided."}
+                        </p>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ color: '#444', fontSize: '0.75rem', fontWeight: 'bold' }}>{comm.memberCount} Members</span>
+                          <span style={{ color: '#ff6600', fontSize: '0.8rem', fontWeight: 'bold' }}>Enter →</span>
+                        </div>
+                      </Link>
+                      {isAdmin && (
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); setAdminEditingComm(comm); setAdminCommName(comm.name); setAdminCommDesc(comm.description); }}
+                          style={{ position: 'absolute', top: '1rem', right: '1rem', background: '#121212', border: '1px solid #333', borderRadius: '8px', color: '#ffcc00', padding: '0.4rem', cursor: 'pointer', fontSize: '0.8rem', zIndex: 5 }}
+                          title="Edit Community"
+                        >✏️</button>
+                      )}
+                    </div>
                   ))}
                 </div>
                 
@@ -200,6 +227,45 @@ const ForumHub: React.FC = () => {
                 style={{ flex: 2, padding: '1rem', background: '#ff6600', color: 'white', border: 'none', borderRadius: '12px', cursor: 'pointer', fontWeight: 'bold', opacity: !newCommName.trim() ? 0.5 : 1 }}
               >
                 Create
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Admin Edit Modal */}
+      {adminEditingComm && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.95)', zIndex: 6000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', backdropFilter: 'blur(10px)' }}>
+          <div style={{ background: '#1a1a1a', padding: '2.5rem', borderRadius: '30px', border: '1px solid #333', maxWidth: '500px', width: '100%' }}>
+            <h2 style={{ color: 'white', marginTop: 0 }}>Admin Community Edit</h2>
+            <p style={{ color: '#ffcc00', fontSize: '0.8rem', fontWeight: 'bold' }}>MODERATION MODE</p>
+            
+            <div className="form-group" style={{ marginTop: '2rem' }}>
+              <label>Community Name</label>
+              <input 
+                type="text" 
+                value={adminCommName}
+                onChange={e => setAdminCommName(e.target.value)}
+                style={{ background: '#121212' }}
+              />
+            </div>
+
+            <div className="form-group" style={{ marginTop: '1.5rem' }}>
+              <label>Description</label>
+              <textarea 
+                value={adminCommDesc}
+                onChange={e => setAdminCommDesc(e.target.value)}
+                style={{ width: '100%', background: '#121212', border: '1px solid #333', borderRadius: '12px', color: 'white', padding: '1rem', minHeight: '150px', fontFamily: 'inherit' }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: '1rem', marginTop: '2.5rem' }}>
+              <button onClick={() => setAdminEditingComm(null)} style={{ flex: 1, padding: '1rem', background: '#333', color: 'white', border: 'none', borderRadius: '12px', cursor: 'pointer', fontWeight: 'bold' }}>Cancel</button>
+              <button 
+                onClick={handleSaveAdminEdit}
+                style={{ flex: 2, padding: '1rem', background: '#ffcc00', color: '#000', border: 'none', borderRadius: '12px', cursor: 'pointer', fontWeight: 'bold' }}
+              >
+                Save Changes
               </button>
             </div>
           </div>

@@ -24,6 +24,7 @@ interface Thread {
 const CommunityView: React.FC = () => {
   const { communityId } = useParams<{ communityId: string }>();
   const [threads, setThreads] = useState<Thread[]>([]);
+  const [communityData, setCommunityData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
   const [userData, setUserData] = useState<any>(null);
@@ -55,6 +56,12 @@ const CommunityView: React.FC = () => {
 
   useEffect(() => {
     if (!communityId) return;
+
+    // Fetch Community Metadata
+    const commRef = doc(db, "communities", communityId);
+    getDoc(commRef).then(snap => {
+      if (snap.exists()) setCommunityData(snap.data());
+    });
 
     const q = query(
       collection(db, `communities/${communityId}/threads`),
@@ -156,20 +163,51 @@ const CommunityView: React.FC = () => {
     }
   };
 
+  const handleDeleteCommunity = async () => {
+    if (!isAdmin || !communityId) return;
+    const confirm = window.confirm("Are you sure you want to delete this ENTIRE community? All threads and comments will be lost.");
+    if (!confirm) return;
+
+    const reason = promptForModerationReason("community deletion");
+    if (reason === null) return;
+
+    try {
+      await deleteDoc(doc(db, "communities", communityId));
+      alert("Community deleted.");
+      window.location.href = "/forum";
+    } catch (e) {
+      console.error("Delete failed", e);
+    }
+  };
+
   return (
     <div className="container" style={{ minHeight: '100vh', background: '#121212', overflowY: 'auto' }}>
       <SEO 
-        title={`c/${communityId}`} 
-        description={`Join the c/${communityId} community on Range Anxiety. Discuss battery life, mods, and routes for your e-bike.`}
+        title={communityData?.name ? `c/${communityData.name}` : `c/${communityId}`} 
+        description={communityData?.description || `Join the c/${communityId} community on Range Anxiety. Discuss battery life, mods, and routes for your e-bike.`}
         url={`https://rangeanxiety.app/forum/c/${communityId}`}
       />
-      <NavBar 
- user={user} onShowInstall={() => setShowInstallTutorial(true)} onShowAuth={() => setShowAuthModal(true)} />
+      <NavBar user={user} onShowInstall={() => setShowInstallTutorial(true)} onShowAuth={() => setShowAuthModal(true)} />
       <main style={{ padding: '2rem 1.5rem', maxWidth: '900px', margin: '0 auto' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2.5rem' }}>
-          <div><Link to="/forum" style={{ color: '#888', textDecoration: 'none', fontSize: '0.8rem', fontWeight: 'bold' }}>FORUM HUB</Link><h1 style={{ color: 'white', margin: '0.2rem 0 0 0', fontSize: '1.8rem' }}>c/{communityId}</h1></div>
+          <div>
+            <Link to="/forum" style={{ color: '#888', textDecoration: 'none', fontSize: '0.8rem', fontWeight: 'bold' }}>FORUM HUB</Link>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <h1 style={{ color: 'white', margin: '0.2rem 0 0 0', fontSize: '1.8rem' }}>c/{communityData?.name || communityId}</h1>
+              {isAdmin && (
+                <button 
+                  onClick={handleDeleteCommunity}
+                  style={{ background: 'none', border: 'none', color: '#ff4444', cursor: 'pointer', fontSize: '1rem', marginTop: '0.5rem' }}
+                  title="Delete Community"
+                >
+                  🗑️
+                </button>
+              )}
+            </div>
+          </div>
           {user && <button onClick={() => setShowCreatePost(true)} style={{ background: '#ff6600', color: 'white', border: 'none', borderRadius: '12px', padding: '0.8rem 1.5rem', fontWeight: 'bold', cursor: 'pointer' }}>New Thread</button>}
         </div>
+
         {loading ? <div style={{ color: '#666', textAlign: 'center', padding: '4rem 0' }}>Loading community...</div> : threads.length === 0 ? <div style={{ color: '#444', textAlign: 'center', padding: '4rem 0' }}>No discussions yet. Start one!</div> : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             {threads.map(thread => (

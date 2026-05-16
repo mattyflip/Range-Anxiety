@@ -21,6 +21,7 @@ interface ForumComment {
 const ThreadView: React.FC = () => {
   const { communityId, threadId } = useParams<{ communityId: string, threadId: string }>();
   const [thread, setThread] = useState<any>(null);
+  const [communityData, setCommunityData] = useState<any>(null);
   const [comments, setComments] = useState<ForumComment[]>([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
@@ -41,6 +42,10 @@ const ThreadView: React.FC = () => {
   // Admin states
   const [adminEditingComment, setAdminEditingComment] = useState<ForumComment | null>(null);
   const [adminEditValue, setAdminEditValue] = useState('');
+  
+  const [adminEditingThread, setAdminEditingThread] = useState(false);
+  const [adminThreadTitle, setAdminThreadTitle] = useState('');
+  const [adminThreadBody, setAdminThreadBody] = useState('');
 
   useEffect(() => {
     const unsub = auth.onAuthStateChanged(u => setUser(u));
@@ -50,10 +55,21 @@ const ThreadView: React.FC = () => {
   useEffect(() => {
     if (!communityId || !threadId) return;
 
+    // Fetch Community Metadata
+    const commRef = doc(db, "communities", communityId);
+    getDoc(commRef).then(snap => {
+      if (snap.exists()) setCommunityData(snap.data());
+    });
+
     // Fetch Thread Details
     const threadRef = doc(db, `communities/${communityId}/threads`, threadId);
     const unsubThread = onSnapshot(threadRef, (snap) => {
-      if (snap.exists()) setThread({ id: snap.id, ...snap.data() });
+      if (snap.exists()) {
+        const data = snap.data();
+        setThread({ id: snap.id, ...data });
+        setAdminThreadTitle(data.title);
+        setAdminThreadBody(data.body || '');
+      }
     });
 
     // Fetch Comments
@@ -119,6 +135,32 @@ const ThreadView: React.FC = () => {
     } catch (e) {
       console.error("Update failed", e);
       alert("Failed to save edits.");
+    }
+  };
+
+  const handleSaveThreadAdminEdit = async () => {
+    if (!isAdmin || !communityId || !threadId) return;
+    const reason = promptForModerationReason("thread edit");
+    if (reason === null) return;
+
+    try {
+      await updateDoc(doc(db, `communities/${communityId}/threads`, threadId), {
+        title: adminThreadTitle,
+        body: adminThreadBody
+      });
+      await createNotification(
+        thread.authorId,
+        user.uid,
+        "System Admin",
+        'moderation',
+        threadId,
+        `Your thread was edited by a moderator. Reason: ${reason}`
+      );
+      setAdminEditingThread(false);
+      alert("Thread updated by Admin.");
+    } catch (e) {
+      console.error("Update failed", e);
+      alert("Failed to save thread edits.");
     }
   };
 
@@ -326,7 +368,7 @@ const ThreadView: React.FC = () => {
       />
 
       <main style={{ padding: '2rem', maxWidth: '900px', margin: '0 auto' }}>
-        <Link to={`/forum/c/${communityId}`} style={{ color: '#ff6600', textDecoration: 'none', fontSize: '0.85rem', fontWeight: 'bold', display: 'block', marginBottom: '1.5rem' }}>← Back to c/{communityId}</Link>
+        <Link to={`/forum/c/${communityId}`} style={{ color: '#ff6600', textDecoration: 'none', fontSize: '0.85rem', fontWeight: 'bold', display: 'block', marginBottom: '1.5rem' }}>← Back to c/{communityData?.name || communityId}</Link>
 
         {thread && (
           <article style={{ background: '#1a1a1a', borderRadius: '24px', border: '1px solid #333', padding: '2rem', marginBottom: '2rem', display: 'flex', gap: '2rem' }}>
@@ -352,11 +394,18 @@ const ThreadView: React.FC = () => {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <h1 style={{ color: 'white', margin: 0, fontSize: '1.8rem', lineHeight: '1.3' }}>{thread.title}</h1>
                 {isAdmin && (
-                  <button 
-                    onClick={handleDeleteThread}
-                    style={{ background: 'none', border: 'none', color: '#ff4444', cursor: 'pointer', fontSize: '1.2rem', padding: '0.5rem' }}
-                    title="Delete Thread as Moderator"
-                  >🗑️</button>
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <button 
+                      onClick={() => setAdminEditingThread(true)}
+                      style={{ background: 'none', border: 'none', color: '#ffcc00', cursor: 'pointer', fontSize: '1.2rem', padding: '0.5rem' }}
+                      title="Edit Thread"
+                    >✏️</button>
+                    <button 
+                      onClick={handleDeleteThread}
+                      style={{ background: 'none', border: 'none', color: '#ff4444', cursor: 'pointer', fontSize: '1.2rem', padding: '0.5rem' }}
+                      title="Delete Thread as Moderator"
+                    >🗑️</button>
+                  </div>
                 )}
               </div>
               {thread.body && (
@@ -434,6 +483,49 @@ const ThreadView: React.FC = () => {
               </button>
               <button 
                 onClick={handleSaveAdminEdit}
+                style={{ flex: 2, padding: '1rem', background: '#ffcc00', color: '#000', border: 'none', borderRadius: '12px', cursor: 'pointer', fontWeight: 'bold' }}
+              >
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Admin Thread Edit Modal */}
+      {adminEditingThread && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.9)', zIndex: 6000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+          <div style={{ background: '#1a1a1a', width: '100%', maxWidth: '600px', padding: '2rem', borderRadius: '24px', border: '1px solid #333' }}>
+            <h2 style={{ color: 'white', marginTop: 0 }}>Admin Thread Edit</h2>
+            <p style={{ color: '#ffcc00', fontSize: '0.8rem', fontWeight: 'bold' }}>MODERATION MODE</p>
+
+            <div className="form-group" style={{ marginTop: '1.5rem' }}>
+              <label style={{ color: '#888', fontSize: '0.7rem', fontWeight: 'bold', textTransform: 'uppercase', display: 'block', marginBottom: '0.5rem' }}>Title</label>
+              <input 
+                type="text"
+                value={adminThreadTitle}
+                onChange={(e) => setAdminThreadTitle(e.target.value)}
+                style={{ width: '100%', background: '#222', border: '1px solid #444', borderRadius: '12px', color: 'white', padding: '1rem', fontFamily: 'inherit', marginBottom: '1.5rem' }}
+              />
+            </div>
+
+            <div className="form-group">
+              <label style={{ color: '#888', fontSize: '0.7rem', fontWeight: 'bold', textTransform: 'uppercase', display: 'block', marginBottom: '0.5rem' }}>Body</label>
+              <textarea 
+                value={adminThreadBody}
+                onChange={(e) => setAdminThreadBody(e.target.value)}
+                style={{ width: '100%', height: '250px', background: '#222', border: '1px solid #444', borderRadius: '12px', color: 'white', padding: '1rem', fontFamily: 'inherit', marginBottom: '1.5rem' }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: '1rem' }}>
+              <button 
+                onClick={() => setAdminEditingThread(false)}
+                style={{ flex: 1, padding: '1rem', background: '#333', color: 'white', border: 'none', borderRadius: '12px', cursor: 'pointer' }}
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleSaveThreadAdminEdit}
                 style={{ flex: 2, padding: '1rem', background: '#ffcc00', color: '#000', border: 'none', borderRadius: '12px', cursor: 'pointer', fontWeight: 'bold' }}
               >
                 Save Changes
