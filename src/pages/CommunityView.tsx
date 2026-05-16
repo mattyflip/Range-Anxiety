@@ -233,18 +233,18 @@ const CommunityView: React.FC = () => {
         {loading ? <div style={{ color: '#666', textAlign: 'center', padding: '4rem 0' }}>Loading community...</div> : threads.length === 0 ? <div style={{ color: '#444', textAlign: 'center', padding: '4rem 0' }}>No discussions yet. Start one!</div> : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             {threads.map(thread => (
-              <div key={thread.id} style={{ background: '#1a1a1a', borderRadius: '20px', border: '1px solid #333', padding: '1.2rem', display: 'flex', gap: '1.5rem' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.2rem', background: '#121212', padding: '0.6rem', borderRadius: '10px', height: 'fit-content' }}>
-                   <button onClick={() => handleVote(thread, 1)} style={{ background: 'none', border: 'none', color: thread.upvotedBy?.includes(user?.uid) ? '#4ade80' : '#444', cursor: 'pointer', fontSize: '1.2rem' }}>🔋</button>
-                   <span style={{ color: 'white', fontWeight: 'bold', fontSize: '0.9rem' }}>{thread.score}</span>
-                   <button onClick={() => handleVote(thread, -1)} style={{ background: 'none', border: 'none', color: thread.downvotedBy?.includes(user?.uid) ? '#f87171' : '#444', cursor: 'pointer', fontSize: '1.2rem' }}>🪫</button>
+              <div key={thread.id} style={{ background: '#1a1a1a', borderRadius: '20px', border: '1px solid #333', padding: '1rem', display: 'flex', gap: '1.2rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.1rem', background: '#121212', padding: '0.4rem 0.6rem', borderRadius: '8px', height: 'fit-content' }}>
+                   <button onClick={() => handleVote(thread, 1)} style={{ background: 'none', border: 'none', color: thread.upvotedBy?.includes(user?.uid) ? '#4ade80' : '#444', cursor: 'pointer', fontSize: '1rem' }}>🔋</button>
+                   <span style={{ color: 'white', fontWeight: 'bold', fontSize: '0.8rem' }}>{thread.score}</span>
+                   <button onClick={() => handleVote(thread, -1)} style={{ background: 'none', border: 'none', color: thread.downvotedBy?.includes(user?.uid) ? '#f87171' : '#444', cursor: 'pointer', fontSize: '1rem' }}>🪫</button>
                 </div>
                 <div style={{ flex: 1 }}>
-                   <div style={{ fontSize: '0.65rem', color: '#555', textTransform: 'uppercase', fontWeight: 'bold', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                   <div style={{ fontSize: '0.6rem', color: '#555', textTransform: 'uppercase', fontWeight: 'bold', marginBottom: '0.3rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                      Posted by <Link to={`/profile/${thread.authorUsername.replace(/\s+/g, '_')}`} style={{ color: '#777', textDecoration: 'none' }}>{thread.authorUsername}</Link>
-                     {(thread.authorUsername === 'MattyFlip' || thread.authorUsername === 'mattyflip') && <span style={{ background: '#ff0000', color: 'white', fontSize: '0.5rem', padding: '1px 3px', borderRadius: '2px', fontWeight: 900 }}>ADMIN</span>}
+                     {(thread.authorUsername === 'MattyFlip' || thread.authorUsername === 'mattyflip') && <span style={{ background: '#ff0000', color: 'white', fontSize: '0.45rem', padding: '1px 2px', borderRadius: '2px', fontWeight: 900 }}>ADMIN</span>}
                    </div>
-                   <Link to={`/forum/c/${communityId}/t/${thread.id}`} style={{ textDecoration: 'none' }}><h2 style={{ color: 'white', margin: '0 0 0.5rem 0', fontSize: '1.2rem', lineHeight: '1.4' }}>{thread.title}</h2></Link>
+                   <Link to={`/forum/c/${communityId}/t/${thread.id}`} style={{ textDecoration: 'none' }}><h2 style={{ color: 'white', margin: '0 0 0.4rem 0', fontSize: '1.1rem', lineHeight: '1.3' }}>{thread.title}</h2></Link>
                    <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
                       <div style={{ fontSize: '0.75rem', color: '#666', fontWeight: 'bold' }}>💬 {thread.commentCount} Comments</div>
                       {thread.mediaUrl && (

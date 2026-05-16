@@ -371,28 +371,28 @@ const ThreadView: React.FC = () => {
         <Link to={`/forum/c/${communityId}`} style={{ color: '#ff6600', textDecoration: 'none', fontSize: '0.85rem', fontWeight: 'bold', display: 'block', marginBottom: '1.5rem' }}>← Back to c/{communityData?.name || communityId}</Link>
 
         {thread && (
-          <article style={{ background: '#1a1a1a', borderRadius: '24px', border: '1px solid #333', padding: '2rem', marginBottom: '2rem', display: 'flex', gap: '2rem' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', background: '#121212', padding: '1rem', borderRadius: '12px', alignSelf: 'flex-start' }}>
+          <article style={{ background: '#1a1a1a', borderRadius: '24px', border: '1px solid #333', padding: '1.5rem', marginBottom: '2rem', display: 'flex', gap: '1.5rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.2rem', background: '#121212', padding: '0.6rem 0.8rem', borderRadius: '10px', alignSelf: 'flex-start' }}>
                <button 
                  onClick={() => handleVote(1)} 
-                 style={{ background: 'none', border: 'none', color: thread.upvotedBy?.includes(user?.uid) ? '#4ade80' : '#444', cursor: 'pointer', fontSize: '1.5rem', filter: thread.upvotedBy?.includes(user?.uid) ? 'none' : 'grayscale(100%)' }}
+                 style={{ background: 'none', border: 'none', color: thread.upvotedBy?.includes(user?.uid) ? '#4ade80' : '#444', cursor: 'pointer', fontSize: '1.2rem', filter: thread.upvotedBy?.includes(user?.uid) ? 'none' : 'grayscale(100%)' }}
                  title="Upvote"
                >🔋</button>
-               <span style={{ color: 'white', fontWeight: 'bold', fontSize: '1.1rem' }}>{thread.score}</span>
+               <span style={{ color: 'white', fontWeight: 'bold', fontSize: '1rem' }}>{thread.score}</span>
                <button 
                  onClick={() => handleVote(-1)} 
-                 style={{ background: 'none', border: 'none', color: thread.downvotedBy?.includes(user?.uid) ? '#f87171' : '#444', cursor: 'pointer', fontSize: '1.5rem', filter: thread.downvotedBy?.includes(user?.uid) ? 'none' : 'grayscale(100%)' }}
+                 style={{ background: 'none', border: 'none', color: thread.downvotedBy?.includes(user?.uid) ? '#f87171' : '#444', cursor: 'pointer', fontSize: '1.2rem', filter: thread.downvotedBy?.includes(user?.uid) ? 'none' : 'grayscale(100%)' }}
                  title="Downvote"
                >🪫</button>
             </div>
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: '0.7rem', color: '#444', textTransform: 'uppercase', fontWeight: 'bold', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <div style={{ fontSize: '0.65rem', color: '#444', textTransform: 'uppercase', fontWeight: 'bold', marginBottom: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                 Posted by <Link to={`/profile/${thread.authorUsername.replace(/\s+/g, '_')}`} style={{ color: '#888', textDecoration: 'none' }}>{thread.authorUsername}</Link> 
                 {(thread.authorUsername === 'MattyFlip' || thread.authorUsername === 'mattyflip') && <span style={{ background: '#ff0000', color: 'white', fontSize: '0.5rem', padding: '1px 3px', borderRadius: '2px', fontWeight: 900 }}>ADMIN</span>}
                 • {thread.createdAt?.toDate().toLocaleString()}
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <h1 style={{ color: 'white', margin: 0, fontSize: '1.8rem', lineHeight: '1.3' }}>{thread.title}</h1>
+                <h1 style={{ color: 'white', margin: 0, fontSize: '1.5rem', lineHeight: '1.3' }}>{thread.title}</h1>
                 {isAdmin && (
                   <div style={{ display: 'flex', gap: '0.5rem' }}>
                     <button 
