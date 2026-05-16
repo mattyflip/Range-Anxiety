@@ -220,6 +220,26 @@ function MapHome() {
   }, []);
 
   useEffect(() => {
+    if (!isLoaded || !mapRef.current) return;
+    
+    // Check if we are loading a saved route first
+    if (localStorage.getItem('ebike_load_route')) return;
+
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition((pos) => {
+        const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        setUserLocation(loc);
+        if (mapRef.current) {
+          mapRef.current.panTo(loc);
+          mapRef.current.setZoom(13);
+        }
+      }, (err) => {
+        console.warn("Auto-centering failed:", err);
+      }, { enableHighAccuracy: false, timeout: 5000 });
+    }
+  }, [isLoaded]);
+
+  useEffect(() => {
     if (!isLoaded) return;
     const loadRoute = () => {
       const raw = localStorage.getItem('ebike_load_route');

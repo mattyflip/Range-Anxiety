@@ -130,6 +130,27 @@ const ExploreMap: React.FC = () => {
     setIsTracking(false);
   };
 
+  const restartTracking = () => {
+    const confirmRestart = window.confirm("Are you sure you want to restart? Current session data will be lost.");
+    if (!confirmRestart) return;
+
+    if (watchId.current !== null) {
+      navigator.geolocation.clearWatch(watchId.current);
+      watchId.current = null;
+    }
+    
+    setPath([]);
+    setDistance(0);
+    setStartTime(Date.now());
+    setLastMovementTime(Date.now());
+    setCurrentSpeed(0);
+    
+    if (isTracking) {
+      // Re-start if it was already tracking
+      startTracking();
+    }
+  };
+
   const saveRide = async () => {
     if (path.length < 2) {
       alert("Not enough data to save ride.");
@@ -237,7 +258,17 @@ const ExploreMap: React.FC = () => {
         </div>
 
         {/* Controls */}
-        <div style={{ position: 'absolute', bottom: '2rem', left: '1rem', right: '1rem', display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+        <div style={{ position: 'absolute', bottom: '2rem', left: '1rem', right: '1rem', display: 'flex', gap: '1rem', justifyContent: 'center', alignItems: 'center' }}>
+          {(isTracking || path.length > 1) && (
+            <button 
+              onClick={restartTracking}
+              style={{ width: '50px', height: '50px', borderRadius: '50%', background: 'rgba(0,0,0,0.6)', border: '1px solid #444', color: 'white', fontSize: '1.2rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              title="Restart Trip"
+            >
+              🔄
+            </button>
+          )}
+
           {!isTracking ? (
             <button 
               onClick={startTracking}
