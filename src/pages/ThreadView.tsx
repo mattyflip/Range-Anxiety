@@ -8,6 +8,8 @@ import AuthModal from '../components/AuthModal'
 import { createNotification } from '../utils/notifications'
 import SEO from '../components/SEO'
 
+import ShareButton from '../components/ShareButton'
+
 interface ForumComment {
   id: string;
   authorId: string;
@@ -433,6 +435,16 @@ const ThreadView: React.FC = () => {
                     style={{ background: 'none', border: 'none', color: thread.downvotedBy?.includes(user?.uid) ? '#f87171' : '#444', cursor: 'pointer', fontSize: '1.1rem', filter: thread.downvotedBy?.includes(user?.uid) ? 'none' : 'grayscale(100%)', padding: '0.2rem' }}
                     title="Downvote"
                   >🪫</button>
+
+                  <div style={{ width: '1px', height: '1rem', background: '#333', margin: '0 0.2rem' }} />
+
+                  <ShareButton 
+                    title={`Range Anxiety | ${thread.title}`}
+                    text={thread.body || ""}
+                    url={window.location.href}
+                    fontSize="1rem"
+                    color="#666"
+                  />
                </div>
                <div style={{ color: '#666', fontWeight: 'bold', fontSize: '0.85rem' }}>💬 {thread.commentCount}</div>
             </div>

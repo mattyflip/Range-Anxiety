@@ -15,6 +15,7 @@ import { getCroppedImg } from '../utils/imageUtils'
 import CommentModal from '../components/CommentModal'
 import { createNotification } from '../utils/notifications'
 import SEO from '../components/SEO'
+import ShareButton from '../components/ShareButton'
 
 interface Post {
   id: string;
@@ -24,6 +25,7 @@ interface Post {
   imageUrl: string;
   caption: string;
   likes: string[];
+  commentCount?: number;
   commentsEnabled?: boolean;
   createdAt: any;
   tripData?: any;
@@ -324,11 +326,27 @@ const Feed: React.FC = () => {
                 </div>
 
                 <div style={{ padding: '1.2rem' }}>
-                  <div style={{ display: 'flex', gap: '1.2rem', marginBottom: '1rem' }}>
+                  <div style={{ display: 'flex', gap: '1.2rem', marginBottom: '1rem', alignItems: 'center' }}>
                     <LikeWidget post={post} user={user} onAuthNeeded={() => setShowAuthModal(true)} />
+                    
                     {post.commentsEnabled !== false && (
-                      <button onClick={() => setActiveCommentPost(post)} style={{ background: 'none', border: 'none', color: 'white', fontSize: '1.5rem', cursor: 'pointer', padding: 0 }}>💬</button>
+                      <button 
+                        onClick={() => setActiveCommentPost(post)} 
+                        style={{ background: 'none', border: 'none', color: 'white', fontSize: '1.2rem', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+                      >
+                        <span>💬</span>
+                        <span style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#666' }}>{post.commentCount || 0}</span>
+                      </button>
                     )}
+
+                    <ShareButton 
+                      title={`Range Anxiety | Trip by ${post.authorUsername}`}
+                      text={post.caption}
+                      url={`${window.location.origin}/feed?post=${post.id}`}
+                      fontSize="1.1rem"
+                      color="#666"
+                    />
+
                     {post.tripData && (
                       <button 
                         onClick={() => handleLoadRoute(post)}
