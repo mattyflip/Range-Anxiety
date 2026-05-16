@@ -37,15 +37,18 @@ const About: React.FC = () => {
       />
 
       <main style={{ padding: '4rem 1.5rem', maxWidth: '800px', margin: '0 auto' }}>
-        <header style={{ textAlign: 'center', marginBottom: '4rem' }}>
-          <h1 style={{ fontSize: 'clamp(2rem, 8vw, 3.5rem)', fontWeight: 900, color: '#ff6600', margin: '0 0 0.5rem 0', lineHeight: '1.1' }}>Conquer Range Anxiety</h1>
+        <header style={{ textAlign: 'center', marginBottom: '2rem' }}>
+          <h1 style={{ fontSize: 'clamp(2rem, 8vw, 3.5rem)', fontWeight: 900, color: '#ff6600', margin: 0, lineHeight: '1.1', textTransform: 'uppercase' }}>Conquer Range Anxiety</h1>
+        </header>
+
+        <section style={{ textAlign: 'center', marginBottom: '5rem' }}>
           <p style={{ fontSize: '1.1rem', color: '#888', maxWidth: '600px', margin: '0 auto 1.5rem auto' }}>
             The most accurate physics-based range estimator for electric bikes, Sur-Rons, and electric motorcycles.
           </p>
           <div style={{ maxWidth: '700px', margin: '0 auto', borderRadius: '24px', overflow: 'hidden', border: '1px solid #333', boxShadow: '0 20px 40px rgba(0,0,0,0.5)' }}>
             <img src={wattSonDiagram} alt="Watt-son's Guide to Precise Range" style={{ width: '100%', display: 'block' }} />
           </div>
-        </header>
+        </section>
 
         <section style={{ marginBottom: '4rem' }}>
           <h2 style={{ color: 'white', borderLeft: '4px solid #ff6600', paddingLeft: '1rem', marginBottom: '1.5rem' }}>The Science of Range</h2>
