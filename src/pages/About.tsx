@@ -85,12 +85,20 @@ const About: React.FC = () => {
 
         <footer style={{ textAlign: 'center', marginTop: '6rem', padding: '4rem 0', borderTop: '1px solid #222' }}>
           <h2 style={{ marginBottom: '2rem' }}>Ready to plan your next trip?</h2>
-          <button 
-            onClick={() => window.location.href = '/'}
-            style={{ padding: '1rem 3rem', background: '#ff6600', color: 'white', border: 'none', borderRadius: '12px', fontWeight: 'bold', fontSize: '1.1rem', cursor: 'pointer' }}
-          >
-            Launch Map
-          </button>
+          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+            <button 
+              onClick={() => window.location.href = '/'}
+              style={{ padding: '1rem 3rem', background: '#ff6600', color: 'white', border: 'none', borderRadius: '12px', fontWeight: 'bold', fontSize: '1.1rem', cursor: 'pointer' }}
+            >
+              Launch Map
+            </button>
+            <button 
+              onClick={() => window.location.href = '/faq'}
+              style={{ padding: '1rem 3rem', background: '#333', color: 'white', border: '1px solid #444', borderRadius: '12px', fontWeight: 'bold', fontSize: '1.1rem', cursor: 'pointer' }}
+            >
+              Read FAQs
+            </button>
+          </div>
         </footer>
       </main>
 

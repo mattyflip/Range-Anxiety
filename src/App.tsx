@@ -8,6 +8,7 @@ import CommunityView from './pages/CommunityView'
 import ThreadView from './pages/ThreadView'
 import About from './pages/About'
 import Notifications from './pages/Notifications'
+import FAQ from './pages/FAQ'
 
 function App() {
   return (
@@ -15,6 +16,7 @@ function App() {
       <Routes>
         <Route path="/" element={<MapHome />} />
         <Route path="/how-it-works" element={<About />} />
+        <Route path="/faq" element={<FAQ />} />
         <Route path="/feed" element={<Feed />} />
         <Route path="/notifications" element={<Notifications />} />
         <Route path="/profile/:username" element={<Profile />} />
