@@ -119,9 +119,6 @@ function MapHome() {
   const [tirePressurePsi, setTirePressurePsi] = useState<number | ''>(''); 
   
   const [trip, setTrip] = useState<TripDetails>({ origin: '', destination: '', waypoints: [] });
-  const [waypoint3, setWaypoint3] = useState('');
-  const [waypoint4, setWaypoint4] = useState('');
-  const [waypoint5, setWaypoint5] = useState('');
   const [mode, setMode] = useState<'eco' | 'normal' | 'sport'>('normal');
   const [pasLevel, setPasLevel] = useState<number>(3);
   const [controlType, setControlType] = useState<'switch' | 'pas'>('pas');
@@ -169,13 +166,11 @@ function MapHome() {
     const filtered = locs.filter(l => l.trim() !== '');
     if (filtered.length === 0) {
       setTrip({ origin: '', destination: '', waypoints: [] });
-      setWaypoint3(''); setWaypoint4(''); setWaypoint5('');
       return;
     }
     
     if (filtered.length === 1) {
       setTrip(p => ({ ...p, origin: filtered[0], destination: '', waypoints: [] }));
-      setWaypoint3(''); setWaypoint4(''); setWaypoint5('');
       return;
     }
 
@@ -184,9 +179,6 @@ function MapHome() {
     const waypoints = filtered.slice(1, filtered.length - 1);
 
     setTrip({ origin, destination, waypoints });
-    setWaypoint3(waypoints[0] || '');
-    setWaypoint4(waypoints[1] || '');
-    setWaypoint5(waypoints[2] || '');
   };
 
   const updateLocation = (index: number, value: string) => {
@@ -330,9 +322,6 @@ function MapHome() {
           setRecordedPath(null);
           setTrip({ origin: data.origin, destination: data.destination, waypoints: data.waypoints });
           const wps = data.waypoints.filter((w: any) => typeof w === 'string');
-          setWaypoint3(wps[0] || '');
-          setWaypoint4(wps[1] || '');
-          setWaypoint5(wps[2] || '');
           setLocations([data.origin, data.destination, wps[0] || '', wps[1] || '', wps[2] || '']);
           if (typeof data.isRoundTrip === 'boolean') setIsRoundTrip(data.isRoundTrip);
           setIsLoading(true);
@@ -347,7 +336,7 @@ function MapHome() {
     const handleEvent = () => loadRoute();
     window.addEventListener('ebike-route-loaded', handleEvent);
     return () => window.removeEventListener('ebike-route-loaded', handleEvent);
-  }, [isLoaded, setWaypoint3, setWaypoint4, setWaypoint5]);
+  }, [isLoaded]);
 
   useEffect(() => {
     if (authInitialized && !user && !localStorage.getItem('ebike_portal_visited')) {
