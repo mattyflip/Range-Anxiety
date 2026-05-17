@@ -28,8 +28,10 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({ onClose }) => {
         style={{ 
           maxWidth: '500px', 
           width: '100%',
+          maxHeight: '90vh',
+          overflowY: 'auto',
           background: '#1a1a1a', 
-          padding: '2.5rem', 
+          padding: '2rem', 
           borderRadius: '30px', 
           border: '1px solid #333',
           boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
@@ -37,32 +39,32 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({ onClose }) => {
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div style={{ fontSize: '3.5rem', marginBottom: '1rem' }}>⚡</div>
-        <h1 style={{ color: '#ff6600', marginBottom: '1rem', fontSize: '1.8rem' }}>Welcome to E-Bike King!</h1>
-        <p style={{ color: '#ccc', fontSize: '1.1rem', lineHeight: '1.6', marginBottom: '2rem' }}>
+        <div style={{ fontSize: '3rem', marginBottom: '0.8rem' }}>⚡</div>
+        <h1 style={{ color: '#ff6600', marginBottom: '0.8rem', fontSize: '1.6rem' }}>Welcome to E-Bike King!</h1>
+        <p style={{ color: '#ccc', fontSize: '1rem', lineHeight: '1.5', marginBottom: '1.5rem' }}>
           Your ultimate tool for planning rides and conquering range anxiety.
         </p>
 
-        <div style={{ textAlign: 'left', background: '#121212', padding: '1.5rem', borderRadius: '20px', marginBottom: '2rem' }}>
-          <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.2rem' }}>
-            <span style={{ fontSize: '1.5rem' }}>📍</span>
+        <div style={{ textAlign: 'left', background: '#121212', padding: '1.2rem', borderRadius: '20px', marginBottom: '1.5rem' }}>
+          <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
+            <span style={{ fontSize: '1.2rem' }}>📍</span>
             <div>
               <div style={{ color: 'white', fontWeight: 'bold' }}>Plan Your Route</div>
-              <div style={{ color: '#888', fontSize: '0.9rem' }}>Tap the map to add waypoints and see real-time range estimates.</div>
+              <div style={{ color: '#888', fontSize: '0.85rem' }}>Tap the map to add waypoints and see real-time range estimates.</div>
             </div>
           </div>
-          <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.2rem' }}>
-            <span style={{ fontSize: '1.5rem' }}>🚲</span>
+          <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
+            <span style={{ fontSize: '1.2rem' }}>🚲</span>
             <div>
               <div style={{ color: 'white', fontWeight: 'bold' }}>Custom Specs</div>
-              <div style={{ color: '#888', fontSize: '0.9rem' }}>Select your bike and battery to get accurate, personalized data.</div>
+              <div style={{ color: '#888', fontSize: '0.85rem' }}>Select your bike and battery to get accurate, personalized data.</div>
             </div>
           </div>
           <div style={{ display: 'flex', gap: '1rem' }}>
-            <span style={{ fontSize: '1.5rem' }}>👥</span>
+            <span style={{ fontSize: '1.2rem' }}>👥</span>
             <div>
               <div style={{ color: 'white', fontWeight: 'bold' }}>Community Hub</div>
-              <div style={{ color: '#888', fontSize: '0.9rem' }}>Join the forum to share trips, ask questions, and meet riders.</div>
+              <div style={{ color: '#888', fontSize: '0.85rem' }}>Join the forum to share trips, ask questions, and meet riders.</div>
             </div>
           </div>
         </div>
@@ -71,7 +73,7 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({ onClose }) => {
           onClick={onClose}
           style={{ 
             width: '100%', 
-            padding: '1.2rem', 
+            padding: '1rem', 
             background: '#ff6600', 
             color: 'white', 
             border: 'none', 

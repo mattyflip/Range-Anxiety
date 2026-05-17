@@ -30,6 +30,8 @@ const InstallTutorial: React.FC<{ onClose: () => void }> = ({ onClose }) => {
       <div style={{
         maxWidth: '450px',
         width: '100%',
+        maxHeight: '90vh',
+        overflowY: 'auto',
         background: '#1a1a1a',
         borderRadius: '24px',
         border: '1px solid #ff6600',
