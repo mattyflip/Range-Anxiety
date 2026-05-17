@@ -150,3 +150,19 @@ export function getEbikeSafetyInfo(region: string, age: number) {
     ageDiff: law.minAge - age
   };
 }
+
+export function getNearestState(lat: number, lng: number): string | null {
+  let nearestState: string | null = null;
+  let minDistance = Infinity;
+
+  // Use a simple Euclidean distance approximation for performance (suitable for state centroids)
+  for (const [state, coords] of Object.entries(STATE_COORDINATES)) {
+    const d = Math.pow(lat - coords.lat, 2) + Math.pow(lng - coords.lng, 2);
+    if (d < minDistance) {
+      minDistance = d;
+      nearestState = state;
+    }
+  }
+
+  return nearestState;
+}

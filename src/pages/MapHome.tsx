@@ -13,7 +13,7 @@ import InstallTutorial from '../components/InstallTutorial'
 import NavBar from '../components/NavBar'
 import AuthModal from '../components/AuthModal'
 import WelcomeModal from '../components/WelcomeModal'
-import { STATE_COORDINATES } from '../utils/ebikeLaws'
+import { STATE_COORDINATES, calculateAge, getNearestState, EBIKE_LAWS } from '../utils/ebikeLaws'
 import SEO from '../components/SEO'
 
 const LIBRARIES: ("places" | "geometry")[] = ["places", "geometry"];
@@ -641,8 +641,31 @@ function MapHome() {
   };
 
   const [sessionTimeStart] = useState(() => new Date().getTime());
-  const canHostRide = () => isHostTier && hostTierExpiresAt && hostTierExpiresAt.getTime() > sessionTimeStart;
-  const canJoinRide = () => isPro || canHostRide();
+
+  const isUnderageForLocation = () => {
+    if (!userData?.birthday) return false;
+    const age = calculateAge(userData.birthday);
+    
+    // Check current physical location
+    if (userLocation) {
+      const physicalState = getNearestState(userLocation.lat, userLocation.lng);
+      if (physicalState) {
+        const law = EBIKE_LAWS[physicalState];
+        if (law && age < law.minAge) return true;
+      }
+    }
+
+    // Fallback/Double-check: Home Region
+    if (userData.homeRegion) {
+      const homeLaw = EBIKE_LAWS[userData.homeRegion];
+      if (homeLaw && age < homeLaw.minAge) return true;
+    }
+
+    return false;
+  };
+
+  const canHostRide = () => !isUnderageForLocation() && isHostTier && hostTierExpiresAt && hostTierExpiresAt.getTime() > sessionTimeStart;
+  const canJoinRide = () => !isUnderageForLocation() && (isPro || canHostRide());
 
   const createRide = async () => {
     if (!user) { setShowAuthModal(true); return; }
@@ -862,73 +885,86 @@ function MapHome() {
           <section className="form-group" style={{ borderTop: '1px solid #333', paddingTop: '1rem', paddingBottom: '2rem', marginTop: '1rem' }}>
             <label style={{ color: '#ff6600', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span>Group Ride {canHostRide() ? <span style={{ color: '#34a853', fontSize: '0.6rem', marginLeft: '0.5rem' }}>✓ HOST</span> : isPro ? <span style={{ color: '#ff9900', fontSize: '0.6rem', marginLeft: '0.5rem' }}>✓ JOIN</span> : <span style={{ color: '#888', fontSize: '0.6rem', marginLeft: '0.5rem' }}>🔒 FREE</span>}</span>
-              {!isPro && !canHostRide() && (
+              {!isPro && !canHostRide() && !isUnderageForLocation() && (
                  <button onClick={() => { setPaywallTier('host'); setShowGroupRidePaywall(true); }} style={{ padding: '0.2rem 0.6rem', background: '#34a853', color: 'white', border: 'none', borderRadius: '4px', fontSize: '0.7rem', cursor: 'pointer' }}>Unlock 30 Days</button>
               )}
             </label>
-            {canHostRide() && hostTierExpiresAt && <div style={{ fontSize: '0.6rem', color: '#666', marginTop: '0.2rem' }}>Host access expires {hostTierExpiresAt.toLocaleDateString()}</div>}
-            {!isPro && !canHostRide() && <div style={{ fontSize: '0.6rem', color: '#ff9900', marginTop: '0.2rem' }}>You can join rides. Upgrade to HOST to create your own.</div>}
-            {!activeRide ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', marginTop: '1rem' }}>
-                {canJoinRide() || canHostRide() ? (
-                  <>
-                    <div style={{ display: 'flex', gap: '0.5rem' }}>
-                      <input type="text" placeholder="Ride Name" value={groupRideName} onChange={e => setGroupRideName(e.target.value)} style={{ flex: 1 }} />
-                      <button onClick={createRide} style={{ padding: '0.4rem 1rem', background: '#ff6600', border: 'none', borderRadius: '4px', color: 'white', fontWeight: 'bold' }}>Host</button>
-                    </div>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.7rem', color: '#888' }}>
-                      <input type="checkbox" checked={isPublicRide} onChange={e => setIsPublicRide(e.target.checked)} style={{ width: 'auto' }} />
-                      Public Visibility
-                    </label>
-                    <div style={{ display: 'flex', gap: '0.5rem' }}>
-                      <input type="text" placeholder="PIN" value={joinPin} onChange={e => setJoinPin(e.target.value)} style={{ width: '80px', textAlign: 'center' }} />
-                      <button onClick={() => joinRide()} style={{ flex: 1, background: '#222', border: '1px solid #333', color: 'white', borderRadius: '4px' }}>Join via PIN</button>
-                    </div>
-                    {publicRides.length > 0 && (
-                      <div style={{ marginTop: '0.5rem' }}>
-                        <label style={{ fontSize: '0.65rem', color: '#666', textTransform: 'uppercase', marginBottom: '0.5rem', display: 'block' }}>Public Rides Nearby</label>
-                        {publicRides.map(r => (
-                          <div key={r.id} onClick={() => joinRide(r.id)} style={{ padding: '0.8rem', background: '#1a1a1a', borderRadius: '8px', marginBottom: '0.5rem', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid #333' }}>
-                            <span style={{ color: 'white', fontSize: '0.9rem' }}>{r.name}</span>
-                            <span style={{ color: '#34a853', fontSize: '0.7rem' }}>Join</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <div style={{ background: 'rgba(255,255,255,0.05)', padding: '1.5rem', borderRadius: '12px', textAlign: 'center' }}>
-                    <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>👥</div>
-                    <div style={{ fontSize: '1.1rem', color: 'white', fontWeight: 'bold', marginBottom: '0.5rem' }}>Group Rides</div>
-                    <div style={{ fontSize: '0.85rem', color: '#aaa', marginBottom: '1rem', lineHeight: 1.4 }}>Join live rides or host your own to see friends on the map in real-time.</div>
-                    <button onClick={() => { setPaywallTier('host'); setShowGroupRidePaywall(true); }} style={{ width: '100%', padding: '0.8rem', background: '#34a853', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>Start 30-Day Pass</button>
-                  </div>
-                )}
+
+            {isUnderageForLocation() ? (
+              <div style={{ background: 'rgba(255,51,51,0.1)', padding: '1rem', borderRadius: '12px', border: '1px solid #ff3333', marginTop: '1rem', textAlign: 'center' }}>
+                <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>⚠️</div>
+                <div style={{ fontSize: '0.85rem', color: 'white', fontWeight: 'bold', marginBottom: '0.3rem' }}>Safety Lock Active</div>
+                <div style={{ fontSize: '0.7rem', color: '#ffaaaa', lineHeight: 1.4 }}>
+                  Group features are locked because you are under the minimum age requirement for electric bike operation in {getNearestState(userLocation?.lat || 0, userLocation?.lng || 0) || 'your current region'}.
+                </div>
               </div>
             ) : (
-              <div style={{ background: '#111', padding: '1rem', borderRadius: '8px', border: '1px solid #ff6600', position: 'relative', marginTop: '1rem' }}>
-                <div style={{ color: '#ff6600', fontSize: '0.7rem', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Active Ride</div>
-                <div style={{ color: 'white', fontSize: '1.1rem', fontWeight: 'bold', marginBottom: '0.2rem' }}>{activeRide.name}</div>
-                <div style={{ color: '#aaa', fontSize: '0.9rem', marginBottom: '1rem' }}>PIN: <span style={{ letterSpacing: '2px', color: 'white' }}>{activeRide.pin}</span></div>
-                <div style={{ fontSize: '0.8rem', color: '#888', marginBottom: '0.5rem' }}>Participants ({rideParticipants.length})</div>
-                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
-                  {rideParticipants.map(p => <span key={p.userId} style={{ background: '#333', padding: '0.2rem 0.5rem', borderRadius: '12px', fontSize: '0.75rem', color: 'white' }}>{p.name} {p.userId === activeRide.leaderId && '👑'}</span>)}
-                </div>
-                {user?.uid === activeRide.creatorId && rideParticipants.length > 1 && (
-                  <div style={{ marginBottom: '0.5rem' }}>
-                    <label style={{ fontSize: '0.6rem', color: '#888' }}>LEADER</label>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem' }}>
-                      {rideParticipants.map(p => (
-                        <button key={p.userId} onClick={() => setRideLeader(p.userId)} style={{ padding: '0.25rem 0.6rem', background: activeRide.leaderId === p.userId ? '#ff6600' : '#333', color: 'white', border: 'none', borderRadius: '12px', fontSize: '0.65rem', cursor: 'pointer', fontWeight: activeRide.leaderId === p.userId ? 'bold' : 'normal' }}>
-                          {activeRide.leaderId === p.userId ? '⭐ ' : ''}{p.name}
-                        </button>
-                      ))}
+              <>
+                {canHostRide() && hostTierExpiresAt && <div style={{ fontSize: '0.6rem', color: '#666', marginTop: '0.2rem' }}>Host access expires {hostTierExpiresAt.toLocaleDateString()}</div>}
+                {!isPro && !canHostRide() && <div style={{ fontSize: '0.6rem', color: '#ff9900', marginTop: '0.2rem' }}>You can join rides. Upgrade to HOST to create your own.</div>}
+                {!activeRide ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', marginTop: '1rem' }}>
+                    {canJoinRide() || canHostRide() ? (
+                      <>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                          <input type="text" placeholder="Ride Name" value={groupRideName} onChange={e => setGroupRideName(e.target.value)} style={{ flex: 1 }} />
+                          <button onClick={createRide} style={{ padding: '0.4rem 1rem', background: '#ff6600', border: 'none', borderRadius: '4px', color: 'white', fontWeight: 'bold' }}>Host</button>
+                        </div>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.7rem', color: '#888' }}>
+                          <input type="checkbox" checked={isPublicRide} onChange={e => setIsPublicRide(e.target.checked)} style={{ width: 'auto' }} />
+                          Public Visibility
+                        </label>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                          <input type="text" placeholder="PIN" value={joinPin} onChange={e => setJoinPin(e.target.value)} style={{ width: '80px', textAlign: 'center' }} />
+                          <button onClick={() => joinRide()} style={{ flex: 1, background: '#222', border: '1px solid #333', color: 'white', borderRadius: '4px' }}>Join via PIN</button>
+                        </div>
+                        {publicRides.length > 0 && (
+                          <div style={{ marginTop: '0.5rem' }}>
+                            <label style={{ fontSize: '0.65rem', color: '#666', textTransform: 'uppercase', marginBottom: '0.5rem', display: 'block' }}>Public Rides Nearby</label>
+                            {publicRides.map(r => (
+                              <div key={r.id} onClick={() => joinRide(r.id)} style={{ padding: '0.8rem', background: '#1a1a1a', borderRadius: '8px', marginBottom: '0.5rem', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid #333' }}>
+                                <span style={{ color: 'white', fontSize: '0.9rem' }}>{r.name}</span>
+                                <span style={{ color: '#34a853', fontSize: '0.7rem' }}>Join</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <div style={{ background: 'rgba(255,255,255,0.05)', padding: '1.5rem', borderRadius: '12px', textAlign: 'center' }}>
+                        <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>👥</div>
+                        <div style={{ fontSize: '1.1rem', color: 'white', fontWeight: 'bold', marginBottom: '0.5rem' }}>Group Rides</div>
+                        <div style={{ fontSize: '0.85rem', color: '#aaa', marginBottom: '1rem', lineHeight: 1.4 }}>Join live rides or host your own to see friends on the map in real-time.</div>
+                        <button onClick={() => { setPaywallTier('host'); setShowGroupRidePaywall(true); }} style={{ width: '100%', padding: '0.8rem', background: '#34a853', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>Start 30-Day Pass</button>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div style={{ background: '#111', padding: '1rem', borderRadius: '8px', border: '1px solid #ff6600', position: 'relative', marginTop: '1rem' }}>
+                    <div style={{ color: '#ff6600', fontSize: '0.7rem', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Active Ride</div>
+                    <div style={{ color: 'white', fontSize: '1.1rem', fontWeight: 'bold', marginBottom: '0.2rem' }}>{activeRide.name}</div>
+                    <div style={{ color: '#aaa', fontSize: '0.9rem', marginBottom: '1rem' }}>PIN: <span style={{ letterSpacing: '2px', color: 'white' }}>{activeRide.pin}</span></div>
+                    <div style={{ fontSize: '0.8rem', color: '#888', marginBottom: '0.5rem' }}>Participants ({rideParticipants.length})</div>
+                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
+                      {rideParticipants.map(p => <span key={p.userId} style={{ background: '#333', padding: '0.2rem 0.5rem', borderRadius: '12px', fontSize: '0.75rem', color: 'white' }}>{p.name} {p.userId === activeRide.leaderId && '👑'}</span>)}
                     </div>
+                    {user?.uid === activeRide.creatorId && rideParticipants.length > 1 && (
+                      <div style={{ marginBottom: '0.5rem' }}>
+                        <label style={{ fontSize: '0.6rem', color: '#888' }}>LEADER</label>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem' }}>
+                          {rideParticipants.map(p => (
+                            <button key={p.userId} onClick={() => setRideLeader(p.userId)} style={{ padding: '0.25rem 0.6rem', background: activeRide.leaderId === p.userId ? '#ff6600' : '#333', color: 'white', border: 'none', borderRadius: '12px', fontSize: '0.65rem', cursor: 'pointer', fontWeight: activeRide.leaderId === p.userId ? 'bold' : 'normal' }}>
+                              {activeRide.leaderId === p.userId ? '⭐ ' : ''}{p.name}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {user?.uid === activeRide.creatorId && <button onClick={endRide} style={{ width: '100%', background: 'transparent', border: '1px solid #ff3333', color: '#ff3333', padding: '0.6rem', borderRadius: '8px', marginTop: '0.5rem' }}>End Ride for Everyone</button>}
+                    {user?.uid !== activeRide.creatorId && <button onClick={leaveRide} style={{ width: '100%', background: 'transparent', border: '1px solid #888', color: '#bbb', padding: '0.6rem', borderRadius: '8px', marginTop: '0.5rem' }}>Leave Ride</button>}
                   </div>
                 )}
-                {user?.uid === activeRide.creatorId && <button onClick={endRide} style={{ width: '100%', background: 'transparent', border: '1px solid #ff3333', color: '#ff3333', padding: '0.6rem', borderRadius: '8px', marginTop: '0.5rem' }}>End Ride for Everyone</button>}
-                {user?.uid !== activeRide.creatorId && <button onClick={leaveRide} style={{ width: '100%', background: 'transparent', border: '1px solid #888', color: '#bbb', padding: '0.6rem', borderRadius: '8px', marginTop: '0.5rem' }}>Leave Ride</button>}
-              </div>
+              </>
             )}
           </section>
           {metrics && (
