@@ -527,9 +527,59 @@ function MapHome() {
   };
 
   const handleCalculate = () => { 
-    if (!trip.origin || !trip.destination) return;
+    let currentOrigin = trip.origin;
+    let currentDest = trip.destination;
+    const nonAt = locations.filter(l => l.trim() !== '');
+
+    if (nonAt.length === 0) {
+       alert("Please enter a destination.");
+       return;
+    }
+
+    // Fallback: If only 1 location provided, it's the destination, and origin is current location
+    if (nonAt.length === 1 && userLocation) {
+       const origin = `${userLocation.lat.toFixed(6)}, ${userLocation.lng.toFixed(6)}`;
+       const destination = nonAt[0];
+       const newLocs = [origin, destination, '', '', ''];
+       setLocations(newLocs);
+       setTrip({ origin, destination, waypoints: [] });
+       currentOrigin = origin;
+       currentDest = destination;
+    } else if (!locations[0].trim() && userLocation) {
+       // Start is empty, but we have other locations. Use current location as start.
+       const origin = `${userLocation.lat.toFixed(6)}, ${userLocation.lng.toFixed(6)}`;
+       const newLocs = [...locations];
+       newLocs[0] = origin;
+       setLocations(newLocs);
+       syncLocationsToStates(newLocs);
+       currentOrigin = origin;
+    }
+
+    if (!currentOrigin || !currentDest) {
+       if (!userLocation) alert("Please enter both start and end points, or enable location services.");
+       return;
+    }
+
     setRecordedPath(null);
     setIsLoading(true); setResponse(null); setMetrics(null); setPois([]); setSettingsDirty(false); 
+  };
+
+  const addPoiToRoute = (poi: POI) => {
+    const poiStr = `${poi.position.lat.toFixed(6)}, ${poi.position.lng.toFixed(6)}`;
+    const newLocs = [...locations];
+    
+    // Find first empty slot
+    const emptyIndex = newLocs.findIndex(l => !l.trim());
+    if (emptyIndex !== -1) {
+      newLocs[emptyIndex] = poiStr;
+      setLocations(newLocs);
+      syncLocationsToStates(newLocs);
+      markDirty();
+      setSelectedPoi(null);
+      alert(`${poi.name} added to route!`);
+    } else {
+      alert("Route is full. Please remove a stop to add this location.");
+    }
   };
 
   const calculateMetrics = async (result: google.maps.DirectionsResult, routeIndex: number = 0) => {
@@ -1247,7 +1297,20 @@ function MapHome() {
                   }}
                 />
               )}
-              {selectedPoi && <InfoWindow position={selectedPoi.position} onCloseClick={() => setSelectedPoi(null)}><div style={{ color: 'black' }}><strong>{selectedPoi.name}</strong><br/>{selectedPoi.address}</div></InfoWindow>}
+              {selectedPoi && (
+                <InfoWindow position={selectedPoi.position} onCloseClick={() => setSelectedPoi(null)}>
+                  <div style={{ color: 'black', padding: '0.4rem' }}>
+                    <div style={{ fontWeight: 'bold', fontSize: '0.9rem', marginBottom: '0.2rem' }}>{selectedPoi.name}</div>
+                    <div style={{ fontSize: '0.75rem', color: '#444', marginBottom: '0.8rem' }}>{selectedPoi.address}</div>
+                    <button 
+                      onClick={() => addPoiToRoute(selectedPoi)}
+                      style={{ width: '100%', padding: '0.5rem', background: '#ff6600', color: 'white', border: 'none', borderRadius: '6px', fontWeight: 'bold', fontSize: '0.75rem', cursor: 'pointer' }}
+                    >
+                      Add to Route
+                    </button>
+                  </div>
+                </InfoWindow>
+              )}
             </GoogleMap>
           ) : <div style={{ color: 'white', padding: '2rem' }}>Loading Maps...</div>}
         </main>
